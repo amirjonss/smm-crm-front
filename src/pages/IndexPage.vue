@@ -127,7 +127,7 @@
                 flat
                 round
                 color="black"
-                icon="print"
+                icon="picture_as_pdf"
                 v-if="selectedProjectId && filteredContentPlans.length > 0"
                 @click="printPage"
               />
@@ -157,19 +157,13 @@
         </div>
       </div>
     </div>
-
-    <!-- 🖨️ Информация для печати -->
-    <div class="print-header" v-if="selectedProject">
-      <h2>Информация о проекте</h2>
-      <p><strong>Название проекта:</strong> {{ selectedProject.project }}</p>
-      <p><strong>Имя (СММ):</strong> {{ selectedProject.name }}</p>
-      <p><strong>Телефон:</strong> {{ selectedProject.phone }}</p>
-    </div>
   </q-page>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 // ------------------- ПРОЕКТЫ -------------------
 const form = ref({ name: '', phone: '', project: '' })
@@ -286,9 +280,52 @@ const filteredContentPlans = computed(() => {
   return rows.value.filter(r => r.projectId === selectedProjectId.value)
 })
 
-// 🖨️ Печать
+// 🧾 📥 Генерация PDF
 function printPage() {
-  window.print()
+  if (!selectedProject.value) return
+
+  const doc = new jsPDF()
+
+  // 🧠 Информация о проекте
+  doc.setFontSize(18)
+  doc.text(selectedProject.value.project, 14, 20)
+
+  doc.setFontSize(12)
+  doc.text(`Имя (СММ): ${selectedProject.value.name}`, 14, 30)
+  doc.text(`Телефон: ${selectedProject.value.phone}`, 14, 38)
+
+  // 🪄 Таблица контент-плана
+  const tableData = filteredContentPlans.value.map(item => [
+    item.index,
+    item.post || '',
+    item.format || '',
+    item.idea || '',
+    item.date || ''
+  ])
+
+  autoTable(doc, {
+    head: [['#', 'Пост', 'Формат', 'Идея', 'Дата']],
+    body: tableData,
+    startY: 50,
+    styles: { fontSize: 10, cellPadding: 3 },
+    headStyles: { fillColor: [33, 150, 243], textColor: 255 },
+    columnStyles: {
+      0: { cellWidth: 10, halign: 'center' },
+      1: { cellWidth: 40 },
+      2: { cellWidth: 30 },
+      3: { cellWidth: 80 },
+      4: { cellWidth: 30 }
+    },
+    theme: 'grid'
+  })
+
+  // 📌 Подвал
+  const pageHeight = doc.internal.pageSize.getHeight()
+  doc.setFontSize(10)
+  doc.text('KH Marketing Agency — контент-план', 14, pageHeight - 10)
+
+  // 📥 Сохранить PDF
+  doc.save(`${selectedProject.value.project}_content_plan.pdf`)
 }
 
 // ------------------- LOCAL STORAGE -------------------
@@ -351,56 +388,5 @@ onMounted(() => {
 }
 .selected-row {
   background-color: #d0f0d0 !important;
-}
-
-/* 🖨️ Стили для печати */
-.print-header {
-  display: none;
-}
-
-@media print {
-  .project-row__form,
-  .content-row__form,
-  .q-btn {
-    display: none !important;
-  }
-
-  .print-header {
-    display: block !important;
-    margin-bottom: 20px;
-  }
-
-  .print-header h2 {
-    font-size: 22px;
-    margin-bottom: 10px;
-  }
-
-  .print-header p {
-    font-size: 16px;
-    margin: 4px 0;
-  }
-
-  body {
-    background: #fff !important;
-  }
-
-  .project-row__list,
-  .content-row__list {
-    width: 100% !important;
-  }
-
-  table,
-  thead th,
-  tbody td {
-    color: #000 !important;
-    background: #fff !important;
-    border-color: #ddd !important;
-  }
-
-  .title {
-    font-size: 20px !important;
-    text-align: left !important;
-    padding: 5px 0 !important;
-  }
 }
 </style>
