@@ -344,22 +344,10 @@ function printPage() {
 .input {
   margin: 10px;
 }
-.submit-btn {
-  //width: 70%;
-}
-.page {
-  //width: 1400px;
-  //margin: auto;
-}
-.content-row {
-  padding: 10px;
-}
+
 .project-row__list,
 .content-row__list {
   padding: 10px;
-}
-.submit-btn__project-create {
-  //width: 30%;
 }
 .selected-row {
   background-color: #d0f0d0 !important;
