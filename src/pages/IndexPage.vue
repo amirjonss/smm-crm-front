@@ -1,10 +1,11 @@
 <template>
   <q-page class="page">
     <div class="project-row row justify-center">
+      <!-- ======= ФОРМА ПРОЕКТА ======= -->
       <div class="project-row__form col-6">
-        <q-form class="project-create col-md-12 col-lg-6" @submit.prevent="addToProjectList">
+        <q-form class="project-create col-md-12 col-lg-6" @submit.prevent="editingProject ? saveEditedProject() : addToProjectList()">
           <div class="area">
-            <div class="title">Мета Проект</div>
+            <div class="title">{{ editingProject ? 'Редактировать проект' : 'Создать проект' }}</div>
             <div class="create-form q-pa-lg row">
               <div class="form-item col-4">
                 <q-input class="input" outlined v-model="form.project" label="Проект" />
@@ -12,7 +13,7 @@
               <div class="form-item col-4">
                 <q-input class="input" outlined v-model="form.name" label="Имя (СММ)" />
               </div>
-              <div class="project-create-form__item col-4">
+              <div class="form-item col-4">
                 <q-input
                   class="input"
                   filled
@@ -24,7 +25,7 @@
               </div>
               <div class="form-item col-12 flex justify-end">
                 <q-btn
-                  label="Создать проект"
+                  :label="editingProject ? 'Сохранить' : 'Создать проект'"
                   class="input self-end submit-btn__project-create"
                   type="submit"
                   color="grey-8"
@@ -34,43 +35,44 @@
           </div>
         </q-form>
       </div>
+
+      <!-- ======= СПИСОК ПРОЕКТОВ ======= -->
       <div class="project-row__list col-6">
         <div class="area">
           <div class="q-pa-md">
-            <div class="title">
-              Список проектов
-            </div>
+            <div class="title">Список проектов</div>
             <q-markup-table>
               <thead>
-                <tr>
-                  <th v-for="col in projectColumns" :key="col.index" class="text-left">
-                    {{ col.label }}
-                  </th>
-                  <th class="text-left"> Действие </th>
-                </tr>
+              <tr>
+                <th v-for="col in projectColumns" :key="col.index" class="text-left">{{ col.label }}</th>
+                <th class="text-left">Действие</th>
+              </tr>
               </thead>
               <tbody>
-                <tr v-for="row in projectRows" :key="row.index">
-                  <td class="text-left">{{row.index}}</td>
-                  <td class="text-left">{{row.project}}</td>
-                  <td class="text-left">{{row.name}}</td>
-                  <td class="text-left">{{row.phone}}</td>
-                  <td class="text-left">
-                    <q-btn flat round color="red" icon="delete"/>
-                    <q-btn flat round color="primary" icon="edit"/>
-                  </td>
-                </tr>
+              <tr v-for="row in projectRows" :key="row.id" :class="{'selected-row': row.id === selectedProjectId}">
+                <td class="text-left">{{ row.index }}</td>
+                <td class="text-left">{{ row.project }}</td>
+                <td class="text-left">{{ row.name }}</td>
+                <td class="text-left">{{ row.phone }}</td>
+                <td class="text-left">
+                  <q-btn flat round color="green" icon="visibility" @click="selectProject(row.id)" />
+                  <q-btn flat round color="primary" icon="edit" @click="editProject(row)" />
+                  <q-btn flat round color="red" icon="delete" @click="deleteProject(row.id)" />
+                </td>
+              </tr>
               </tbody>
             </q-markup-table>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- ======= КОНТЕНТ ПЛАН ======= -->
     <div class="content-row row">
       <div class="content-row__form col-6">
-        <q-form class="content-plan-create col-md-12 col-lg-6" @submit.prevent="addToContentList">
+        <q-form class="content-plan-create col-md-12 col-lg-6" @submit.prevent="editingContent ? saveEditedContentPlan() : addToContentList()">
           <div class="area">
-            <div class="title">Создать контент план</div>
+            <div class="title">{{ editingContent ? 'Редактировать контент план' : 'Создать контент план' }}</div>
             <div class="create-form q-pa-lg row">
               <div class="form-item col-4">
                 <q-input class="input" outlined v-model="contentPlanForm.post" label="Пост" />
@@ -84,7 +86,7 @@
                   label="Формат"
                 />
               </div>
-              <div class="project-create-form__item col-4">
+              <div class="form-item col-4">
                 <q-input
                   type="date"
                   class="input"
@@ -104,7 +106,7 @@
               </div>
               <div class="form-item col-6 flex justify-end">
                 <q-btn
-                  label="Добавить контент"
+                  :label="editingContent ? 'Сохранить' : 'Добавить контент'"
                   class="input self-end submit-btn"
                   type="submit"
                   color="grey-8"
@@ -114,31 +116,39 @@
           </div>
         </q-form>
       </div>
+
+      <!-- ======= СПИСОК КОНТЕНТ ПЛАНОВ ======= -->
       <div class="content-row__list col-6">
         <div class="area">
           <div class="q-pa-md">
-            <div class="title">
-              Список контент планов
+            <div class="title row justify-between items-center">
+              <div>Список контент планов</div>
+              <q-btn
+                flat
+                round
+                color="black"
+                icon="print"
+                v-if="selectedProjectId && filteredContentPlans.length > 0"
+                @click="printPage"
+              />
             </div>
             <q-markup-table>
               <thead>
               <tr>
-                <th v-for="col in columns" :key="col.index" class="text-left">
-                  {{ col.label }}
-                </th>
-                <th class="text-left"> Действие </th>
+                <th v-for="col in columns" :key="col.index" class="text-left">{{ col.label }}</th>
+                <th class="text-left">Действие</th>
               </tr>
               </thead>
               <tbody>
-              <tr v-for="row in rows" :key="row.index">
-                <td class="text-left">{{row.index}}</td>
-                <td class="text-left">{{row.post}}</td>
-                <td class="text-left">{{row.format}}</td>
-                <td class="text-left">{{row.idea}}</td>
-                <td class="text-left">{{row.date}}</td>
+              <tr v-for="row in filteredContentPlans" :key="row.id">
+                <td class="text-left">{{ row.index }}</td>
+                <td class="text-left">{{ row.post }}</td>
+                <td class="text-left">{{ row.format }}</td>
+                <td class="text-left">{{ row.idea }}</td>
+                <td class="text-left">{{ row.date }}</td>
                 <td class="text-left">
-                  <q-btn flat round color="red" icon="delete"/>
-                  <q-btn flat round color="primary" icon="edit"/>
+                  <q-btn flat round color="primary" icon="edit" @click="editContentPlan(row)" />
+                  <q-btn flat round color="red" icon="delete" @click="deleteContentPlan(row.id)" />
                 </td>
               </tr>
               </tbody>
@@ -147,84 +157,159 @@
         </div>
       </div>
     </div>
+
+    <!-- 🖨️ Информация для печати -->
+    <div class="print-header" v-if="selectedProject">
+      <h2>Информация о проекте</h2>
+      <p><strong>Название проекта:</strong> {{ selectedProject.project }}</p>
+      <p><strong>Имя (СММ):</strong> {{ selectedProject.name }}</p>
+      <p><strong>Телефон:</strong> {{ selectedProject.phone }}</p>
+    </div>
   </q-page>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
-const form = ref({
-  name: '',
-  phone: '',
-  project: '',
-  index: 1,
-})
-
+// ------------------- ПРОЕКТЫ -------------------
+const form = ref({ name: '', phone: '', project: '' })
 const projectRows = ref([])
-
-const contentPlanForm = ref({
-  post: '',
-  format: '',
-  idea: '',
-  date: '',
-  index: 1,
-})
-
-const options = ref(['Reels', 'Carousel', 'Post', 'Animation', 'Story'])
-
-const columns = [
-  { name: 'index', label: '#', field: 'index' },
-  {
-    name: 'post',
-    required: true,
-    label: 'Пост',
-    align: 'left',
-    field: (row) => row.post,
-    format: (val) => `${val}`,
-  },
-  { name: 'format', align: 'center', label: 'Формат', field: 'format' },
-  { name: 'idea', label: 'Идея', field: 'idea', align: 'left' },
-  { name: 'date', label: 'Дата', field: 'date', align: 'left' },
-]
+const selectedProjectId = ref(null)
+const editingProject = ref(null)
 
 const projectColumns = [
-  { index: 'index', align: 'left', label: '#', field: 'index' },
-  { project: 'project', align: 'left', label: 'Проект', field: 'project' },
-  { name: 'name', align: 'left', label: 'Имя (СММ)', field: 'name' },
-  { phone: 'phone', align: 'left', label: 'Телефон', field: 'phone' },
+  { index: 'index', label: '#', field: 'index' },
+  { project: 'project', label: 'Проект', field: 'project' },
+  { name: 'name', label: 'Имя (СММ)', field: 'name' },
+  { phone: 'phone', label: 'Телефон', field: 'phone' },
 ]
 
-const rows = ref([])
-function addToContentList() {
-  const newRow = {
-    post: contentPlanForm.value.post,
-    format: contentPlanForm.value.format,
-    idea: contentPlanForm.value.idea,
-    date: contentPlanForm.value.date,
-    index: rows.value.length + 1,
-  }
-  rows.value.push(newRow)
-  contentPlanForm.value = {
-    post: '',
-    format: '',
-    idea: '',
-    date: '',
-  }
-}
 function addToProjectList() {
   const newRow = {
+    id: Date.now(),
     name: form.value.name,
     phone: form.value.phone,
     project: form.value.project,
     index: projectRows.value.length + 1,
   }
   projectRows.value.push(newRow)
-  form.value = {
-    name: '',
-    phone: '',
-    project: '',
+  saveProjectsToStorage()
+  form.value = { name: '', phone: '', project: '' }
+}
+
+function selectProject(id) {
+  selectedProjectId.value = id
+}
+
+function editProject(project) {
+  editingProject.value = project
+  form.value = { name: project.name, phone: project.phone, project: project.project }
+}
+
+function saveEditedProject() {
+  const idx = projectRows.value.findIndex(p => p.id === editingProject.value.id)
+  if (idx !== -1) {
+    projectRows.value[idx] = { ...editingProject.value, ...form.value }
+    saveProjectsToStorage()
+    editingProject.value = null
+    form.value = { name: '', phone: '', project: '' }
   }
 }
+
+function deleteProject(id) {
+  projectRows.value = projectRows.value.filter(p => p.id !== id)
+  rows.value = rows.value.filter(r => r.projectId !== id)
+  saveProjectsToStorage()
+  saveContentToStorage()
+  if (selectedProjectId.value === id) selectedProjectId.value = null
+}
+
+const selectedProject = computed(() => {
+  return projectRows.value.find(p => p.id === selectedProjectId.value) || null
+})
+
+// ------------------- КОНТЕНТ ПЛАН -------------------
+const contentPlanForm = ref({ post: '', format: '', idea: '', date: '' })
+const rows = ref([])
+const editingContent = ref(null)
+const options = ref(['Reels', 'Carousel', 'Post', 'Animation', 'Story'])
+
+const columns = [
+  { name: 'index', label: '#', field: 'index' },
+  { name: 'post', label: 'Пост', field: 'post' },
+  { name: 'format', label: 'Формат', field: 'format' },
+  { name: 'idea', label: 'Идея', field: 'idea' },
+  { name: 'date', label: 'Дата', field: 'date' },
+]
+
+function addToContentList() {
+  if (!selectedProjectId.value) {
+    alert('Выберите проект!')
+    return
+  }
+
+  const newRow = {
+    id: Date.now(),
+    projectId: selectedProjectId.value,
+    post: contentPlanForm.value.post,
+    format: contentPlanForm.value.format,
+    idea: contentPlanForm.value.idea,
+    date: contentPlanForm.value.date,
+    index: filteredContentPlans.value.length + 1,
+  }
+  rows.value.push(newRow)
+  saveContentToStorage()
+  contentPlanForm.value = { post: '', format: '', idea: '', date: '' }
+}
+
+function editContentPlan(plan) {
+  editingContent.value = plan
+  contentPlanForm.value = { post: plan.post, format: plan.format, idea: plan.idea, date: plan.date }
+}
+
+function saveEditedContentPlan() {
+  const idx = rows.value.findIndex(p => p.id === editingContent.value.id)
+  if (idx !== -1) {
+    rows.value[idx] = { ...editingContent.value, ...contentPlanForm.value }
+    saveContentToStorage()
+    editingContent.value = null
+    contentPlanForm.value = { post: '', format: '', idea: '', date: '' }
+  }
+}
+
+function deleteContentPlan(id) {
+  rows.value = rows.value.filter(r => r.id !== id)
+  saveContentToStorage()
+}
+
+const filteredContentPlans = computed(() => {
+  return rows.value.filter(r => r.projectId === selectedProjectId.value)
+})
+
+// 🖨️ Печать
+function printPage() {
+  window.print()
+}
+
+// ------------------- LOCAL STORAGE -------------------
+function saveProjectsToStorage() {
+  localStorage.setItem('projects', JSON.stringify(projectRows.value))
+}
+
+function saveContentToStorage() {
+  localStorage.setItem('contentPlans', JSON.stringify(rows.value))
+}
+
+function loadDataFromStorage() {
+  const savedProjects = localStorage.getItem('projects')
+  const savedContent = localStorage.getItem('contentPlans')
+  if (savedProjects) projectRows.value = JSON.parse(savedProjects)
+  if (savedContent) rows.value = JSON.parse(savedContent)
+}
+
+onMounted(() => {
+  loadDataFromStorage()
+})
 </script>
 
 <style scoped lang="scss">
@@ -240,9 +325,6 @@ function addToProjectList() {
 }
 .project-create {
   padding: 10px;
-  &__submit-btn {
-    width: 100%;
-  }
 }
 .content-plan-create {
   padding: 10px;
@@ -266,5 +348,59 @@ function addToProjectList() {
 }
 .submit-btn__project-create {
   width: 30%;
+}
+.selected-row {
+  background-color: #d0f0d0 !important;
+}
+
+/* 🖨️ Стили для печати */
+.print-header {
+  display: none;
+}
+
+@media print {
+  .project-row__form,
+  .content-row__form,
+  .q-btn {
+    display: none !important;
+  }
+
+  .print-header {
+    display: block !important;
+    margin-bottom: 20px;
+  }
+
+  .print-header h2 {
+    font-size: 22px;
+    margin-bottom: 10px;
+  }
+
+  .print-header p {
+    font-size: 16px;
+    margin: 4px 0;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  .project-row__list,
+  .content-row__list {
+    width: 100% !important;
+  }
+
+  table,
+  thead th,
+  tbody td {
+    color: #000 !important;
+    background: #fff !important;
+    border-color: #ddd !important;
+  }
+
+  .title {
+    font-size: 20px !important;
+    text-align: left !important;
+    padding: 5px 0 !important;
+  }
 }
 </style>
