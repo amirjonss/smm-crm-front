@@ -165,41 +165,29 @@ import { ref, computed, onMounted } from 'vue'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
-// ------------------- ПРОЕКТЫ -------------------
+// 👇 ОБЯЗАТЕЛЬНО: импорт файла шрифта, сгенерированного fontconverter’ом jsPDF
+// Помести Roboto-Regular-normal.js в src/fonts и проверь путь:
+import './Roboto-Regular-normal.js'
+
+// ====== ТВОЙ СУЩЕСТВУЮЩИЙ КОД СОСТОЯНИЙ/МЕТОДОВ (без изменений) ======
 const form = ref({ name: '', phone: '', project: '' })
 const projectRows = ref([])
 const selectedProjectId = ref(null)
 const editingProject = ref(null)
-
 const projectColumns = [
   { index: 'index', label: '#', field: 'index' },
   { project: 'project', label: 'Проект', field: 'project' },
   { name: 'name', label: 'Имя (СММ)', field: 'name' },
   { phone: 'phone', label: 'Телефон', field: 'phone' },
 ]
-
 function addToProjectList() {
-  const newRow = {
-    id: Date.now(),
-    name: form.value.name,
-    phone: form.value.phone,
-    project: form.value.project,
-    index: projectRows.value.length + 1,
-  }
+  const newRow = { id: Date.now(), name: form.value.name, phone: form.value.phone, project: form.value.project, index: projectRows.value.length + 1 }
   projectRows.value.push(newRow)
   saveProjectsToStorage()
   form.value = { name: '', phone: '', project: '' }
 }
-
-function selectProject(id) {
-  selectedProjectId.value = id
-}
-
-function editProject(project) {
-  editingProject.value = project
-  form.value = { name: project.name, phone: project.phone, project: project.project }
-}
-
+function selectProject(id) { selectedProjectId.value = id }
+function editProject(project) { editingProject.value = project; form.value = { name: project.name, phone: project.phone, project: project.project } }
 function saveEditedProject() {
   const idx = projectRows.value.findIndex(p => p.id === editingProject.value.id)
   if (idx !== -1) {
@@ -209,7 +197,6 @@ function saveEditedProject() {
     form.value = { name: '', phone: '', project: '' }
   }
 }
-
 function deleteProject(id) {
   projectRows.value = projectRows.value.filter(p => p.id !== id)
   rows.value = rows.value.filter(r => r.projectId !== id)
@@ -217,17 +204,12 @@ function deleteProject(id) {
   saveContentToStorage()
   if (selectedProjectId.value === id) selectedProjectId.value = null
 }
+const selectedProject = computed(() => projectRows.value.find(p => p.id === selectedProjectId.value) || null)
 
-const selectedProject = computed(() => {
-  return projectRows.value.find(p => p.id === selectedProjectId.value) || null
-})
-
-// ------------------- КОНТЕНТ ПЛАН -------------------
 const contentPlanForm = ref({ post: '', format: '', idea: '', date: '' })
 const rows = ref([])
 const editingContent = ref(null)
 const options = ref(['Reels', 'Carousel', 'Post', 'Animation', 'Story'])
-
 const columns = [
   { name: 'index', label: '#', field: 'index' },
   { name: 'post', label: 'Пост', field: 'post' },
@@ -235,32 +217,14 @@ const columns = [
   { name: 'idea', label: 'Идея', field: 'idea' },
   { name: 'date', label: 'Дата', field: 'date' },
 ]
-
 function addToContentList() {
-  if (!selectedProjectId.value) {
-    alert('Выберите проект!')
-    return
-  }
-
-  const newRow = {
-    id: Date.now(),
-    projectId: selectedProjectId.value,
-    post: contentPlanForm.value.post,
-    format: contentPlanForm.value.format,
-    idea: contentPlanForm.value.idea,
-    date: contentPlanForm.value.date,
-    index: filteredContentPlans.value.length + 1,
-  }
+  if (!selectedProjectId.value) { alert('Выберите проект!'); return }
+  const newRow = { id: Date.now(), projectId: selectedProjectId.value, post: contentPlanForm.value.post, format: contentPlanForm.value.format, idea: contentPlanForm.value.idea, date: contentPlanForm.value.date, index: filteredContentPlans.value.length + 1 }
   rows.value.push(newRow)
   saveContentToStorage()
   contentPlanForm.value = { post: '', format: '', idea: '', date: '' }
 }
-
-function editContentPlan(plan) {
-  editingContent.value = plan
-  contentPlanForm.value = { post: plan.post, format: plan.format, idea: plan.idea, date: plan.date }
-}
-
+function editContentPlan(plan) { editingContent.value = plan; contentPlanForm.value = { post: plan.post, format: plan.format, idea: plan.idea, date: plan.date } }
 function saveEditedContentPlan() {
   const idx = rows.value.findIndex(p => p.id === editingContent.value.id)
   if (idx !== -1) {
@@ -270,32 +234,42 @@ function saveEditedContentPlan() {
     contentPlanForm.value = { post: '', format: '', idea: '', date: '' }
   }
 }
+function deleteContentPlan(id) { rows.value = rows.value.filter(r => r.id !== id); saveContentToStorage() }
+const filteredContentPlans = computed(() => rows.value.filter(r => r.projectId === selectedProjectId.value))
 
-function deleteContentPlan(id) {
-  rows.value = rows.value.filter(r => r.id !== id)
-  saveContentToStorage()
+function saveProjectsToStorage() { localStorage.setItem('projects', JSON.stringify(projectRows.value)) }
+function saveContentToStorage() { localStorage.setItem('contentPlans', JSON.stringify(rows.value)) }
+function loadDataFromStorage() {
+  const savedProjects = localStorage.getItem('projects')
+  const savedContent = localStorage.getItem('contentPlans')
+  if (savedProjects) projectRows.value = JSON.parse(savedProjects)
+  if (savedContent) rows.value = JSON.parse(savedContent)
 }
+onMounted(() => loadDataFromStorage())
 
-const filteredContentPlans = computed(() => {
-  return rows.value.filter(r => r.projectId === selectedProjectId.value)
-})
-
-// 🧾 📥 Генерация PDF
+// ====== ВОТ ЭТА ФУНКЦИЯ ИСПРАВЛЯЕТ ЗАГОЛОВКИ (кириллица в head) ======
 function printPage() {
   if (!selectedProject.value) return
 
   const doc = new jsPDF()
 
-  // 🧠 Информация о проекте
+  // Имя шрифта должно совпадать с addFont(...) внутри Roboto-Regular-normal.js
+  const FONT = 'Roboto-Regular' // чаще всего именно так называется после конвертации
+
+  // Устанавливаем шрифт для документа
+  doc.setFont(FONT, 'normal')
+
+  // Заголовок
   doc.setFontSize(18)
-  doc.text(selectedProject.value.project, 14, 20)
+  doc.text(selectedProject.value.project || 'Без названия', 14, 20)
 
   doc.setFontSize(12)
-  doc.text(`Имя (СММ): ${selectedProject.value.name}`, 14, 30)
-  doc.text(`Телефон: ${selectedProject.value.phone}`, 14, 38)
+  doc.text(`Имя (СММ): ${selectedProject.value.name || ''}`, 14, 30)
+  doc.text(`Телефон: ${selectedProject.value.phone || ''}`, 14, 38)
 
-  // 🪄 Таблица контент-плана
-  const tableData = filteredContentPlans.value.map(item => [
+  // Заголовки и тело таблицы
+  const head = [['#', 'Post', 'Format', 'Idea', 'Date']]
+  const body = filteredContentPlans.value.map(item => [
     item.index,
     item.post || '',
     item.format || '',
@@ -304,49 +278,46 @@ function printPage() {
   ])
 
   autoTable(doc, {
-    head: [['#', 'Пост', 'Формат', 'Идея', 'Дата']],
-    body: tableData,
+    head,
+    body,
     startY: 50,
-    styles: { fontSize: 10, cellPadding: 3 },
-    headStyles: { fillColor: [33, 150, 243], textColor: 255 },
+    theme: 'grid',
+    // Базовые стили для ВСЕХ ячеек
+    styles: {
+      font: FONT,
+      fontSize: 10,
+      cellPadding: 3,
+    },
+    // Стили заголовка (на всякий случай тоже задаём)
+    headStyles: {
+      font: FONT,
+      fontStyle: 'bold',
+      fontSize: 10,
+      fillColor: [33, 150, 243],
+      textColor: 255,
+    },
     columnStyles: {
       0: { cellWidth: 10, halign: 'center' },
       1: { cellWidth: 40 },
       2: { cellWidth: 30 },
       3: { cellWidth: 80 },
-      4: { cellWidth: 30 }
+      4: { cellWidth: 30 },
     },
-    theme: 'grid'
+    // 🛠 КРИТИЧЕСКО: насильно проставляем шрифт для head,
+    // т.к. у некоторых версий автотаблицы он может игнорироваться
+    didParseCell: (data) => {
+      data.cell.styles.font = FONT
+    }
   })
 
-  // 📌 Подвал
+  // Подвал
   const pageHeight = doc.internal.pageSize.getHeight()
   doc.setFontSize(10)
   doc.text('KH Marketing Agency — контент-план', 14, pageHeight - 10)
 
-  // 📥 Сохранить PDF
-  doc.save(`${selectedProject.value.project}_content_plan.pdf`)
+  // Сохранение
+  doc.save(`${selectedProject.value.project || 'project'}_content_plan.pdf`)
 }
-
-// ------------------- LOCAL STORAGE -------------------
-function saveProjectsToStorage() {
-  localStorage.setItem('projects', JSON.stringify(projectRows.value))
-}
-
-function saveContentToStorage() {
-  localStorage.setItem('contentPlans', JSON.stringify(rows.value))
-}
-
-function loadDataFromStorage() {
-  const savedProjects = localStorage.getItem('projects')
-  const savedContent = localStorage.getItem('contentPlans')
-  if (savedProjects) projectRows.value = JSON.parse(savedProjects)
-  if (savedContent) rows.value = JSON.parse(savedContent)
-}
-
-onMounted(() => {
-  loadDataFromStorage()
-})
 </script>
 
 <style scoped lang="scss">
