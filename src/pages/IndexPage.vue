@@ -1,158 +1,161 @@
 <template>
   <q-page class="page">
-    <div class="project-row row justify-center">
-      <!-- ======= ФОРМА ПРОЕКТА ======= -->
-      <div class="project-row__form col-6">
-        <q-form class="project-create col-md-12 col-lg-6" @submit.prevent="editingProject ? saveEditedProject() : addToProjectList()">
-          <div class="area">
-            <div class="title">{{ editingProject ? 'Редактировать проект' : 'Создать проект' }}</div>
-            <div class="create-form q-pa-lg row">
-              <div class="form-item col-4">
-                <q-input class="input" outlined v-model="form.project" label="Проект" />
-              </div>
-              <div class="form-item col-4">
-                <q-input class="input" outlined v-model="form.name" label="Имя (СММ)" />
-              </div>
-              <div class="form-item col-4">
-                <q-input
-                  class="input"
-                  filled
-                  v-model="form.phone"
-                  label="Телефон"
-                  mask="998 (##) ### - ## - ##"
-                  fill-mask
-                />
-              </div>
-              <div class="form-item col-12 flex justify-end">
-                <q-btn
-                  :label="editingProject ? 'Сохранить' : 'Создать проект'"
-                  class="input self-end submit-btn__project-create"
-                  type="submit"
-                  color="grey-8"
-                />
+    <div class="row justify-center">
+      <div class="project-row row justify-center col-10">
+        <!-- ======= ФОРМА ПРОЕКТА ======= -->
+        <div class="project-row__form col-xs-12 col-lg-6">
+          <q-form class="project-create col-md-12 col-lg-6" @submit.prevent="editingProject ? saveEditedProject() : addToProjectList()">
+            <div class="area">
+              <div class="title">{{ editingProject ? 'Редактировать проект' : 'Создать проект' }}</div>
+              <div class="create-form q-pa-lg row">
+                <div class="form-item col-xs-12 col-sm-6 col-md-4 col-lg-4">
+                  <q-input class="input" outlined v-model="form.project" label="Проект" />
+                </div>
+                <div class="form-item col-xs-12 col-sm-6 col-md-4 col-lg-4">
+                  <q-input class="input" outlined v-model="form.name" label="Имя (СММ)" />
+                </div>
+                <div class="form-item col-xs-12 col-sm-6 col-md-4 col-lg-4">
+                  <q-input
+                    class="input"
+                    filled
+                    v-model="form.phone"
+                    label="Телефон"
+                    mask="998 (##) ### - ## - ##"
+                    fill-mask
+                  />
+                </div>
+                <div class="form-item col-xs-12 col-sm-6 col-md-12 col-lg-12 flex justify-end">
+                  <q-btn
+                    :label="editingProject ? 'Сохранить' : 'Создать проект'"
+                    class="input self-end submit-btn__project-create"
+                    type="submit"
+                    color="grey-8"
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        </q-form>
-      </div>
+          </q-form>
+        </div>
 
-      <!-- ======= СПИСОК ПРОЕКТОВ ======= -->
-      <div class="project-row__list col-6">
-        <div class="area">
-          <div class="q-pa-md">
-            <div class="title">Список проектов</div>
-            <q-markup-table>
-              <thead>
-              <tr>
-                <th v-for="col in projectColumns" :key="col.index" class="text-left">{{ col.label }}</th>
-                <th class="text-left">Действие</th>
-              </tr>
-              </thead>
-              <tbody>
-              <tr v-for="row in projectRows" :key="row.id" :class="{'selected-row': row.id === selectedProjectId}">
-                <td class="text-left">{{ row.index }}</td>
-                <td class="text-left">{{ row.project }}</td>
-                <td class="text-left">{{ row.name }}</td>
-                <td class="text-left">{{ row.phone }}</td>
-                <td class="text-left">
-                  <q-btn flat round color="green" icon="visibility" @click="selectProject(row.id)" />
-                  <q-btn flat round color="primary" icon="edit" @click="editProject(row)" />
-                  <q-btn flat round color="red" icon="delete" @click="deleteProject(row.id)" />
-                </td>
-              </tr>
-              </tbody>
-            </q-markup-table>
+        <!-- ======= СПИСОК ПРОЕКТОВ ======= -->
+        <div class="project-row__list col-xs-12 col-lg-6">
+          <div class="area">
+            <div class="q-pa-md">
+              <div class="title">Список проектов</div>
+              <q-markup-table>
+                <thead>
+                <tr>
+                  <th v-for="col in projectColumns" :key="col.index" class="text-left">{{ col.label }}</th>
+                  <th class="text-left">Действие</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr v-for="row in projectRows" :key="row.id" :class="{'selected-row': row.id === selectedProjectId}">
+                  <td class="text-left">{{ row.index }}</td>
+                  <td class="text-left">{{ row.project }}</td>
+                  <td class="text-left">{{ row.name }}</td>
+                  <td class="text-left">{{ row.phone }}</td>
+                  <td class="text-left">
+                    <q-btn flat round color="green" icon="visibility" @click="selectProject(row.id)" />
+                    <q-btn flat round color="primary" icon="edit" @click="editProject(row)" />
+                    <q-btn flat round color="red" icon="delete" @click="deleteProject(row.id)" />
+                  </td>
+                </tr>
+                </tbody>
+              </q-markup-table>
+            </div>
           </div>
         </div>
       </div>
     </div>
+    <div class="row justify-center">
+      <!-- ======= КОНТЕНТ ПЛАН ======= -->
+      <div class="content-row row col-10">
+        <div class="content-row__form  col-xs-12 col-lg-6">
+          <q-form class="content-plan-create col-md-12 col-lg-6" @submit.prevent="editingContent ? saveEditedContentPlan() : addToContentList()">
+            <div class="area">
+              <div class="title">{{ editingContent ? 'Редактировать контент план' : 'Создать контент план' }}</div>
+              <div class="create-form q-pa-lg row">
+                <div class="form-item col-xs-12 col-sm-6 col-md-6 col-lg-4">
+                  <q-input class="input" outlined v-model="contentPlanForm.post" label="Пост" />
+                </div>
+                <div class="form-item col-xs-12 col-sm-6 col-md-6 col-lg-4">
+                  <q-select
+                    class="input"
+                    outlined
+                    v-model="contentPlanForm.format"
+                    :options="options"
+                    label="Формат"
+                  />
+                </div>
+                <div class="form-item col-xs-12 col-sm-6 col-md-6 col-lg-4">
+                  <q-input
+                    type="date"
+                    class="input"
+                    outlined
+                    v-model="contentPlanForm.date"
+                    label="Дата"
+                  />
+                </div>
+                <div class="form-item col-xs-12 col-sm-6 col-md-6 col-lg-4">
+                  <q-input
+                    class="input"
+                    autogrow
+                    outlined
+                    v-model="contentPlanForm.idea"
+                    label="Идея"
+                  />
+                </div>
+                <div class="form-item col-xs-12 col-sm-12 col-md-12 col-lg-8 flex justify-end">
+                  <q-btn
+                    :label="editingContent ? 'Сохранить' : 'Добавить контент'"
+                    class="input self-end submit-btn"
+                    type="submit"
+                    color="grey-8"
+                  />
+                </div>
+              </div>
+            </div>
+          </q-form>
+        </div>
 
-    <!-- ======= КОНТЕНТ ПЛАН ======= -->
-    <div class="content-row row">
-      <div class="content-row__form col-6">
-        <q-form class="content-plan-create col-md-12 col-lg-6" @submit.prevent="editingContent ? saveEditedContentPlan() : addToContentList()">
+        <!-- ======= СПИСОК КОНТЕНТ ПЛАНОВ ======= -->
+        <div class="content-row__list col-xs-12 col-lg-6">
           <div class="area">
-            <div class="title">{{ editingContent ? 'Редактировать контент план' : 'Создать контент план' }}</div>
-            <div class="create-form q-pa-lg row">
-              <div class="form-item col-4">
-                <q-input class="input" outlined v-model="contentPlanForm.post" label="Пост" />
-              </div>
-              <div class="form-item col-4">
-                <q-select
-                  class="input"
-                  outlined
-                  v-model="contentPlanForm.format"
-                  :options="options"
-                  label="Формат"
-                />
-              </div>
-              <div class="form-item col-4">
-                <q-input
-                  type="date"
-                  class="input"
-                  outlined
-                  v-model="contentPlanForm.date"
-                  label="Дата"
-                />
-              </div>
-              <div class="form-item col-6">
-                <q-input
-                  class="input"
-                  autogrow
-                  outlined
-                  v-model="contentPlanForm.idea"
-                  label="Идея"
-                />
-              </div>
-              <div class="form-item col-6 flex justify-end">
+            <div class="q-pa-md">
+              <div class="title row justify-between items-center">
+                <div>Список контент планов</div>
                 <q-btn
-                  :label="editingContent ? 'Сохранить' : 'Добавить контент'"
-                  class="input self-end submit-btn"
-                  type="submit"
-                  color="grey-8"
+                  flat
+                  round
+                  color="black"
+                  icon="picture_as_pdf"
+                  v-if="selectedProjectId && filteredContentPlans.length > 0"
+                  @click="printPage"
                 />
               </div>
+              <q-markup-table>
+                <thead>
+                <tr>
+                  <th v-for="col in columns" :key="col.index" class="text-left">{{ col.label }}</th>
+                  <th class="text-left">Действие</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr v-for="row in filteredContentPlans" :key="row.id">
+                  <td class="text-left">{{ row.index }}</td>
+                  <td class="text-left">{{ row.post }}</td>
+                  <td class="text-left">{{ row.format }}</td>
+                  <td class="text-left">{{ row.idea }}</td>
+                  <td class="text-left">{{ row.date }}</td>
+                  <td class="text-left">
+                    <q-btn flat round color="primary" icon="edit" @click="editContentPlan(row)" />
+                    <q-btn flat round color="red" icon="delete" @click="deleteContentPlan(row.id)" />
+                  </td>
+                </tr>
+                </tbody>
+              </q-markup-table>
             </div>
-          </div>
-        </q-form>
-      </div>
-
-      <!-- ======= СПИСОК КОНТЕНТ ПЛАНОВ ======= -->
-      <div class="content-row__list col-6">
-        <div class="area">
-          <div class="q-pa-md">
-            <div class="title row justify-between items-center">
-              <div>Список контент планов</div>
-              <q-btn
-                flat
-                round
-                color="black"
-                icon="picture_as_pdf"
-                v-if="selectedProjectId && filteredContentPlans.length > 0"
-                @click="printPage"
-              />
-            </div>
-            <q-markup-table>
-              <thead>
-              <tr>
-                <th v-for="col in columns" :key="col.index" class="text-left">{{ col.label }}</th>
-                <th class="text-left">Действие</th>
-              </tr>
-              </thead>
-              <tbody>
-              <tr v-for="row in filteredContentPlans" :key="row.id">
-                <td class="text-left">{{ row.index }}</td>
-                <td class="text-left">{{ row.post }}</td>
-                <td class="text-left">{{ row.format }}</td>
-                <td class="text-left">{{ row.idea }}</td>
-                <td class="text-left">{{ row.date }}</td>
-                <td class="text-left">
-                  <q-btn flat round color="primary" icon="edit" @click="editContentPlan(row)" />
-                  <q-btn flat round color="red" icon="delete" @click="deleteContentPlan(row.id)" />
-                </td>
-              </tr>
-              </tbody>
-            </q-markup-table>
           </div>
         </div>
       </div>
@@ -326,6 +329,7 @@ function printPage() {
   border-radius: 10px;
   margin: 10px 0 10px 0;
 }
+
 .title {
   font-size: 25px;
   text-align: center;
@@ -341,11 +345,11 @@ function printPage() {
   margin: 10px;
 }
 .submit-btn {
-  width: 70%;
+  //width: 70%;
 }
 .page {
-  width: 1400px;
-  margin: auto;
+  //width: 1400px;
+  //margin: auto;
 }
 .content-row {
   padding: 10px;
@@ -355,7 +359,7 @@ function printPage() {
   padding: 10px;
 }
 .submit-btn__project-create {
-  width: 30%;
+  //width: 30%;
 }
 .selected-row {
   background-color: #d0f0d0 !important;
