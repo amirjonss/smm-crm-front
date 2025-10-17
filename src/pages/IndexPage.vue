@@ -1,7 +1,7 @@
 <template>
   <q-page class="page">
     <div class="row justify-center">
-      <div class="project-row row justify-center col-10">
+      <div class="project-row row justify-center col-xs-12 col-md-10">
         <!-- ======= ФОРМА ПРОЕКТА ======= -->
         <div class="project-row__form col-xs-12 col-lg-6">
           <q-form class="project-create col-md-12 col-lg-6" @submit.prevent="editingProject ? saveEditedProject() : addToProjectList()">
@@ -70,7 +70,7 @@
     </div>
     <div class="row justify-center">
       <!-- ======= КОНТЕНТ ПЛАН ======= -->
-      <div class="content-row row col-10">
+      <div class="content-row row col-xs-12 col-md-10">
         <div class="content-row__form  col-xs-12 col-lg-6">
           <q-form class="content-plan-create col-md-12 col-lg-6" @submit.prevent="editingContent ? saveEditedContentPlan() : addToContentList()">
             <div class="area">
