@@ -68,6 +68,7 @@
         </div>
       </div>
     </div>
+
     <div class="row justify-center">
       <!-- ======= КОНТЕНТ ПЛАН ======= -->
       <div class="content-row row col-xs-12 col-md-10">
@@ -146,7 +147,7 @@
                   <td class="text-left">{{ row.index }}</td>
                   <td class="text-left">{{ row.post }}</td>
                   <td class="text-left">{{ row.format }}</td>
-                  <td class="text-left">{{ row.idea }}</td>
+                  <td class="text-left" style="max-width: 260px; word-break: break-word; white-space: normal !important;">{{ row.idea }}</td>
                   <td class="text-left">{{ row.date }}</td>
                   <td class="text-left">
                     <q-btn flat round color="primary" icon="edit" @click="editContentPlan(row)" />
@@ -167,12 +168,15 @@
 import { ref, computed, onMounted } from 'vue'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-
-// 👇 ОБЯЗАТЕЛЬНО: импорт файла шрифта, сгенерированного fontconverter’ом jsPDF
-// Помести Roboto-Regular-normal.js в src/fonts и проверь путь:
+import 'svg2pdf.js'
 import './Roboto-Regular-normal.js'
+import './Roboto-Bold-normal.js'
 
-// ====== ТВОЙ СУЩЕСТВУЮЩИЙ КОД СОСТОЯНИЙ/МЕТОДОВ (без изменений) ======
+// Фон и логотип как raw-SVG (никаких fetch)
+import bgSvgRaw from '../assets/asset7.svg?raw'
+import logoSvgRaw from '../assets/logo.svg?raw'
+
+// ====== состояние/методы ======
 const form = ref({ name: '', phone: '', project: '' })
 const projectRows = ref([])
 const selectedProjectId = ref(null)
@@ -184,7 +188,13 @@ const projectColumns = [
   { phone: 'phone', label: 'Телефон', field: 'phone' },
 ]
 function addToProjectList() {
-  const newRow = { id: Date.now(), name: form.value.name, phone: form.value.phone, project: form.value.project, index: projectRows.value.length + 1 }
+  const newRow = {
+    id: Date.now(),
+    name: form.value.name,
+    phone: form.value.phone,
+    project: form.value.project,
+    index: projectRows.value.length + 1
+  }
   projectRows.value.push(newRow)
   saveProjectsToStorage()
   form.value = { name: '', phone: '', project: '' }
@@ -222,7 +232,15 @@ const columns = [
 ]
 function addToContentList() {
   if (!selectedProjectId.value) { alert('Выберите проект!'); return }
-  const newRow = { id: Date.now(), projectId: selectedProjectId.value, post: contentPlanForm.value.post, format: contentPlanForm.value.format, idea: contentPlanForm.value.idea, date: contentPlanForm.value.date, index: filteredContentPlans.value.length + 1 }
+  const newRow = {
+    id: Date.now(),
+    projectId: selectedProjectId.value,
+    post: contentPlanForm.value.post,
+    format: contentPlanForm.value.format,
+    idea: contentPlanForm.value.idea,
+    date: contentPlanForm.value.date,
+    index: filteredContentPlans.value.length + 1
+  }
   rows.value.push(newRow)
   saveContentToStorage()
   contentPlanForm.value = { post: '', format: '', idea: '', date: '' }
@@ -250,75 +268,133 @@ function loadDataFromStorage() {
 }
 onMounted(() => loadDataFromStorage())
 
-// ====== ВОТ ЭТА ФУНКЦИЯ ИСПРАВЛЯЕТ ЗАГОЛОВКИ (кириллица в head) ======
-function printPage() {
-  if (!selectedProject.value) return
+// ====== helpers ======
+function svgFromRaw(raw) {
+  const div = document.createElement('div')
+  div.innerHTML = raw.trim()
+  const svg = div.querySelector('svg')
+  if (!svg) throw new Error('SVG not found')
+  if (!svg.getAttribute('viewBox')) {
+    const w = parseFloat(svg.getAttribute('width')) || 1000
+    const h = parseFloat(svg.getAttribute('height')) || 1414
+    svg.setAttribute('viewBox', `0 0 ${w} ${h}`)
+  }
+  return svg
+}
 
-  const doc = new jsPDF()
+// ====== ПЕЧАТЬ: pixel-perfect ======
+async function printPage() {
+  if (!selectedProject.value || filteredContentPlans.value.length === 0) return
 
-  // Имя шрифта должно совпадать с addFont(...) внутри Roboto-Regular-normal.js
-  const FONT = 'Roboto-Regular' // чаще всего именно так называется после конвертации
+  // Цвета из макета
+  const NAVY = { r: 31, g: 42, b: 90 }     // #1F2A5A
+  const CYAN = { r: 0, g: 188, b: 212 }    // #00BCD4
 
-  // Устанавливаем шрифт для документа
+  // Базовая сетка A4
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+  const FONT = 'Roboto-Regular'
+  const FONT_BOLD = 'Roboto-Bold'
   doc.setFont(FONT, 'normal')
 
-  // Заголовок
-  doc.setFontSize(18)
-  doc.text(selectedProject.value.project || 'Без названия', 14, 20)
+  const W = doc.internal.pageSize.getWidth()
+  const H = doc.internal.pageSize.getHeight()
 
-  doc.setFontSize(12)
-  doc.text(`Имя (СММ): ${selectedProject.value.name || ''}`, 14, 30)
-  doc.text(`Телефон: ${selectedProject.value.phone || ''}`, 14, 38)
+  // Фон во всю страницу (вектор)
+  await doc.svg(svgFromRaw(bgSvgRaw), { x: 0, y: 0, width: W, height: H })
 
-  // Заголовки и тело таблицы
-  const head = [['#', 'Post', 'Format', 'Idea', 'Date']]
-  const body = filteredContentPlans.value.map(item => [
-    item.index,
+  // ===== Шапка (точные координаты из макета) =====
+  // Логотип: центр, ~26мм ширина, Y=24
+  await doc.svg(svgFromRaw(logoSvgRaw), { x: W/2 - 40, y: 24, width: 80, height: 11 })
+
+  // Текст шапки
+  doc.setFontSize(14)
+  doc.setFont(FONT, 'normal', 'normal')
+
+  // Слева: Brend (y=48), Raqam (y=56)
+  doc.setTextColor(CYAN.r, CYAN.g, CYAN.b);  doc.text('Brend:', 18, 48)
+  doc.setTextColor(0,0,0);                   doc.text(selectedProject.value.project || '', 35, 48)
+
+  doc.setTextColor(CYAN.r, CYAN.g, CYAN.b);  doc.text('Raqam:', 18, 56)
+  doc.setTextColor(0,0,0);                   doc.text(selectedProject.value.phone || '', 37, 56)
+
+  // Справа: F.I.O (y=48)
+  doc.setTextColor(CYAN.r, CYAN.g, CYAN.b);  doc.text('F.I.O:', W - 78, 48)
+  doc.setTextColor(0,0,0);                   doc.text(selectedProject.value.name || '', W - 62, 48)
+
+  // Тонкая линия под шапкой (y=64)
+  doc.setDrawColor(NAVY.r, NAVY.g, NAVY.b)
+  doc.setLineWidth(0.5)
+  doc.line(18, 64, W - 18, 64)
+
+  // Заголовок «KONTENT PLAN»
+  doc.setTextColor(NAVY.r, NAVY.g, NAVY.b)
+  doc.setFontSize(30)
+  doc.setFont(FONT, 'normal', '400')
+  doc.text('KONTENT PLAN', W/2, 82, { align: 'center'})
+
+  // ===== Таблица (в точности по центру, не выходит за страницу) =====
+  // В макете поле слева/справа ≈ 18мм. Держим целевую ширину 162мм (W=210 → 210-2*24 ≈ 162 для визуального баланса)
+  const TARGET_W = 300
+  const maxAllowed = W - 2 * 18
+  const tableWidth = Math.min(TARGET_W, maxAllowed)
+  const left = (W - tableWidth) / 2
+
+  const head = [['№', 'Post', 'Format', 'Idea', 'Sana']]
+  const body = filteredContentPlans.value.map((item, i) => ([
+    String(i + 1),
     item.post || '',
     item.format || '',
     item.idea || '',
     item.date || ''
-  ])
+  ]))
 
   autoTable(doc, {
     head,
     body,
-    startY: 50,
+    startY: 94,                         // под заголовком как в макете
+    tableWidth,
+    margin: { left, right: left },
     theme: 'grid',
-    // Базовые стили для ВСЕХ ячеек
     styles: {
-      font: FONT,
       fontSize: 10,
-      cellPadding: 3,
+      cellPadding: 3.2,
+      lineWidth: 0.28,
+      lineColor: [NAVY.r, NAVY.g, NAVY.b],
+      textColor: [0,0,0],
+      overflow: 'linebreak',
+      valign: 'middle'
     },
-    // Стили заголовка (на всякий случай тоже задаём)
     headStyles: {
-      font: FONT,
-      fontStyle: 'bold',
-      fontSize: 10,
-      fillColor: [33, 150, 243],
-      textColor: 255,
+      font: FONT_BOLD,
+      fontStyle: 'normal',
+      fontSize: 13,
+      fillColor: [NAVY.r, NAVY.g, NAVY.b],
+      textColor: [255,255,255],
+      lineColor: [NAVY.r, NAVY.g, NAVY.b],
+      halign: 'center'
     },
+    // Доли ширины колонок подобраны под картинку
     columnStyles: {
-      0: { cellWidth: 10, halign: 'center' },
-      1: { cellWidth: 40 },
-      2: { cellWidth: 30 },
-      3: { cellWidth: 80 },
-      4: { cellWidth: 30 },
+      0: { cellWidth: tableWidth * 0.07, halign: 'center' }, // №
+      1: { cellWidth: tableWidth * 0.23 },                   // Post
+      2: { cellWidth: tableWidth * 0.12 },                   // Format
+      3: { cellWidth: tableWidth * 0.38 },                   // Idea
+      4: { cellWidth: tableWidth * 0.20, halign: 'center' },  // Sana
     },
-    // 🛠 КРИТИЧЕСКО: насильно проставляем шрифт для head,
-    // т.к. у некоторых версий автотаблицы он может игнорироваться
-    didParseCell: (data) => {
-      data.cell.styles.font = FONT
-    }
+    didParseCell: (data) => { data.cell.styles.font = FONT },
+    didDrawPage: () => {
+      // Футер как в макете
+      doc.setTextColor(0,0,0)
+      doc.setFontSize(11)
+      doc.text('@kh.agency', 18, H - 12)
+      doc.text('+998 20 010 20 20', W - 18, H - 12, { align: 'right' })
+    },
+    pageBreak: 'auto',
+    rowPageBreak: 'auto',
+    // Чуть уменьшаем высоту строк, чтобы визуально совпало
+    bodyStyles: { minCellHeight: 10.2 }
   })
 
-  // Подвал
-  const pageHeight = doc.internal.pageSize.getHeight()
-  doc.setFontSize(10)
-  doc.text('KH Marketing Agency — контент-план', 14, pageHeight - 10)
-
-  // Сохранение
   doc.save(`${selectedProject.value.project || 'project'}_content_plan.pdf`)
 }
 </script>
@@ -329,27 +405,11 @@ function printPage() {
   border-radius: 10px;
   margin: 10px 0 10px 0;
 }
+.title { font-size: 25px; text-align: center; padding: 10px 0; }
+.project-create { padding: 10px; }
+.content-plan-create { padding: 10px; }
+.input { margin: 10px; }
 
-.title {
-  font-size: 25px;
-  text-align: center;
-  padding: 10px 0;
-}
-.project-create {
-  padding: 10px;
-}
-.content-plan-create {
-  padding: 10px;
-}
-.input {
-  margin: 10px;
-}
-
-.project-row__list,
-.content-row__list {
-  padding: 10px;
-}
-.selected-row {
-  background-color: #d0f0d0 !important;
-}
+.project-row__list, .content-row__list { padding: 10px; }
+.selected-row { background-color: #d0f0d0 !important; }
 </style>
