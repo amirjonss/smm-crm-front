@@ -171,7 +171,7 @@ import autoTable from 'jspdf-autotable'
 import 'svg2pdf.js'
 import './Roboto-Regular-normal.js'
 import './Roboto-Bold-normal.js'
-
+import { useUserStore } from 'stores/user.js'
 // Фон и логотип как raw-SVG (никаких fetch)
 import bgSvgRaw from '../assets/asset7.svg?raw'
 import logoSvgRaw from '../assets/logo.svg?raw'
@@ -181,6 +181,7 @@ const form = ref({ name: '', phone: '', project: '' })
 const projectRows = ref([])
 const selectedProjectId = ref(null)
 const editingProject = ref(null)
+const user = useUserStore();
 const projectColumns = [
   { index: 'index', label: '#', field: 'index' },
   { project: 'project', label: 'Проект', field: 'project' },
@@ -188,6 +189,7 @@ const projectColumns = [
   { phone: 'phone', label: 'Телефон', field: 'phone' },
 ]
 function addToProjectList() {
+  user.fetchUser()
   const newRow = {
     id: Date.now(),
     name: form.value.name,
