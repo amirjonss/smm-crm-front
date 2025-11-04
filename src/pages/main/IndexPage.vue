@@ -184,7 +184,7 @@
                   round
                   color="black"
                   icon="picture_as_pdf"
-                  v-if="selectedProjectId && filteredContentPlans.length > 0"
+                  v-if="selectedProjectId"
                   @click="printPage"
                 />
               </div>
@@ -306,7 +306,7 @@ function fetchProject() {
   })
 }
 const selectedProject = computed(
-  () => projectRows.value.find((p) => p.id === selectedProjectId.value) || null,
+  () => projectStore.getProjects.find((p) => p.id === selectedProjectId.value) || null,
 )
 
 watch(selectedProjectId, async () => {
@@ -341,7 +341,7 @@ function addToContentList() {
     date: contentPlanForm.value.date,
   }
   contentPlanStore.createContentPlan(newRow).then(() => {
-    contentPlanStore.fetchContentPlan()
+    contentPlanStore.fetchContentPlan(selectedProjectId.value)
   })
   contentPlanForm.value = { post: '', format: '', idea: '', date: '', id: null }
 }
@@ -371,9 +371,6 @@ function deleteContentPlan(id) {
     contentPlanStore.fetchContentPlan()
   })
 }
-const filteredContentPlans = computed(() =>
-  rows.value.filter((r) => r.projectId === selectedProjectId.value),
-)
 function loadDataFromStorage() {
   const savedProjects = localStorage.getItem('projects')
   const savedContent = localStorage.getItem('contentPlans')
@@ -382,9 +379,7 @@ function loadDataFromStorage() {
 }
 onMounted(() => {
   loadDataFromStorage()
-  projectStore.fetchProjects().then(() => {
-    console.log(projectStore.getProjects, 'prij')
-  })
+  projectStore.fetchProjects()
 })
 
 // ====== helpers ======
@@ -401,15 +396,10 @@ function svgFromRaw(raw) {
   return svg
 }
 
-// ====== ПЕЧАТЬ: pixel-perfect ======
 async function printPage() {
-  if (!selectedProject.value || filteredContentPlans.value.length === 0) return
-
-  // Цвета из макета
   const NAVY = { r: 31, g: 42, b: 90 } // #1F2A5A
   const CYAN = { r: 0, g: 188, b: 212 } // #00BCD4
 
-  // Базовая сетка A4
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
   const FONT = 'Roboto-Regular'
   const FONT_BOLD = 'Roboto-Bold'
@@ -418,59 +408,49 @@ async function printPage() {
   const W = doc.internal.pageSize.getWidth()
   const H = doc.internal.pageSize.getHeight()
 
-  // Фон во всю страницу (вектор)
   await doc.svg(svgFromRaw(bgSvgRaw), { x: 0, y: 0, width: W, height: H })
 
-  // ===== Шапка (точные координаты из макета) =====
-  // Логотип: центр, ~26мм ширина, Y=24
   await doc.svg(svgFromRaw(logoSvgRaw), { x: W / 2 - 40, y: 24, width: 80, height: 11 })
 
-  // Текст шапки
   doc.setFontSize(14)
   doc.setFont(FONT, 'normal', 'normal')
 
-  // Слева: Brend (y=48), Raqam (y=56)
   doc.setTextColor(CYAN.r, CYAN.g, CYAN.b)
   doc.text('Brend:', 18, 48)
   doc.setTextColor(0, 0, 0)
-  doc.text(selectedProject.value.project || '', 35, 48)
+  doc.text(selectedProject.value.name || '', 35, 48)
 
   doc.setTextColor(CYAN.r, CYAN.g, CYAN.b)
   doc.text('Raqam:', 18, 56)
   doc.setTextColor(0, 0, 0)
   doc.text(selectedProject.value.phone || '', 37, 56)
 
-  // Справа: F.I.O (y=48)
   doc.setTextColor(CYAN.r, CYAN.g, CYAN.b)
   doc.text('F.I.O:', W - 78, 48)
   doc.setTextColor(0, 0, 0)
   doc.text(selectedProject.value.name || '', W - 62, 48)
 
-  // Тонкая линия под шапкой (y=64)
   doc.setDrawColor(NAVY.r, NAVY.g, NAVY.b)
   doc.setLineWidth(0.5)
   doc.line(18, 64, W - 18, 64)
 
-  // Заголовок «KONTENT PLAN»
   doc.setTextColor(NAVY.r, NAVY.g, NAVY.b)
   doc.setFontSize(30)
   doc.setFont(FONT, 'normal', '400')
   doc.text('KONTENT PLAN', W / 2, 82, { align: 'center' })
 
-  // ===== Таблица (в точности по центру, не выходит за страницу) =====
-  // В макете поле слева/справа ≈ 18мм. Держим целевую ширину 162мм (W=210 → 210-2*24 ≈ 162 для визуального баланса)
   const TARGET_W = 300
   const maxAllowed = W - 2 * 18
   const tableWidth = Math.min(TARGET_W, maxAllowed)
   const left = (W - tableWidth) / 2
 
   const head = [['№', 'Post', 'Format', 'Idea', 'Sana']]
-  const body = filteredContentPlans.value.map((item, i) => [
+  const body = contentPlanStore.getContentPlans.map((item, i) => [
     String(i + 1),
     item.post || '',
     item.format || '',
     item.idea || '',
-    item.date || '',
+    item.date.slice(0, 10) || '',
   ])
 
   autoTable(doc, {

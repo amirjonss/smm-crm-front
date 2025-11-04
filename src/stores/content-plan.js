@@ -42,10 +42,10 @@ export const useContentPlanStore = defineStore('content-plan', {
           })
       })
     },
-    fetchContentPlan(id) {
+    fetchContentPlan(projectId) {
       return new Promise((resolve, reject) => {
         api
-          .get('/content_plans?project.id=' + id)
+          .get('/content_plans?project.id=' + projectId)
           .then((response) => {
             this.contentPlans.totalItems = response.data.totalItems
             this.contentPlans.items = response.data.member

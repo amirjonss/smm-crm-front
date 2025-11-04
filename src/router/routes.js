@@ -6,8 +6,16 @@ function isAuthorised() {
     return { path: '/login' }
   }
 }
-function isAdmin() {
-  if(!useUserStore().isAdmin) {
+async function isAdmin() {
+  const user = useUserStore()
+  if (!user.loaded) {
+    try {
+      await user.fetchUser({})
+    } catch {
+      return { path: '/login' }
+    }
+  }
+  if (!user.isAdmin) {
     return { path: '/login' }
   }
 }
@@ -25,7 +33,9 @@ const routes = [
   {
     path: '/dashboard',
     component: () => import('layouts/DashboardLayout.vue'),
-    children: [{ path: '', component: () => import('pages/dashboard/DashboardPage.vue') }],
+    children: [
+      { path: '', component: () => import('pages/dashboard/HomePage.vue') },
+    ],
     beforeEnter: [isAuthorised, isAdmin],
   },
   {

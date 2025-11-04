@@ -8,6 +8,7 @@ import { useUserStore } from 'stores/user.js'
 const userStore = useUserStore()
 
 onMounted(() => {
+  console.log('2')
   userStore.fetchUser()
 })
 </script>

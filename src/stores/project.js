@@ -56,6 +56,20 @@ export const useProjectStore = defineStore('project', {
           })
       })
     },
+    fetchProjectsByUser(userId) {
+      return new Promise((resolve, reject) => {
+        api
+          .get('/projects?executor.id=' + userId)
+          .then((response) => {
+            this.projects.totalItems = response.data.totalItems
+            this.projects.items = response.data.member
+            resolve()
+          })
+          .catch((e) => {
+            reject(e, 'error during the fetching project')
+          })
+      })
+    },
     deleteProject(id) {
       return new Promise((resolve, reject) => {
         api
@@ -68,6 +82,10 @@ export const useProjectStore = defineStore('project', {
             reject(e, 'there is an error during the deletion')
           })
       })
+    },
+    clearProjects() {
+      this.projects.totalItems = 0
+      this.projects.items = null
     }
   },
 })
