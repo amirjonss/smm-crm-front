@@ -3,17 +3,25 @@ import { api } from 'boot/axios.js'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
-    accessToken: null,
-    refreshToken: null,
+    user: {
+      id: null,
+      email: null,
+      roles: [],
+      createdAt: null,
+      updatedAt: null,
+      updatedBy: null,
+      givenName: null,
+      familyName: null
+    }
   }),
 
   getters: {
-    getAccessToken(state) {
-      return state.accessToken
+    getUser(state) {
+      return state.user
     },
-    getRefreshToken(state) {
-      return state.refreshToken
-    },
+    isAdmin(state) {
+      return state.user.roles.includes("ROLE_ADMIN")
+    }
   },
 
   actions: {
@@ -21,7 +29,9 @@ export const useUserStore = defineStore('user', {
       return new Promise((resolve, reject) => {
         api
           .post('/users/about_me', data)
-          .then(() => {
+          .then((response) => {
+            this.user = response.data
+            console.log(this.user, 'user')
             resolve()
           })
           .catch((e) => {

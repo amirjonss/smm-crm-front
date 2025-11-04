@@ -241,10 +241,9 @@ import autoTable from 'jspdf-autotable'
 import 'svg2pdf.js'
 import './Roboto-Regular-normal.js'
 import './Roboto-Bold-normal.js'
-// import { useUserStore } from 'stores/user.js'
 import { useProjectStore } from 'stores/project.js'
-import bgSvgRaw from '../assets/asset7.svg?raw'
-import logoSvgRaw from '../assets/logo.svg?raw'
+import bgSvgRaw from 'assets/asset7.svg?raw'
+import logoSvgRaw from 'assets/logo.svg?raw'
 import { useContentPlanStore } from 'stores/content-plan.js'
 
 // ====== состояние/методы ======

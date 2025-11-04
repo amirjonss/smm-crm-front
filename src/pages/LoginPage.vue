@@ -42,6 +42,7 @@
 import { reactive } from 'vue'
 import {useAuthStore} from 'stores/auth.js'
 import {useRouter} from "vue-router";
+import { useUserStore } from 'stores/user.js'
 
 export default {
   setup () {
@@ -49,6 +50,7 @@ export default {
       email: '',
       password: ''
     })
+    const userStore = useUserStore()
 
     const user = useAuthStore()
     const router = useRouter()
@@ -57,7 +59,13 @@ export default {
       form,
       auth() {
         user.fetchToken(form).then(() => {
-          router.push('/')
+          userStore.fetchUser().then(() => {
+            if (userStore.isAdmin) {
+              router.push('/dashboard')
+            } else {
+              router.push('/')
+            }
+          })
         }).catch((e) => {
           console.log(e)
         })
