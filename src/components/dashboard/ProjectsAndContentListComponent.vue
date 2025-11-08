@@ -35,7 +35,6 @@
                         : (selectedProjectId = item.id)
                     "
                   />
-                  <q-btn flat round color="red" icon="delete" @click="deleteProject(item.id)" />
                 </td>
               </tr>
             </tbody>
@@ -62,9 +61,6 @@
                 <td class="text-left">{{ item.format }}</td>
                 <td class="text-left">{{ item.idea }}</td>
                 <td class="text-left">{{ item.date.slice(0, 10) }}</td>
-                <td class="text-left">
-                  <q-btn flat round color="red" icon="delete" @click="deleteContentPlan(item.id)" />
-                </td>
               </tr>
             </tbody>
           </q-markup-table>
@@ -104,20 +100,7 @@ const contentPlanColumns = [
   { name: 'Формат' },
   { name: 'Идея' },
   { name: 'Дата' },
-  { name: 'Действие' },
 ]
-
-function deleteProject(id) {
-  projectStore.deleteProject(id).then(() => {
-    projectStore.fetchProjects()
-  })
-}
-
-function deleteContentPlan(id) {
-  contentPlanStore.deleteContentPlan(id).then(() => {
-    contentPlanStore.fetchContentPlan(selectedProjectId.value)
-  })
-}
 watch(selectedProjectId, () => {
   if (selectedProjectId.value != null) {
     contentPlanStore.fetchContentPlan(selectedProjectId.value)
