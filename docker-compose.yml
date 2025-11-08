@@ -3,16 +3,16 @@ version: '3'
 services:
   node:
     container_name: ${DOCKER_PROJECT_NAME}_node
-    image: node:16.12-buster
+    image: node:20-bullseye
+    working_dir: /var/www/html
     volumes:
       - ./:/var/www/html
-    working_dir: /var/www/html
     command: /bin/sh -c "
       npm i -g @quasar/cli &&
       echo 'npm version:' &&
       npm -v &&
       echo 'node version:' &&
       node -v &&
-      echo '-----------' &&
+      echo '--------------' &&
       npm install &&
       quasar build"
