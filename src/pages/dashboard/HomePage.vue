@@ -77,7 +77,7 @@
                   round
                   color="red"
                   icon="delete"
-                  @click="deleteUser(row.id)"
+                  @click="confirmUserDeletion(row)"
                 />
               </td>
             </tr>
@@ -93,6 +93,7 @@
 import { onMounted, ref } from 'vue'
 import { useUserStore } from 'stores/user.js'
 import ProjectsAndContentListComponent from 'components/dashboard/ProjectsAndContentListComponent.vue'
+import { useQuasar } from 'quasar'
 
 const userStore = useUserStore()
 const userForm = ref({
@@ -104,6 +105,8 @@ const isLoading = ref(false)
 const selectedUserId = ref(null)
 const columns = [{ label: '№' }, { label: 'Имя' }, { label: 'Фамилия' }, { label: 'email' }, { label: 'Действие' }]
 const editingUserId = ref(null)
+const q = useQuasar()
+
 function createUser() {
   isLoading.value = true
   if (editingUserId.value) {
@@ -113,6 +116,18 @@ function createUser() {
       isLoading.value = false
       userStore.fetchUsers()
       clearForm()
+      q.notify({
+        message: 'Пользователь успешно создан',
+        type: 'positive'
+      })
+    }).catch((e) => {
+      isLoading.value = false
+      console.log(e)
+      q.notify({
+        message: 'Такой email уже существует',
+        type: 'negative',
+        timeout: 80
+      })
     })
   }
 }
@@ -137,6 +152,10 @@ function saveEditedUser() {
   userStore.patchUser(userForm.value, editingUserId.value).then(() => {
     userStore.fetchUsers().then(() => {
       isLoading.value = false
+      q.notify({
+        message: 'Пользователь успешно изменен',
+        type: 'positive'
+      })
     })
   })
   clearForm()
@@ -149,6 +168,17 @@ function clearForm() {
 function deleteUser(id) {
   userStore.deleteUser(id).then(() => {
     userStore.fetchUsers()
+  })
+}
+function confirmUserDeletion(user) {
+  q.dialog({
+    title: 'Внимание',
+    message: 'Вы действительно хотите удалить проект ' + '<strong>' + user.givenName + '</strong>',
+    cancel: true,
+    color: 'red',
+    html: true
+  }).onOk(() => {
+    deleteUser(user.id)
   })
 }
 onMounted(() => {

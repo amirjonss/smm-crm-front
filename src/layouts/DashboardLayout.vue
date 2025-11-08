@@ -1,8 +1,8 @@
 <template>
   <div>
     <q-layout view="hHh Lpr lff" class="shadow-2">
-      <header-component v-model:drawer="drawer"/>
-      <sidebar-component v-model="drawer"/>
+      <dashboard-header-component v-model:drawer="drawer"/>
+<!--      <sidebar-component v-model="drawer"/>-->
 
       <q-page-container>
         <router-view />
@@ -13,8 +13,8 @@
 
 <script setup>
 import { ref } from 'vue'
-import HeaderComponent from 'components/dashboard/HeaderComponent.vue'
-import SidebarComponent from 'components/dashboard/SidebarComponent.vue'
+import DashboardHeaderComponent from 'components/dashboard/DashboardHeaderComponent.vue'
+// import SidebarComponent from 'components/dashboard/SidebarComponent.vue'
 
-const drawer = ref(false)
+const drawer = ref(true)
 </script>

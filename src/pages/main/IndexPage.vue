@@ -85,7 +85,7 @@
                         @click="selectProject(row.id)"
                       />
                       <q-btn flat round color="primary" icon="edit" @click="editProject(row)" />
-                      <q-btn flat round color="red" icon="delete" @click="deleteProject(row.id)" />
+                      <q-btn flat round color="red" icon="delete" @click="confirmProjectDeletion(row)" />
                     </td>
                   </tr>
                 </tbody>
@@ -220,7 +220,7 @@
                         round
                         color="red"
                         icon="delete"
-                        @click="deleteContentPlan(row.id)"
+                        @click="confirmContentPlanDeletion(row.id)"
                       />
                     </td>
                   </tr>
@@ -253,7 +253,9 @@ const selectedProjectId = ref(null)
 const editingProject = ref(null)
 const projectStore = useProjectStore()
 const contentPlanStore = useContentPlanStore()
+import { useQuasar } from 'quasar'
 
+const q = useQuasar()
 const projectColumns = [
   { index: 'index', label: '#', field: 'index' },
   { project: 'project', label: 'Проект', field: 'project' },
@@ -264,6 +266,10 @@ function addToProjectList() {
   projectStore.createProject(form.value)
     .then(() => {
       projectStore.fetchProjects()
+      q.notify({
+        message: 'Проект успешно создан',
+        type: 'positive'
+      })
     })
   form.value = { name: '', phone: '' }
 }
@@ -289,6 +295,10 @@ function saveEditedProject() {
   console.log(selectedProjectId)
   projectStore.patchProject(form.value, selectedProjectId.value).then(() => {
     projectStore.fetchProjects()
+    q.notify({
+      message: 'Проект успешно изменено',
+      type: 'positive'
+    })
   })
   editingProject.value = null
   form.value = { name: '', phone: ''}
@@ -297,6 +307,10 @@ function saveEditedProject() {
 function deleteProject(id) {
   projectStore.deleteProject(id).then(() => {
     projectStore.fetchProjects()
+    q.notify({
+      message: 'Проект успешно удалено',
+      type: 'positive'
+    })
   })
 }
 
@@ -342,6 +356,10 @@ function addToContentList() {
   }
   contentPlanStore.createContentPlan(newRow).then(() => {
     contentPlanStore.fetchContentPlan(selectedProjectId.value)
+    q.notify({
+      message: 'Контент-план успешно создан',
+      type: 'positive'
+    })
   })
   contentPlanForm.value = { post: '', format: '', idea: '', date: '', id: null }
 }
@@ -362,13 +380,21 @@ function saveEditedContentPlan() {
     idea: contentPlanForm.value.idea,
   }, editingContent.value.id).then(() => {
     contentPlanStore.fetchContentPlan(selectedProjectId.value)
+    q.notify({
+      message: 'Контент-план успешно изменено',
+      type: 'positive'
+    })
   })
   editingContent.value = null
   contentPlanForm.value = { post: '', format: '', idea: '', date: '' }
 }
 function deleteContentPlan(id) {
   contentPlanStore.deleteContentPlan(id).then(() => {
-    contentPlanStore.fetchContentPlan()
+    contentPlanStore.fetchContentPlan(selectedProjectId.value)
+    q.notify({
+      message: 'Контент-план успешно удалено',
+      type: 'positive'
+    })
   })
 }
 function loadDataFromStorage() {
@@ -377,6 +403,31 @@ function loadDataFromStorage() {
   if (savedProjects) projectRows.value = JSON.parse(savedProjects)
   if (savedContent) rows.value = JSON.parse(savedContent)
 }
+
+function confirmProjectDeletion(project) {
+  q.dialog({
+    title: 'Внимание',
+    message: 'Вы действительно хотите удалить проект ' + '<strong>' + project.name + '</strong>',
+    cancel: true,
+    color: 'red',
+    html: true
+  }).onOk(() => {
+    deleteProject(project.id)
+  })
+}
+
+function confirmContentPlanDeletion(contentPlanId) {
+  q.dialog({
+    title: 'Внимание',
+    message: 'Вы действительно хотите удалить контент план ',
+    cancel: true,
+    color: 'red',
+    html: true
+  }).onOk(() => {
+    deleteContentPlan(contentPlanId)
+  })
+}
+
 onMounted(() => {
   loadDataFromStorage()
   projectStore.fetchProjects()

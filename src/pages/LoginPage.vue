@@ -16,17 +16,17 @@
           type="email"
           :rules="[ val => val && val.length > 0 || 'Заполните Форму']"
         />
-
-        <q-input
-          outlined
-          type="password"
-          v-model="form.password"
-          label="password"
-          lazy-rules
-          :rules="[
+        <q-input label="password" lazy-rules outlined v-model="form.password"  :type="isPwd ? 'password' : 'text'" :rules="[
           val => val.length > 0 || 'Заполните Форму'
-        ]"
-        />
+        ]">
+          <template v-slot:append>
+            <q-icon
+              :name="isPwd ? 'visibility_off' : 'visibility'"
+              class="cursor-pointer"
+              @click="isPwd = !isPwd"
+            />
+          </template>
+        </q-input>
 
         <div class="flex justify-end">
           <q-btn label="Войти" type="submit" color="primary"/>
@@ -38,40 +38,37 @@
 
 </template>
 
-<script>
-import { reactive } from 'vue'
+<script setup>
+import { reactive, ref } from 'vue'
 import {useAuthStore} from 'stores/auth.js'
 import {useRouter} from "vue-router";
 import { useUserStore } from 'stores/user.js'
-
-export default {
-  setup () {
-    const form = reactive({
-      email: '',
-      password: ''
-    })
-    const userStore = useUserStore()
-
-    const user = useAuthStore()
-    const router = useRouter()
-
-    return {
-      form,
-      auth() {
-        user.fetchToken(form).then(() => {
-          userStore.fetchUser().then(() => {
-            if (userStore.isAdmin) {
-              router.push('/dashboard')
-            } else {
-              router.push('/')
-            }
-          })
-        }).catch((e) => {
-          console.log(e)
-        })
+import { useQuasar } from 'quasar'
+const form = reactive({
+  email: '',
+  password: ''
+})
+const userStore = useUserStore()
+const user = useAuthStore()
+const router = useRouter()
+const q = useQuasar()
+const isPwd = ref(true)
+function auth() {
+  user.fetchToken(form).then(() => {
+    userStore.fetchUser().then(() => {
+      if (userStore.isAdmin) {
+        router.push('/dashboard')
+      } else {
+        router.push('/')
       }
-    }
-  }
+    })
+  }).catch((e) => {
+    console.log(e)
+    q.notify({
+      message: 'Пароль или логин не правильный',
+      type: 'negative'
+    })
+  })
 }
 </script>
 
