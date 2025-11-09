@@ -2,7 +2,7 @@
   <q-header elevated>
     <q-toolbar class="bg-grey-14 text-right">
       <q-toolbar-title class="title">{{
-        userStore.getUser?.familyName?.slice(0, 1) + ' ' + userStore.getUser.givenName
+          shortName
       }}</q-toolbar-title>
 
       <q-btn flat round dense icon="logout" @click="logout">
@@ -21,10 +21,21 @@
 import { useUserStore } from 'stores/user.js'
 import { useAuthStore } from 'stores/auth.js'
 import { useRouter } from 'vue-router'
+import { computed } from 'vue'
 
 const authStore = useAuthStore()
 const userStore = useUserStore()
 const router = useRouter()
+
+const shortName = computed(() => {
+  const user = userStore.getUser
+  if (!user) return ''
+
+  const f = user.familyName ? user.familyName.slice(0, 1) : ''
+  const g = user.givenName || ''
+
+  return `${f} ${g}`.trim()
+})
 function logout() {
   authStore.clearTokens()
   router.push('/login')
