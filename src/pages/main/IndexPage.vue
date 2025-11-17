@@ -244,6 +244,7 @@ import './Roboto-Bold-normal.js'
 import { useProjectStore } from 'stores/project.js'
 import bgSvgRaw from 'assets/asset7.svg?raw'
 import logoSvgRaw from 'assets/logo.svg?raw'
+import { useQuasar } from 'quasar'
 import { useContentPlanStore } from 'stores/content-plan.js'
 
 // ====== состояние/методы ======
@@ -253,8 +254,6 @@ const selectedProjectId = ref(null)
 const editingProject = ref(null)
 const projectStore = useProjectStore()
 const contentPlanStore = useContentPlanStore()
-import { useQuasar } from 'quasar'
-
 const q = useQuasar()
 const projectColumns = [
   { index: 'index', label: '#', field: 'index' },
@@ -262,6 +261,18 @@ const projectColumns = [
   { name: 'name', label: 'Имя (СММ)', field: 'name' },
   { phone: 'phone', label: 'Телефон', field: 'phone' },
 ]
+
+function getFullName(project) {
+  let givenName = project.createdBy.givenName
+  let familyName = null
+  if (project.createdBy.familyName) {
+    familyName = project.createdBy.familyName
+  } else {
+    familyName = ''
+  }
+  return givenName + ' ' + familyName
+}
+
 function addToProjectList() {
   projectStore.createProject(form.value)
     .then(() => {
@@ -479,7 +490,7 @@ async function printPage() {
   doc.setTextColor(CYAN.r, CYAN.g, CYAN.b)
   doc.text('F.I.O:', W - 78, 48)
   doc.setTextColor(0, 0, 0)
-  doc.text(selectedProject.value.name || '', W - 62, 48)
+  doc.text(getFullName(selectedProject.value) || '', W - 62, 48)
 
   doc.setDrawColor(NAVY.r, NAVY.g, NAVY.b)
   doc.setLineWidth(0.5)
@@ -532,9 +543,9 @@ async function printPage() {
     // Доли ширины колонок подобраны под картинку
     columnStyles: {
       0: { cellWidth: tableWidth * 0.07, halign: 'center' }, // №
-      1: { cellWidth: tableWidth * 0.23 }, // Post
-      2: { cellWidth: tableWidth * 0.12 }, // Format
-      3: { cellWidth: tableWidth * 0.38 }, // Idea
+      1: { cellWidth: tableWidth * 0.38 }, // Post
+      2: { cellWidth: tableWidth * 0.15 }, // Format
+      3: { cellWidth: tableWidth * 0.20 }, // Idea
       4: { cellWidth: tableWidth * 0.2, halign: 'center' }, // Sana
     },
     didParseCell: (data) => {
