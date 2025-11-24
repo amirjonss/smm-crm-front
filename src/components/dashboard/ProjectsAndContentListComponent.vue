@@ -29,11 +29,7 @@
                     round
                     color="primary"
                     icon="info"
-                    @click="
-                      item.id === selectedProjectId
-                        ? (selectedProjectId = null)
-                        : (selectedProjectId = item.id)
-                    "
+                    @click="setProject(item)"
                   />
                 </td>
               </tr>
@@ -44,7 +40,10 @@
     </div>
     <div class="content-plan-row col-xs-12 col-sm-12 col-md-8 col-lg-6 q-pa-md">
       <div class="content-plan-row__list area row q-pa-lg">
-        <div class="col-12 title text-h5 text-center q-pb-lg">Список Контент Планов</div>
+        <div class="col-12 title row justify-between text-h5 text-center q-pb-lg">
+          <div>Список Контент Планов</div>
+          <pdf-printer-component :selected-project-id="selectedProjectId" :selected-project="selectedProject" :content-plans="contentPlanStore.getContentPlans"/>
+        </div>
         <div class="col-12">
           <q-markup-table>
             <thead>
@@ -74,11 +73,13 @@
 import { ref, watch, defineProps } from 'vue'
 import { useProjectStore } from 'stores/project.js'
 import { useContentPlanStore } from 'stores/content-plan.js'
+import PdfPrinterComponent from 'components/PdfPrinterComponent.vue'
 
 const projectStore = useProjectStore()
 const contentPlanStore = useContentPlanStore()
 const selectedProjectId = ref(null)
 const selectedUserId = ref(null)
+const selectedProject = ref(null)
 const props = defineProps({
   parentSelectedUserId: {
     default: null
@@ -101,6 +102,17 @@ const contentPlanColumns = [
   { name: 'Идея' },
   { name: 'Дата' },
 ]
+
+function setProject(project) {
+  if (project.id === selectedProjectId.value) {
+    selectedProjectId.value = null
+    selectedProject.value = null
+  } else {
+    selectedProjectId.value = project.id
+    selectedProject.value = project
+  }
+}
+
 watch(selectedProjectId, () => {
   if (selectedProjectId.value != null) {
     contentPlanStore.fetchContentPlan(selectedProjectId.value)
