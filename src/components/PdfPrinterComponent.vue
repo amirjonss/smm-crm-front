@@ -68,34 +68,34 @@ async function printPage() {
 
   await doc.svg(svgFromRaw(bgSvgRaw), { x: 0, y: 0, width: W, height: H })
 
-  await doc.svg(svgFromRaw(logoSvgRaw), { x: W / 2 - 40, y: 24, width: 80, height: 11 })
+  await doc.svg(svgFromRaw(logoSvgRaw), { x: W / 2 - 40, y: 5, width: 80, height: 11 })
 
   doc.setFontSize(14)
   doc.setFont(FONT, 'normal', 'normal')
 
   doc.setTextColor(CYAN.r, CYAN.g, CYAN.b)
-  doc.text('Brend:', 18, 48)
+  doc.text('Brend:', 18, 29)
   doc.setTextColor(0, 0, 0)
-  doc.text(props.selectedProject.name || '', 35, 48)
+  doc.text(props.selectedProject.name || '', 35, 29)
 
   doc.setTextColor(CYAN.r, CYAN.g, CYAN.b)
-  doc.text('Raqam:', 18, 56)
+  doc.text('Raqam:', 18, 37)
   doc.setTextColor(0, 0, 0)
-  doc.text(props.selectedProject.phone || '', 37, 56)
+  doc.text(props.selectedProject.phone || '', 37, 56 - 19)
 
   doc.setTextColor(CYAN.r, CYAN.g, CYAN.b)
-  doc.text('F.I.O:', W - 78, 48)
+  doc.text('F.I.O:', W - 78, 29)
   doc.setTextColor(0, 0, 0)
-  doc.text(getFullName(props.selectedProject) || '', W - 62, 48)
+  doc.text(getFullName(props.selectedProject) || '', W - 62, 29)
 
   doc.setDrawColor(NAVY.r, NAVY.g, NAVY.b)
   doc.setLineWidth(0.5)
-  doc.line(18, 64, W - 18, 64)
+  doc.line(18, 45, W - 18, 45)
 
   doc.setTextColor(NAVY.r, NAVY.g, NAVY.b)
   doc.setFontSize(30)
   doc.setFont(FONT, 'normal', '400')
-  doc.text('KONTENT PLAN', W / 2, 82, { align: 'center' })
+  doc.text('KONTENT PLAN', W / 2, 63, { align: 'center' })
 
   const TARGET_W = 300
   const maxAllowed = W - 2 * 18
@@ -114,7 +114,7 @@ async function printPage() {
   autoTable(doc, {
     head,
     body,
-    startY: 94, // под заголовком как в макете
+    startY: 94 - 19, // под заголовком как в макете
     tableWidth,
     margin: { left, right: left },
     theme: 'grid',
@@ -139,9 +139,9 @@ async function printPage() {
     // Доли ширины колонок подобраны под картинку
     columnStyles: {
       0: { cellWidth: tableWidth * 0.07, halign: 'center' }, // №
-      1: { cellWidth: tableWidth * 0.38 }, // Post
+      1: { cellWidth: tableWidth * 0.20 }, // Post
       2: { cellWidth: tableWidth * 0.15 }, // Format
-      3: { cellWidth: tableWidth * 0.20 }, // Idea
+      3: { cellWidth: tableWidth * 0.38 }, // Idea
       4: { cellWidth: tableWidth * 0.2, halign: 'center' }, // Sana
     },
     didParseCell: (data) => {
