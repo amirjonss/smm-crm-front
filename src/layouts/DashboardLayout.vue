@@ -1,20 +1,23 @@
 <template>
-  <div>
-    <q-layout view="hHh Lpr lff" class="shadow-2">
-      <dashboard-header-component v-model:drawer="drawer"/>
-<!--      <sidebar-component v-model="drawer"/>-->
-
-      <q-page-container>
-        <router-view />
-      </q-page-container>
-    </q-layout>
-  </div>
+  <q-layout view="hHh Lpr lff" class="dashboard-layout">
+    <dashboard-header-component />
+    <q-page-container class="page-bg">
+      <router-view />
+    </q-page-container>
+  </q-layout>
 </template>
 
 <script setup>
-import { ref } from 'vue'
 import DashboardHeaderComponent from 'components/dashboard/DashboardHeaderComponent.vue'
-// import SidebarComponent from 'components/dashboard/SidebarComponent.vue'
-
-const drawer = ref(true)
 </script>
+
+<style scoped>
+.dashboard-layout {
+  background: var(--bg-primary);
+}
+
+.page-bg {
+  background: var(--bg-secondary);
+  min-height: calc(100vh - 64px);
+}
+</style>

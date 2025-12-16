@@ -5,10 +5,13 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useUserStore } from 'stores/user.js'
+import { useThemeStore } from 'stores/theme.js'
+
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 
 onMounted(() => {
-  console.log('2')
+  themeStore.initTheme()
   userStore.fetchUser()
 })
 </script>

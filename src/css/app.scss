@@ -1,3 +1,338 @@
+// Global styles for the CRM application
+// Modern, minimalistic design
+
+* {
+  box-sizing: border-box;
+}
+
 body {
-  background: url("data:image/svg+xml,<svg id='patternId' width='100%' height='100%' xmlns='http://www.w3.org/2000/svg'><defs><pattern id='a' patternUnits='userSpaceOnUse' width='50' height='33.333' patternTransform='scale(2) rotate(0)'><rect x='0' y='0' width='100%' height='100%' fill='%23000000ff'/><path d='M25 .806v2.79h.8V.806Zm0 4.465v2.791h.8v-2.79Zm-2.043 3.902-2.32 1.55.444.665 2.32-1.55-.443-.665zm4.885 0-.444.665 2.32 1.55.445-.665zM-.4 10.61v2.79h.8v-2.79zm50 0v2.79h.8v-2.79zm-30.356 1.042-2.32 1.55.443.666 2.322-1.55-.444-.666zm12.311 0-.444.665 2.32 1.55.445-.664zm3.783 2.566-.444.666 2.321 1.55.444-.666zm-19.852.025-2.32 1.55.444.665 2.32-1.55zm-15.886.77v2.79h.8v-2.79Zm50 0v2.79h.8v-2.79Zm-50 4.465v2.79h.8v-2.79h-.8Zm50 0v2.79h.8v-2.79h-.8zM2.442 23.379l-.444.665 2.32 1.55.445-.665zm45.115 0-2.32 1.55.443.666 2.322-1.55-.444-.666zM6.155 25.86l-.444.665 2.32 1.55.445-.665zm37.69 0-2.322 1.55.444.665 2.321-1.55-.444-.666zM9.937 28.424l-.444.665 2.32 1.55.445-.665-2.321-1.55zm30.11.003-2.321 1.55.444.666 2.321-1.55zM25 29.737v2.79h.8v-2.79z'  stroke-width='1' stroke='none' fill='%2301dbfeff'/></pattern></defs><rect width='800%' height='800%' transform='translate(0,0)' fill='url(%23a)'/></svg>")
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
+}
+
+// Typography
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+// Card styles
+.card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+  
+  &:hover {
+    box-shadow: var(--shadow-md);
+  }
+}
+
+.card-elevated {
+  background-color: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+// Form inputs styling
+.q-field--outlined .q-field__control {
+  border-radius: var(--radius-md) !important;
+  
+  &:before {
+    border-color: var(--border-color) !important;
+  }
+  
+  &:hover:before {
+    border-color: $primary !important;
+  }
+}
+
+.q-field--filled .q-field__control {
+  border-radius: var(--radius-md) !important;
+  background-color: var(--bg-tertiary) !important;
+  
+  &:before {
+    background: transparent !important;
+  }
+}
+
+// Button enhancements
+.q-btn {
+  border-radius: var(--radius-md) !important;
+  text-transform: none !important;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, $primary 0%, #1d4ed8 100%) !important;
+  box-shadow: 0 2px 8px rgba($primary, 0.3);
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba($primary, 0.4);
+  }
+}
+
+// Table styling
+.q-table {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  
+  thead tr th {
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  tbody tr {
+    transition: background-color 0.15s ease;
+    
+    &:hover {
+      background-color: var(--bg-hover);
+    }
+    
+    td {
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border-light);
+    }
+  }
+}
+
+.q-markup-table {
+  background-color: transparent;
+  border-radius: 0;
+  overflow: visible;
+  border: none;
+  
+  thead tr th {
+    background-color: transparent;
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    border-top: none;
+  }
+  
+  tbody tr {
+    transition: background-color 0.15s ease;
+    
+    &:nth-child(even) {
+      background-color: var(--bg-tertiary);
+    }
+    
+    &:hover {
+      background-color: var(--bg-hover);
+    }
+    
+    td {
+      color: var(--text-primary);
+      padding: 1rem;
+      border-bottom: none;
+      font-size: 0.875rem;
+    }
+  }
+}
+
+// Custom scrollbar
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 4px;
+  
+  &:hover {
+    background: var(--text-secondary);
+  }
+}
+
+// Selected row styling
+.selected-row {
+  background-color: rgba($primary, 0.1) !important;
+  border-left: 3px solid $primary;
+}
+
+// Dialog styling
+.q-dialog__inner--minimized > div {
+  border-radius: var(--radius-lg);
+}
+
+// Notification styling
+.q-notification {
+  border-radius: var(--radius-md);
+}
+
+// Header styling - Liquid Glass effect
+.q-header {
+  background: rgba(255, 255, 255, 0.6) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.body--dark .q-header {
+  background: rgba(30, 41, 59, 0.7) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+// Page container
+.page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  
+  @media (max-width: 599px) {
+    padding: 1rem;
+  }
+}
+
+// Section title
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+  
+  &::after {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 3px;
+    background: $primary;
+    margin-top: 0.5rem;
+    border-radius: 2px;
+  }
+}
+
+// Empty state
+.empty-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--text-muted);
+  
+  .empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+  
+  .empty-state-text {
+    font-size: 1rem;
+  }
+}
+
+// Fade animation
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+// Responsive utilities
+.hide-mobile {
+  @media (max-width: 599px) {
+    display: none !important;
+  }
+}
+
+.hide-tablet {
+  @media (max-width: 1023px) {
+    display: none !important;
+  }
+}
+
+.hide-desktop {
+  @media (min-width: 600px) {
+    display: none !important;
+  }
+}
+
+.show-mobile {
+  display: none !important;
+  
+  @media (max-width: 599px) {
+    display: block !important;
+  }
+}
+
+// Mobile table wrapper for horizontal scroll
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--text-muted);
+    border-radius: 3px;
+  }
+}
+
+// Mobile-friendly buttons
+@media (max-width: 599px) {
+  .q-btn {
+    min-height: 44px; // iOS touch target
+  }
+  
+  .q-btn--dense {
+    min-height: 36px;
+  }
+}
+
+// Mobile card adjustments
+@media (max-width: 599px) {
+  .q-card, .card {
+    border-radius: var(--radius-md);
+  }
+}
+
+// Mobile typography
+@media (max-width: 599px) {
+  h1 {
+    font-size: 1.5rem;
+  }
+  
+  h2 {
+    font-size: 1.25rem;
+  }
+  
+  h3 {
+    font-size: 1.125rem;
+  }
+}
+
+// Safe area for notched devices
+@supports (padding: max(0px)) {
+  .page-container {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
 }
