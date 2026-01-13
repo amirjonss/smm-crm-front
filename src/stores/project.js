@@ -6,12 +6,14 @@ export const useProjectStore = defineStore('project', {
     projects: {
       totalItems: 0,
       items: []
-    }
+    },
+    globalTotal: 0
   }),
 
   getters: {
     getProjectsTotalItems: (state) => state.projects.totalItems,
-    getProjects: state => state.projects.items
+    getProjects: state => state.projects.items,
+    getGlobalTotal: (state) => state.globalTotal
   },
 
   actions: {
@@ -25,6 +27,19 @@ export const useProjectStore = defineStore('project', {
           })
           .catch((e) => {
             reject(e, 'error during the creating project')
+          })
+      })
+    },
+    fetchProjectsCount() {
+      return new Promise((resolve, reject) => {
+        api
+          .get('/projects')
+          .then((response) => {
+            this.globalTotal = response.data.totalItems
+            resolve()
+          })
+          .catch((e) => {
+            reject(e, 'error during the fetching project count')
           })
       })
     },
@@ -85,7 +100,7 @@ export const useProjectStore = defineStore('project', {
     },
     clearProjects() {
       this.projects.totalItems = 0
-      this.projects.items = null
+      this.projects.items = []
     }
   },
 })

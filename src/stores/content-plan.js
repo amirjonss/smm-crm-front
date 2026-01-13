@@ -6,12 +6,14 @@ export const useContentPlanStore = defineStore('content-plan', {
     contentPlans: {
       totalItems: 0,
       items: []
-    }
+    },
+    globalTotal: 0
   }),
 
   getters: {
     getContentPlanTotalItems: (state) => state.contentPlans.totalItems,
-    getContentPlans: state => state.contentPlans.items
+    getContentPlans: state => state.contentPlans.items,
+    getGlobalTotal: (state) => state.globalTotal
   },
 
   actions: {
@@ -25,6 +27,19 @@ export const useContentPlanStore = defineStore('content-plan', {
           })
           .catch((e) => {
             reject(e, 'error during the creating content plan')
+          })
+      })
+    },
+    fetchContentPlansCount() {
+      return new Promise((resolve, reject) => {
+        api
+          .get('/content_plans')
+          .then((response) => {
+            this.globalTotal = response.data.totalItems
+            resolve()
+          })
+          .catch((e) => {
+            reject(e, 'error during the fetching content plan count')
           })
       })
     },
@@ -56,6 +71,18 @@ export const useContentPlanStore = defineStore('content-plan', {
           })
       })
     },
+    fetchContentPlansByDateRange(startDate, endDate) {
+      return new Promise((resolve, reject) => {
+        api
+          .get(`/content_plans?date[after]=${startDate}&date[before]=${endDate}`)
+          .then((response) => {
+            resolve(response.data.member)
+          })
+          .catch((e) => {
+            reject(e, 'error during the fetching content plan by date range')
+          })
+      })
+    },
     deleteContentPlan(id) {
       return new Promise((resolve, reject) => {
         api
@@ -71,7 +98,7 @@ export const useContentPlanStore = defineStore('content-plan', {
     },
     clearContentPlans() {
       this.contentPlans.totalItems = 0
-      this.contentPlans.items = null
+      this.contentPlans.items = []
     }
   },
 })

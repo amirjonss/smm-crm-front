@@ -11,7 +11,7 @@
         <template v-for="(menuItem, index) in menuList" :key="index">
           <q-item
             clickable
-            @click="currentPage = menuItem.label"
+            @click="handleItemClick(menuItem)"
             :to="menuItem.to"
             :active="menuItem.label === currentPage"
             v-ripple
@@ -32,6 +32,11 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useAuthStore } from 'stores/auth.js'
+import { useRouter } from 'vue-router'
+
+const authStore = useAuthStore()
+const router = useRouter()
 
 const menuList = [
   {
@@ -44,11 +49,20 @@ const menuList = [
     icon: 'logout',
     label: 'Выйти',
     separator: false,
-    to: '/login',
+    action: 'logout',
     position: 'bottom'
   }
 ]
 const currentPage = ref('')
+
+function handleItemClick(item) {
+  if (item.action === 'logout') {
+    authStore.clearTokens()
+    router.push('/login')
+  } else {
+    currentPage.value = item.label
+  }
+}
 </script>
 
 <style scoped></style>

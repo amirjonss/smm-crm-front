@@ -7,64 +7,112 @@
         <p class="page-subtitle">Управление проектами и контент-планами</p>
       </div>
 
-      <div class="content-grid">
-        <!-- Project Form Card -->
-        <div class="grid-item">
-          <div class="card">
-            <div class="card-header">
-              <h2 class="card-title">
-                <q-icon name="add_circle" class="card-icon" />
-                {{ editingProject ? 'Редактировать проект' : 'Создать проект' }}
-              </h2>
-            </div>
-            <div class="card-body">
-              <q-form @submit.prevent="editingProject ? saveEditedProject() : addToProjectList()">
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label class="form-label">Название проекта</label>
-                    <q-input
-                      v-model="form.name"
-                      outlined
-                      placeholder="Введите название"
-                      lazy-rules
-                      :rules="[val => val.length > 0 || 'Заполните поле']"
-                      class="modern-input"
-                    />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Телефон</label>
-                    <q-input
-                      v-model="form.phone"
-                      outlined
-                      mask="998 (##) ### - ## - ##"
-                      fill-mask
-                      placeholder="998 (__) ___ - __ - __"
-                      lazy-rules
-                      :rules="[val => val.length > 0 || 'Заполните поле']"
-                      class="modern-input"
-                    />
-                  </div>
-                </div>
-                <div class="form-actions">
-                  <q-btn
-                    v-if="editingProject"
-                    flat
-                    label="Отмена"
-                    @click="cancelEdit"
-                    class="btn-cancel"
-                  />
-                  <q-btn
-                    type="submit"
-                    :label="editingProject ? 'Сохранить' : 'Создать'"
-                    unelevated
-                    class="btn-primary-action"
-                  />
-                </div>
-              </q-form>
-            </div>
+      <!-- Stats Cards -->
+      <div class="stats-grid q-mb-xl">
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-blue">
+            <q-icon name="today" size="1.5rem" />
+          </div>
+          <div class="stat-content">
+            <span class="stat-value">{{ todaysContentPlans.length }}</span>
+            <span class="stat-label">Сегодня</span>
           </div>
         </div>
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-purple">
+            <q-icon name="date_range" size="1.5rem" />
+          </div>
+          <div class="stat-content">
+            <span class="stat-value">{{ weekCount }}</span>
+            <span class="stat-label">На неделю</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-green">
+            <q-icon name="calendar_month" size="1.5rem" />
+          </div>
+          <div class="stat-content">
+            <span class="stat-value">{{ monthCount }}</span>
+            <span class="stat-label">На месяц</span>
+          </div>
+        </div>
+        <div class="stat-card stat-card-disabled">
+          <div class="stat-icon stat-icon-orange">
+            <q-icon name="task_alt" size="1.5rem" />
+          </div>
+          <div class="stat-content">
+            <span class="stat-value">Скоро</span>
+            <span class="stat-label">Выполнено</span>
+          </div>
+        </div>
+      </div>
 
+      <!-- Today's Content Plan Table -->
+      <div class="q-mb-xl">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <q-icon name="today" class="card-icon" />
+              План на сегодня
+              <span class="card-count q-ml-sm">{{ todaysContentPlans.length }}</span>
+            </h2>
+          </div>
+          <div class="card-body no-padding" style="min-height: auto; max-height: 400px;">
+            <div v-if="todaysContentPlans.length === 0" class="empty-state">
+              <q-icon name="event_busy" class="empty-state-icon" />
+              <p class="empty-state-text">На сегодня планов нет</p>
+            </div>
+
+            <template v-else>
+              <!-- Mobile Cards View -->
+              <div class="mobile-cards show-mobile-only">
+                <div
+                  v-for="plan in todaysContentPlans"
+                  :key="plan.id"
+                  class="mobile-card"
+                >
+                  <div class="mobile-card-header">
+                    <span class="mobile-card-title">{{ plan.post }}</span>
+                    <span class="format-badge">{{ plan.format }}</span>
+                  </div>
+                  <div class="mobile-card-body">
+                    <div class="mobile-card-row">
+                      <span class="mobile-card-label">Проект:</span>
+                      <span class="project-name">{{ getProjectName(plan.project) }}</span>
+                    </div>
+                    <div class="mobile-card-row">
+                      <span class="mobile-card-label">Идея:</span>
+                      <span class="mobile-card-idea">{{ plan.idea }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Desktop Table View -->
+              <q-markup-table flat class="modern-table hide-mobile-only">
+                <thead>
+                  <tr>
+                    <th>Проект</th>
+                    <th>Пост</th>
+                    <th>Формат</th>
+                    <th>Идея</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="plan in todaysContentPlans" :key="plan.id">
+                    <td class="project-name">{{ getProjectName(plan.project) }}</td>
+                    <td class="post-name">{{ plan.post }}</td>
+                    <td><span class="format-badge">{{ plan.format }}</span></td>
+                    <td class="idea-cell">{{ plan.idea }}</td>
+                  </tr>
+                </tbody>
+              </q-markup-table>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-grid">
         <!-- Projects List Card -->
         <div class="grid-item">
           <div class="card">
@@ -72,199 +120,78 @@
               <h2 class="card-title">
                 <q-icon name="folder" class="card-icon" />
                 Список проектов
+                <span class="card-count q-ml-sm">{{ projectStore.getProjects.length }}</span>
               </h2>
-              <span class="card-count">{{ projectStore.getProjects.length }}</span>
+              <div class="card-header-actions">
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="add"
+                  class="btn-add-minimal q-mr-sm"
+                  @click="openProjectDialog"
+                >
+                  <q-tooltip>Создать проект</q-tooltip>
+                </q-btn>
+              </div>
             </div>
             <div class="card-body no-padding">
               <div v-if="projectStore.getProjects.length === 0" class="empty-state">
                 <q-icon name="folder_off" class="empty-state-icon" />
                 <p class="empty-state-text">Проекты не найдены</p>
               </div>
-              
-              <!-- Mobile Cards View -->
-              <div v-else class="mobile-cards show-mobile-only">
+
+              <div v-else class="projects-list">
                 <div
                   v-for="row in projectStore.getProjects"
                   :key="row.id"
-                  class="mobile-card"
-                  :class="{ 'mobile-card-selected': row.id === selectedProjectId }"
+                  class="project-item cursor-pointer"
+                  :class="{ 'project-item-selected': row.id === selectedProjectId }"
+                  @click="selectProject(row.id)"
                 >
-                  <div class="mobile-card-header">
-                    <span class="mobile-card-title">{{ row.name }}</span>
+                  <div class="project-item-main">
+                    <div class="project-item-icon">
+                      <q-icon name="folder" size="20px" />
+                    </div>
+                    <div class="project-item-info">
+                      <div class="project-item-name">{{ row.name }}</div>
+                      <div class="project-item-phone">{{ row.phone }}</div>
+                    </div>
+                    <q-icon
+                      v-if="row.id === selectedProjectId"
+                      name="check_circle"
+                      color="primary"
+                      size="20px"
+                      class="q-ml-sm"
+                    />
+                  </div>
+                  <div class="project-item-actions">
                     <q-btn
                       flat
                       round
                       dense
                       size="sm"
-                      :icon="row.id === selectedProjectId ? 'check_circle' : 'radio_button_unchecked'"
-                      :color="row.id === selectedProjectId ? 'primary' : 'grey-6'"
-                      @click="selectProject(row.id)"
+                      icon="edit"
+                      color="grey-6"
+                      @click.stop="editProject(row)"
                     >
-                      <q-tooltip>{{ row.id === selectedProjectId ? 'Выбрано' : 'Выбрать' }}</q-tooltip>
+                      <q-tooltip>Редактировать</q-tooltip>
                     </q-btn>
-                  </div>
-                  <div class="mobile-card-body">
-                    <div class="mobile-card-row">
-                      <span class="mobile-card-label">Менеджер:</span>
-                      <span>{{ row.createdBy.givenName }}</span>
-                    </div>
-                    <div class="mobile-card-row">
-                      <span class="mobile-card-label">Телефон:</span>
-                      <span>{{ row.phone }}</span>
-                    </div>
-                  </div>
-                  <div class="mobile-card-actions">
-                    <q-btn flat dense size="sm" icon="edit" label="Изменить" no-caps @click="editProject(row)" />
-                    <q-btn flat dense size="sm" icon="delete_outline" label="Удалить" no-caps color="negative" @click="confirmProjectDeletion(row)" />
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      size="sm"
+                      icon="delete_outline"
+                      color="grey-6"
+                      class="action-btn-danger"
+                      @click.stop="confirmProjectDeletion(row)"
+                    >
+                      <q-tooltip>Удалить</q-tooltip>
+                    </q-btn>
                   </div>
                 </div>
               </div>
-              
-              <!-- Desktop Table View -->
-              <q-markup-table v-if="projectStore.getProjects.length > 0" flat class="modern-table hide-mobile-only">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Проект</th>
-                    <th class="hide-mobile">Менеджер</th>
-                    <th class="hide-mobile">Телефон</th>
-                    <th>Действия</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="(row, index) in projectStore.getProjects"
-                    :key="row.id"
-                    :class="{ 'selected-row': row.id === selectedProjectId }"
-                  >
-                    <td>{{ index + 1 }}</td>
-                    <td class="project-name">{{ row.name }}</td>
-                    <td class="hide-mobile">{{ row.createdBy.givenName }}</td>
-                    <td class="hide-mobile">{{ row.phone }}</td>
-                    <td>
-                      <div class="action-buttons">
-                        <q-btn
-                          :flat="row.id !== selectedProjectId"
-                          :unelevated="row.id === selectedProjectId"
-                          dense
-                          size="sm"
-                          :icon="row.id === selectedProjectId ? 'check_circle' : 'playlist_add'"
-                          :color="row.id === selectedProjectId ? 'primary' : 'grey-6'"
-                          class="action-btn-icon"
-                          @click="selectProject(row.id)"
-                        >
-                          <q-tooltip>{{ row.id === selectedProjectId ? 'Выбрано' : 'Выбрать для контента' }}</q-tooltip>
-                        </q-btn>
-                        <q-btn
-                          flat
-                          dense
-                          size="sm"
-                          icon="edit"
-                          color="grey-6"
-                          class="action-btn-icon"
-                          @click="editProject(row)"
-                        >
-                          <q-tooltip>Редактировать</q-tooltip>
-                        </q-btn>
-                        <q-btn
-                          flat
-                          dense
-                          size="sm"
-                          icon="delete_outline"
-                          color="grey-6"
-                          class="action-btn-icon action-btn-danger"
-                          @click="confirmProjectDeletion(row)"
-                        >
-                          <q-tooltip>Удалить</q-tooltip>
-                        </q-btn>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </q-markup-table>
-            </div>
-          </div>
-        </div>
-
-        <!-- Content Plan Form Card -->
-        <div class="grid-item">
-          <div class="card">
-            <div class="card-header">
-              <h2 class="card-title">
-                <q-icon name="post_add" class="card-icon" />
-                {{ editingContent ? 'Редактировать контент' : 'Добавить контент' }}
-              </h2>
-            </div>
-            <div class="card-body">
-              <q-form @submit.prevent="editingContent ? saveEditedContentPlan() : addToContentList()">
-                <div class="form-grid form-grid-3">
-                  <div class="form-group">
-                    <label class="form-label">Пост</label>
-                    <q-input
-                      v-model="contentPlanForm.post"
-                      outlined
-                      placeholder="Название поста"
-                      lazy-rules
-                      :rules="[val => val.length > 0 || 'Заполните поле']"
-                      class="modern-input"
-                    />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Формат</label>
-                    <q-select
-                      v-model="contentPlanForm.format"
-                      :options="options"
-                      outlined
-                      placeholder="Выберите формат"
-                      lazy-rules
-                      :rules="[val => val.length > 0 || 'Выберите формат']"
-                      class="modern-input"
-                    />
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Дата</label>
-                    <q-input
-                      v-model="contentPlanForm.date"
-                      type="date"
-                      outlined
-                      lazy-rules
-                      :rules="[val => val.length > 0 || 'Выберите дату']"
-                      class="modern-input"
-                    />
-                  </div>
-                  <div class="form-group form-group-full">
-                    <label class="form-label">Идея</label>
-                    <q-input
-                      v-model="contentPlanForm.idea"
-                      outlined
-                      autogrow
-                      placeholder="Опишите идею контента"
-                      lazy-rules
-                      :rules="[val => val.length > 0 || 'Заполните поле']"
-                      class="modern-input"
-                    />
-                  </div>
-                </div>
-                <div class="form-actions">
-                  <q-btn
-                    v-if="editingContent"
-                    flat
-                    label="Отмена"
-                    @click="cancelContentEdit"
-                    class="btn-cancel"
-                  />
-                  <q-btn
-                    type="submit"
-                    :label="editingContent ? 'Сохранить' : 'Добавить'"
-                    unelevated
-                    class="btn-primary-action"
-                    :disable="!selectedProjectId"
-                  />
-                </div>
-                <p v-if="!selectedProjectId" class="form-hint">
-                  <q-icon name="info" size="xs" /> Выберите проект для добавления контента
-                </p>
-              </q-form>
             </div>
           </div>
         </div>
@@ -276,9 +203,20 @@
               <h2 class="card-title">
                 <q-icon name="list_alt" class="card-icon" />
                 Контент-план
+                <span class="card-count q-ml-sm">{{ contentPlanStore.getContentPlans.length }}</span>
               </h2>
               <div class="card-header-actions">
-                <span class="card-count">{{ contentPlanStore.getContentPlans.length }}</span>
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="add"
+                  class="btn-add-minimal q-mr-sm"
+                  :disable="!selectedProjectId"
+                  @click="openContentDialog"
+                >
+                  <q-tooltip>{{ selectedProjectId ? 'Добавить контент' : 'Выберите проект' }}</q-tooltip>
+                </q-btn>
                 <pdf-printer-component
                   v-if="contentPlanStore.getContentPlans.length > 0"
                   :contentPlans="contentPlanStore.getContentPlans"
@@ -294,7 +232,7 @@
                   {{ selectedProjectId ? 'Контент-план пуст' : 'Выберите проект' }}
                 </p>
               </div>
-              
+
               <!-- Mobile Cards View -->
               <div v-else class="mobile-cards show-mobile-only">
                 <div
@@ -323,7 +261,7 @@
                   </div>
                 </div>
               </div>
-              
+
               <!-- Desktop Table View -->
               <q-markup-table v-if="contentPlanStore.getContentPlans.length > 0" flat class="modern-table hide-mobile-only">
                 <thead>
@@ -366,6 +304,142 @@
           </div>
         </div>
       </div>
+      <!-- Project Dialog -->
+      <q-dialog v-model="showProjectDialog" persistent>
+        <q-card class="dialog-card">
+          <q-card-section class="row items-center q-pb-none">
+            <div class="text-h6">{{ editingProject ? 'Редактировать проект' : 'Создать проект' }}</div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup @click="cancelEdit" />
+          </q-card-section>
+
+          <q-card-section class="q-pt-md">
+            <q-form @submit.prevent="editingProject ? saveEditedProject() : addToProjectList()">
+              <div class="form-group q-mb-md">
+                <label class="form-label">Название проекта</label>
+                <q-input
+                  v-model="form.name"
+                  outlined
+                  placeholder="Введите название"
+                  lazy-rules
+                  :rules="[val => val.length > 0 || 'Заполните поле']"
+                  class="modern-input"
+                />
+              </div>
+              <div class="form-group q-mb-lg">
+                <label class="form-label">Телефон</label>
+                <q-input
+                  v-model="form.phone"
+                  outlined
+                  mask="998 (##) ### - ## - ##"
+                  fill-mask
+                  placeholder="998 (__) ___ - __ - __"
+                  lazy-rules
+                  :rules="[val => val.length > 0 || 'Заполните поле']"
+                  class="modern-input"
+                />
+              </div>
+
+              <div class="form-actions row justify-end q-gutter-sm">
+                <q-btn
+                  flat
+                  label="Отмена"
+                  color="grey-7"
+                  v-close-popup
+                  @click="cancelEdit"
+                  class="btn-cancel"
+                />
+                <q-btn
+                  type="submit"
+                  :label="editingProject ? 'Сохранить' : 'Создать'"
+                  unelevated
+                  color="primary"
+                  class="btn-primary-action"
+                />
+              </div>
+            </q-form>
+          </q-card-section>
+        </q-card>
+      </q-dialog>
+      <!-- Content Dialog -->
+      <q-dialog v-model="showContentDialog" persistent>
+        <q-card class="dialog-card">
+          <q-card-section class="row items-center q-pb-none">
+            <div class="text-h6">{{ editingContent ? 'Редактировать контент' : 'Добавить контент' }}</div>
+            <q-space />
+            <q-btn icon="close" flat round dense v-close-popup @click="cancelContentEdit" />
+          </q-card-section>
+
+          <q-card-section class="q-pt-md">
+            <q-form @submit.prevent="editingContent ? saveEditedContentPlan() : addToContentList()">
+              <div class="form-group q-mb-md">
+                <label class="form-label">Пост</label>
+                <q-input
+                  v-model="contentPlanForm.post"
+                  outlined
+                  placeholder="Название поста"
+                  lazy-rules
+                  :rules="[val => val.length > 0 || 'Заполните поле']"
+                  class="modern-input"
+                />
+              </div>
+              <div class="form-group q-mb-md">
+                <label class="form-label">Формат</label>
+                <q-select
+                  v-model="contentPlanForm.format"
+                  :options="options"
+                  outlined
+                  placeholder="Выберите формат"
+                  lazy-rules
+                  :rules="[val => val.length > 0 || 'Выберите формат']"
+                  class="modern-input"
+                />
+              </div>
+              <div class="form-group q-mb-md">
+                <label class="form-label">Дата</label>
+                <q-input
+                  v-model="contentPlanForm.date"
+                  type="date"
+                  outlined
+                  lazy-rules
+                  :rules="[val => val.length > 0 || 'Выберите дату']"
+                  class="modern-input"
+                />
+              </div>
+              <div class="form-group q-mb-lg">
+                <label class="form-label">Идея</label>
+                <q-input
+                  v-model="contentPlanForm.idea"
+                  outlined
+                  autogrow
+                  placeholder="Опишите идею контента"
+                  lazy-rules
+                  :rules="[val => val.length > 0 || 'Заполните поле']"
+                  class="modern-input"
+                />
+              </div>
+
+              <div class="form-actions row justify-end q-gutter-sm">
+                <q-btn
+                  flat
+                  label="Отмена"
+                  color="grey-7"
+                  v-close-popup
+                  @click="cancelContentEdit"
+                  class="btn-cancel"
+                />
+                <q-btn
+                  type="submit"
+                  :label="editingContent ? 'Сохранить' : 'Добавить'"
+                  unelevated
+                  color="primary"
+                  class="btn-primary-action"
+                />
+              </div>
+            </q-form>
+          </q-card-section>
+        </q-card>
+      </q-dialog>
     </div>
   </q-page>
 </template>
@@ -375,18 +449,79 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useProjectStore } from 'stores/project.js'
 import { useQuasar } from 'quasar'
 import { useContentPlanStore } from 'stores/content-plan.js'
+import { api } from 'boot/axios.js'
 import PdfPrinterComponent from 'components/PdfPrinterComponent.vue'
 
 const form = ref({ phone: '', name: '' })
 const selectedProjectId = ref(null)
 const editingProject = ref(null)
+const showProjectDialog = ref(false)
 const projectStore = useProjectStore()
 const contentPlanStore = useContentPlanStore()
 const q = useQuasar()
 
+const todaysContentPlans = ref([])
+const weekCount = ref(0)
+const monthCount = ref(0)
+
+function getWeekRange() {
+  const now = new Date()
+  const day = now.getDay() || 7
+  if (day !== 1) now.setHours(-24 * (day - 1))
+  const start = now.toISOString().slice(0, 10)
+  now.setHours(24 * 6)
+  const end = now.toISOString().slice(0, 10)
+  return { start, end }
+}
+
+function getMonthRange() {
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+  return { start, end }
+}
+
+async function fetchTodaysContentPlans() {
+  const today = new Date().toISOString().slice(0, 10)
+  try {
+    // Today
+    const response = await api.get('/content_plans?date=' + today)
+    todaysContentPlans.value = response.data.member
+
+    // Week
+    const { start: weekStart, end: weekEnd } = getWeekRange()
+    const weekPlans = await contentPlanStore.fetchContentPlansByDateRange(weekStart, weekEnd)
+    weekCount.value = weekPlans.length
+
+    // Month
+    const { start: monthStart, end: monthEnd } = getMonthRange()
+    const monthPlans = await contentPlanStore.fetchContentPlansByDateRange(monthStart, monthEnd)
+    monthCount.value = monthPlans.length
+  } catch (e) {
+    console.error('Error fetching stats:', e)
+  }
+}
+
+function getProjectName(project) {
+  if (!project) return '---'
+  if (typeof project === 'object' && project.name) return project.name
+  if (typeof project === 'string') {
+    const id = project.split('/').pop()
+    const found = projectStore.getProjects.find(p => String(p.id) === String(id))
+    return found ? found.name : '---'
+  }
+  return '---'
+}
+
+function openProjectDialog() {
+  cancelEdit()
+  showProjectDialog.value = true
+}
+
 function addToProjectList() {
   projectStore.createProject(form.value).then(() => {
     projectStore.fetchProjects()
+    showProjectDialog.value = false
     q.notify({
       message: 'Проект успешно создан',
       type: 'positive',
@@ -401,18 +536,16 @@ function selectProject(id) {
 }
 
 function editProject(project) {
-  if (project.id === selectedProjectId.value && editingProject.value) {
-    cancelEdit()
-  } else {
-    selectedProjectId.value = project.id
-    editingProject.value = project
-    form.value = { name: project.name, phone: project.phone }
-  }
+  selectedProjectId.value = project.id
+  editingProject.value = project
+  form.value = { name: project.name, phone: project.phone }
+  showProjectDialog.value = true
 }
 
 function saveEditedProject() {
   projectStore.patchProject(form.value, selectedProjectId.value).then(() => {
     projectStore.fetchProjects()
+    showProjectDialog.value = false
     q.notify({
       message: 'Проект успешно обновлён',
       type: 'positive',
@@ -425,7 +558,7 @@ function saveEditedProject() {
 function cancelEdit() {
   editingProject.value = null
   form.value = { name: '', phone: '' }
-  selectedProjectId.value = null
+  showProjectDialog.value = false
 }
 
 function deleteProject(id) {
@@ -462,9 +595,15 @@ watch(selectedProjectId, async () => {
 })
 
 // Content plan
-const contentPlanForm = ref({ post: '', format: '', idea: '', date: '', id: null })
+const contentPlanForm = ref({ post: '', format: '', idea: '', date: '', id: null, status: 'В плане' })
 const editingContent = ref(null)
+const showContentDialog = ref(false)
 const options = ref(['Reels', 'Carousel', 'Post', 'Animation', 'Story'])
+
+function openContentDialog() {
+  cancelContentEdit()
+  showContentDialog.value = true
+}
 
 function addToContentList() {
   if (!selectedProjectId.value) {
@@ -476,37 +615,39 @@ function addToContentList() {
     post: contentPlanForm.value.post,
     format: contentPlanForm.value.format,
     idea: contentPlanForm.value.idea,
-    date: contentPlanForm.value.date
+    date: contentPlanForm.value.date,
+    status: contentPlanForm.value.status
   }
   contentPlanStore.createContentPlan(newRow).then(() => {
     contentPlanStore.fetchContentPlan(selectedProjectId.value)
+    fetchTodaysContentPlans()
+    showContentDialog.value = false
     q.notify({
       message: 'Контент добавлен',
       type: 'positive',
       position: 'top'
     })
   })
-  contentPlanForm.value = { post: '', format: '', idea: '', date: '', id: null }
+  contentPlanForm.value = { post: '', format: '', idea: '', date: '', id: null, status: 'В плане' }
 }
 
 function editContentPlan(plan) {
-  if (editingContent.value?.id === plan.id) {
-    cancelContentEdit()
-  } else {
-    editingContent.value = plan
-    contentPlanForm.value = {
-      post: plan.post,
-      format: plan.format,
-      idea: plan.idea,
-      date: plan.date.slice(0, 10),
-      id: plan.id
-    }
+  editingContent.value = plan
+  contentPlanForm.value = {
+    post: plan.post,
+    format: plan.format,
+    idea: plan.idea,
+    date: plan.date.slice(0, 10),
+    id: plan.id,
+    status: plan.status || 'В плане'
   }
+  showContentDialog.value = true
 }
 
 function cancelContentEdit() {
   editingContent.value = null
-  contentPlanForm.value = { post: '', format: '', idea: '', date: '', id: null }
+  contentPlanForm.value = { post: '', format: '', idea: '', date: '', id: null, status: 'В плане' }
+  showContentDialog.value = false
 }
 
 function saveEditedContentPlan() {
@@ -514,9 +655,12 @@ function saveEditedContentPlan() {
     post: contentPlanForm.value.post,
     format: contentPlanForm.value.format,
     date: contentPlanForm.value.date,
-    idea: contentPlanForm.value.idea
+    idea: contentPlanForm.value.idea,
+    status: contentPlanForm.value.status
   }, editingContent.value.id).then(() => {
     contentPlanStore.fetchContentPlan(selectedProjectId.value)
+    fetchTodaysContentPlans()
+    showContentDialog.value = false
     q.notify({
       message: 'Контент обновлён',
       type: 'positive',
@@ -529,6 +673,7 @@ function saveEditedContentPlan() {
 function deleteContentPlan(id) {
   contentPlanStore.deleteContentPlan(id).then(() => {
     contentPlanStore.fetchContentPlan(selectedProjectId.value)
+    fetchTodaysContentPlans()
     q.notify({
       message: 'Контент удалён',
       type: 'positive',
@@ -549,10 +694,34 @@ function confirmContentPlanDeletion(contentPlanId) {
 
 onMounted(() => {
   projectStore.fetchProjects()
+  fetchTodaysContentPlans()
 })
 </script>
 
 <style scoped lang="scss">
+.btn-add-minimal {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  width: 32px;
+  height: 32px;
+
+  &:hover {
+    background: #3b82f6;
+    color: white;
+  }
+}
+
+.dialog-card {
+  width: 450px;
+  max-width: 95vw;
+  border-radius: 12px;
+  background: var(--bg-card);
+
+  @media (max-width: 599px) {
+    width: 90vw;
+  }
+}
+
 .index-page {
   padding: 0;
 }
@@ -588,9 +757,82 @@ onMounted(() => {
   margin: 0;
 }
 
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+
+  @media (max-width: 1023px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 599px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stat-card-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.stat-icon-blue {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+}
+
+.stat-icon-purple {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+}
+
+.stat-icon-green {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.stat-icon-orange {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
 .content-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 3fr 7fr;
   gap: 1.5rem;
 
   @media (max-width: 1023px) {
@@ -653,13 +895,19 @@ onMounted(() => {
 
 .card-body {
   padding: 1.5rem;
+  min-height: 500px;
+  max-height: 500px;
+  overflow-y: auto;
 
   @media (max-width: 599px) {
     padding: 1rem;
+    min-height: auto;
   }
 
   &.no-padding {
     padding: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
@@ -732,20 +980,27 @@ onMounted(() => {
 .modern-table {
   background: transparent;
   border: none;
-  
+  width: 100%;
+  min-width: 100%;
+
   :deep(thead tr th) {
     background: transparent !important;
     color: var(--text-muted) !important;
     font-weight: 500;
     font-size: 0.6875rem;
     border-top: none !important;
+    text-align: left !important;
   }
-  
+
+  :deep(tbody tr td) {
+    text-align: left !important;
+  }
+
   :deep(tbody tr) {
     &:nth-child(even) {
       background-color: var(--bg-tertiary);
     }
-    
+
     &:hover {
       background-color: var(--bg-hover) !important;
     }
@@ -758,10 +1013,84 @@ onMounted(() => {
   align-items: center;
 }
 
+.projects-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.project-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-light);
+  transition: all 0.2s ease;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background-color: var(--bg-hover);
+  }
+}
+
+.project-item-selected {
+  background-color: rgba(59, 130, 246, 0.08);
+  border-left: 3px solid #3b82f6;
+  padding-left: calc(1.25rem - 3px);
+}
+
+.project-item-main {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.project-item-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.875rem;
+  flex-shrink: 0;
+}
+
+.project-item-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.project-item-name {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-item-phone {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.project-item-actions {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: 0.5rem;
+}
+
 .action-btn-icon {
   border-radius: 8px;
   transition: all 0.2s ease;
-  
+
   &:hover {
     background: var(--bg-hover);
     color: var(--text-primary) !important;
@@ -773,10 +1102,22 @@ onMounted(() => {
   color: #ef4444 !important;
 }
 
-.project-name,
+.project-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .post-name {
   font-weight: 500;
   color: var(--text-primary);
+  max-width: 200px;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .format-badge {
@@ -790,10 +1131,10 @@ onMounted(() => {
 }
 
 .idea-cell {
-  max-width: 200px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: 250px;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .empty-state {
@@ -822,7 +1163,7 @@ onMounted(() => {
 
 .show-mobile-only {
   display: none !important;
-  
+
   @media (max-width: 767px) {
     display: block !important;
   }
@@ -840,7 +1181,7 @@ onMounted(() => {
   padding: 1rem;
   margin-bottom: 0.75rem;
   transition: all 0.2s ease;
-  
+
   &:last-child {
     margin-bottom: 0;
   }
@@ -887,9 +1228,8 @@ onMounted(() => {
   color: var(--text-secondary);
   text-align: right;
   max-width: 60%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-wrap: break-word;
 }
 
 .mobile-card-actions {
@@ -902,12 +1242,12 @@ onMounted(() => {
 @media (max-width: 599px) {
   .form-actions {
     flex-direction: column;
-    
+
     .q-btn {
       width: 100%;
     }
   }
-  
+
   .btn-primary-action {
     order: -1;
   }
@@ -918,7 +1258,7 @@ onMounted(() => {
   .page-header {
     margin-bottom: 1.25rem;
   }
-  
+
   .page-title {
     font-size: 1.375rem;
   }

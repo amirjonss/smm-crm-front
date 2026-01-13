@@ -1,37 +1,60 @@
 <template>
   <q-header class="app-header">
     <q-toolbar class="header-toolbar">
-      <!-- Logo/Brand -->
-      <div class="header-brand">
-        <div class="brand-icon-sm">
-          <q-icon name="dashboard" size="1.25rem" color="white" />
-        </div>
-        <span class="brand-name hide-mobile">CRM</span>
+      <div class="header-container">
+        <!-- Logo/Brand -->
+        <router-link to="/" class="header-brand">
+          <img src="~assets/logo.svg" alt="KH Agency" class="header-logo" />
+        </router-link>
+
+        <q-space />
+
+        <!-- Settings menu -->
+        <q-btn
+          flat
+          round
+          icon="settings"
+          class="settings-btn"
+        >
+          <q-menu auto-close class="settings-menu shadow-10">
+            <q-list class="settings-list">
+              <!-- User Info Header -->
+              <q-item class="user-info-item" v-if="userStore.getUser">
+                <q-item-section avatar>
+                  <q-avatar size="36px" color="primary" text-color="white" class="user-avatar-menu">
+                    {{ userInitial }}
+                  </q-avatar>
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label class="text-weight-bold user-name-label">{{ shortName }}</q-item-label>
+                  <q-item-label caption class="user-email-label">{{ userStore.getUser.email }}</q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <q-separator />
+
+              <q-item clickable @click="themeStore.toggleTheme" class="menu-item">
+                <q-item-section avatar>
+                  <q-icon :name="themeStore.isDark ? 'light_mode' : 'dark_mode'" size="20px" />
+                </q-item-section>
+                <q-item-section>
+                  {{ themeStore.isDark ? 'Светлая тема' : 'Тёмная тема' }}
+                </q-item-section>
+              </q-item>
+
+              <q-separator />
+
+              <q-item clickable @click="logout" class="text-negative menu-item">
+                <q-item-section avatar>
+                  <q-icon name="logout" color="negative" size="20px" />
+                </q-item-section>
+                <q-item-section>Выход</q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+          <q-tooltip>Настройки</q-tooltip>
+        </q-btn>
       </div>
-
-      <q-space />
-
-      <!-- User info -->
-      <div class="header-user" v-if="userStore.getUser">
-        <q-avatar size="36px" color="primary" text-color="white" class="user-avatar">
-          {{ userInitial }}
-        </q-avatar>
-        <span class="user-name hide-mobile">{{ shortName }}</span>
-      </div>
-
-      <!-- Theme toggle -->
-      <theme-toggle />
-
-      <!-- Logout button -->
-      <q-btn
-        flat
-        round
-        icon="logout"
-        @click="logout"
-        class="logout-btn"
-      >
-        <q-tooltip>Выход</q-tooltip>
-      </q-btn>
     </q-toolbar>
   </q-header>
 </template>
@@ -39,12 +62,13 @@
 <script setup>
 import { useUserStore } from 'stores/user.js'
 import { useAuthStore } from 'stores/auth.js'
+import { useThemeStore } from 'stores/theme.js'
 import { useRouter } from 'vue-router'
 import { computed } from 'vue'
-import ThemeToggle from 'components/ThemeToggle.vue'
 
 const authStore = useAuthStore()
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 const router = useRouter()
 
 const shortName = computed(() => {
@@ -86,91 +110,95 @@ function logout() {
 
 .header-toolbar {
   height: 64px;
-  padding: 0 1.5rem;
+  padding: 0;
 
   @media (max-width: 599px) {
-    padding: 0 0.75rem;
     height: 56px;
-    gap: 0.5rem;
+  }
+}
+
+.header-container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+
+  @media (max-width: 599px) {
+    padding: 0 1rem;
   }
 }
 
 .header-brand {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  text-decoration: none;
+}
+
+.header-logo {
+  height: 32px;
+  width: auto;
+  display: block;
   
   @media (max-width: 599px) {
-    gap: 0.5rem;
+    height: 28px;
   }
 }
 
-.brand-icon-sm {
-  width: 36px;
-  height: 36px;
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  
-  @media (max-width: 599px) {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-  }
-}
-
-.brand-name {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.02em;
-  
-  @media (max-width: 599px) {
-    font-size: 1rem;
-  }
-}
-
-.header-user {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-right: 0.5rem;
-  
-  @media (max-width: 599px) {
-    gap: 0.5rem;
-    margin-right: 0.25rem;
-  }
-}
-
-.user-avatar {
-  font-weight: 600;
-  font-size: 0.875rem;
-  
-  @media (max-width: 599px) {
-    width: 32px !important;
-    height: 32px !important;
-    font-size: 0.75rem;
-  }
-}
-
-.user-name {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-primary);
-  
-  @media (max-width: 599px) {
-    font-size: 0.8125rem;
-  }
-}
-
-.logout-btn {
+.settings-btn {
   color: var(--text-secondary);
 
   &:hover {
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
+    color: var(--text-primary);
+    background: var(--bg-hover);
+  }
+}
+
+.settings-list {
+  min-width: 220px;
+  
+  @media (max-width: 599px) {
+    min-width: 180px;
+  }
+}
+
+.user-info-item {
+  padding: 12px 16px;
+  
+  @media (max-width: 599px) {
+    padding: 8px 12px;
+  }
+}
+
+.user-avatar-menu {
+  @media (max-width: 599px) {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 14px;
+  }
+}
+
+.user-name-label {
+  @media (max-width: 599px) {
+    font-size: 13px;
+  }
+}
+
+.user-email-label {
+  @media (max-width: 599px) {
+    font-size: 11px;
+  }
+}
+
+.menu-item {
+  @media (max-width: 599px) {
+    min-height: 40px;
+    font-size: 13px;
+    
+    :deep(.q-item__section--avatar) {
+      min-width: 40px;
+    }
   }
 }
 

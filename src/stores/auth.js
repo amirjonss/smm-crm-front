@@ -1,5 +1,8 @@
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { api } from 'boot/axios.js'
+import { useUserStore } from 'stores/user.js'
+import { useProjectStore } from 'stores/project.js'
+import { useContentPlanStore } from 'stores/content-plan.js'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -56,6 +59,17 @@ export const useAuthStore = defineStore('auth', {
     },
     clearTokens() {
       localStorage.clear()
+      this.accessToken = ''
+      this.refreshToken = ''
+      this.isAuthorized = false
+
+      const userStore = useUserStore()
+      const projectStore = useProjectStore()
+      const contentPlanStore = useContentPlanStore()
+
+      userStore.$reset()
+      projectStore.$reset()
+      contentPlanStore.$reset()
     },
   },
 })
