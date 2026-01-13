@@ -2,7 +2,7 @@
   <q-btn
     flat
     round
-    color="black"
+    :color="themeStore.isDark ? 'white' : 'black'"
     icon="picture_as_pdf"
     v-if="selectedProjectId"
     @click="printPage"
@@ -14,10 +14,12 @@ import bgSvgRaw from 'assets/asset7.svg?raw'
 import logoSvgRaw from 'assets/logo.svg?raw'
 import autoTable from 'jspdf-autotable'
 import { defineProps } from 'vue'
+import { useThemeStore } from 'stores/theme.js'
 import 'svg2pdf.js'
 import './Roboto-Regular-normal.js'
 import './Roboto-Bold-normal.js'
 
+const themeStore = useThemeStore()
 const props = defineProps({
   selectedProjectId: {
     default: null
