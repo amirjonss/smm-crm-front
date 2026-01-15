@@ -73,7 +73,7 @@
                                                   :class="`type-${event.type}`"
                                                   @click.stop="openEventDialog(event)"
                                                 >
-                                                  <div class="event-title">{{ event.projectName }}</div>
+                                                  <div class="event-title">{{ truncateText(event.projectName, 30) }}</div>
                                                   <div class="event-type">{{ event.typeLabel }}</div>
                                                 </div>                                
                                 <div 
@@ -101,8 +101,9 @@
               <q-menu
                 v-if="$q.screen.gt.xs && getEventsForDate(day.date).length > 2"
                 :model-value="hoveredDayKey === date.formatDate(day.date, 'YYYY-MM-DD')"
-                anchor="center middle"
-                self="center middle"
+                fit
+                anchor="top left"
+                self="top left"
                 no-parent-event
                 persistent
                 class="bg-transparent no-shadow no-padding overflow-visible"
@@ -112,7 +113,7 @@
                 @mouseleave="handleMouseLeave"
               >
                 <div class="glass-day-card column q-gutter-y-xs">
-                   <div class="glass-content custom-scroll" style="max-height: 320px; overflow-y: auto;">
+                   <div class="glass-content custom-scroll" style="max-height: 60vh; overflow-y: auto;">
                      <div
                         v-for="event in getEventsForDate(day.date)"
                         :key="event.id"
@@ -120,7 +121,7 @@
                         :class="`type-${event.type}`"
                         @click="openEventDialog(event)"
                      >
-                        <div class="event-title">{{ event.projectName }}</div>
+                        <div class="event-title">{{ truncateText(event.projectName, 30) }}</div>
                         <div class="event-type">{{ event.typeLabel }}</div>
                      </div>
                      
@@ -511,6 +512,11 @@ function getColorForType(type) {
   }
 }
 
+function truncateText(text, length) {
+  if (!text) return ''
+  return text.length > length ? text.substring(0, length) + '...' : text
+}
+
 // 5. Async Functions
 async function fetchEvents() {
   const year = currentDate.value.getFullYear()
@@ -842,6 +848,8 @@ onMounted(() => {
   padding: 0.75rem;
   position: relative;
   transition: background-color 0.2s;
+  min-width: 0;
+  overflow: hidden;
   
   &:hover {
     background: var(--bg-hover);
@@ -961,9 +969,8 @@ onMounted(() => {
   background: transparent;
   border: none;
   box-shadow: none;
-  min-width: 200px;
-  max-width: 240px;
-  padding: 10px;
+  width: 100%;
+  padding: 0.75rem;
 }
 
 .glass-content {
@@ -991,6 +998,8 @@ onMounted(() => {
   cursor: pointer;
   border-left: 3px solid transparent;
   transition: all 0.2s ease;
+  max-width: 100%;
+  overflow: hidden;
   
   &:hover {
     transform: translateY(-2px);
