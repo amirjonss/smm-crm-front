@@ -148,6 +148,66 @@ async function printPage() {
     },
     didParseCell: (data) => {
       data.cell.styles.font = FONT
+      if (data.section === 'body' && data.column.index === 3) {
+        // Hide default text by making it white (assumes white background)
+        // We will redraw it manually in didDrawCell to handle mixed styles
+        data.cell.styles.textColor = [255, 255, 255]
+      }
+    },
+    didDrawCell: (data) => {
+      if (data.section === 'body' && data.column.index === 3) {
+        const lines = data.cell.text
+        const fontSize = data.cell.styles.fontSize
+        const scaleFactor = doc.internal.scaleFactor
+        const lineHeight = (fontSize * 1.15) / scaleFactor
+
+        // Calculate vertical centering
+        const totalTextHeight = lines.length * lineHeight
+        // data.cell.y is top-left. data.cell.height is full cell height.
+        // We center the text block vertically.
+        const startY = data.cell.y + (data.cell.height - totalTextHeight) / 2
+        const startX = data.cell.x + data.cell.padding('left')
+
+        const urlRegex = /(https?:\/\/[^\s]+)/g
+
+        lines.forEach((line, i) => {
+          // Calculate baseline for the current line
+          // Text is drawn from baseline. We approximate baseline from top of line.
+          const lineTopY = startY + i * lineHeight
+          const textBaselineY = lineTopY + (fontSize * 0.75) / scaleFactor
+
+          // Split line by URL
+          const parts = line.split(urlRegex)
+          let currentLineX = startX
+
+          parts.forEach((part) => {
+            if (!part) return
+
+            if (part.match(/^https?:\/\//)) {
+              // It's a link
+              doc.setTextColor(0, 0, 255) // Blue
+              doc.text(part, currentLineX, textBaselineY)
+
+              const partWidth = doc.getTextWidth(part)
+
+              // Underline
+              doc.setDrawColor(0, 0, 255)
+              doc.setLineWidth(0.1)
+              doc.line(currentLineX, textBaselineY + 0.5, currentLineX + partWidth, textBaselineY + 0.5)
+
+              // Clickable Area
+              doc.link(currentLineX, lineTopY, partWidth, lineHeight, { url: part })
+
+              currentLineX += partWidth
+            } else {
+              // Normal Text
+              doc.setTextColor(0, 0, 0) // Black
+              doc.text(part, currentLineX, textBaselineY)
+              currentLineX += doc.getTextWidth(part)
+            }
+          })
+        })
+      }
     },
     didDrawPage: () => {
       // Футер как в макете
