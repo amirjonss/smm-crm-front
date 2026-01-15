@@ -42,7 +42,7 @@
               <span class="card-count q-ml-sm">{{ todaysContentPlans.length }}</span>
             </h2>
           </div>
-          <div class="card-body no-padding" style="min-height: auto; max-height: 400px;">
+          <div class="card-body no-padding" style="min-height: auto; max-height: 400px; overflow-y: auto;">
             <div v-if="todaysContentPlans.length === 0" class="empty-state">
               <q-icon name="event_busy" class="empty-state-icon" />
               <p class="empty-state-text">На сегодня планов нет</p>

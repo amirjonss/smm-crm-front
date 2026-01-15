@@ -140,6 +140,7 @@ function logout() {
   height: 32px;
   width: auto;
   display: block;
+  filter: brightness(0) invert(1);
   
   @media (max-width: 599px) {
     height: 28px;

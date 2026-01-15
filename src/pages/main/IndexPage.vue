@@ -225,7 +225,12 @@
                 />
               </div>
             </div>
-            <div class="card-body no-padding">
+            <div 
+              class="card-body no-padding" 
+              ref="contentPlanScrollContainer" 
+              @dragover="handleAutoScroll" 
+              @wheel="onWheelDuringDrag"
+            >
               <div v-if="contentPlanStore.getContentPlans.length === 0" class="empty-state">
                 <q-icon name="article" class="empty-state-icon" />
                 <p class="empty-state-text">
@@ -278,7 +283,17 @@
                   <tr
                     v-for="(row, index) in contentPlanStore.getContentPlans"
                     :key="index"
-                    :class="{ 'selected-row': row.id === contentPlanForm.id }"
+                    :class="{ 
+                      'selected-row': row.id === contentPlanForm.id,
+                      'drag-over': dragOverItemIndex === index,
+                      'dragged-item': draggedItemIndex === index
+                    }"
+                    draggable="true"
+                    @dragstart="onDragStart(index)"
+                    @dragover.prevent="onDragOver(index, $event)"
+                    @drop="onDrop(index)"
+                    @dragend="onDragEnd"
+                    class="draggable-row"
                   >
                     <td>{{ index + 1 }}</td>
                     <td class="post-name">{{ row.post }}</td>
@@ -595,10 +610,134 @@ watch(selectedProjectId, async () => {
 })
 
 // Content plan
-const contentPlanForm = ref({ post: '', format: '', idea: '', date: '', id: null, status: 'В плане' })
+const contentPlanForm = ref({ post: '', format: '', idea: '', date: '', id: null, status: 'В плане', position: 0 })
 const editingContent = ref(null)
 const showContentDialog = ref(false)
 const options = ref(['Reels', 'Carousel', 'Post', 'Animation', 'Story'])
+
+const draggedItemIndex = ref(null)
+const dragOverItemIndex = ref(null)
+const contentPlanScrollContainer = ref(null)
+let autoScrollInterval = null
+
+function onWheelDuringDrag(e) {
+  if (draggedItemIndex.value !== null && contentPlanScrollContainer.value) {
+    contentPlanScrollContainer.value.scrollTop += e.deltaY
+  }
+}
+
+function stopAutoScroll() {
+  if (autoScrollInterval) {
+    clearInterval(autoScrollInterval)
+    autoScrollInterval = null
+  }
+}
+
+function handleAutoScroll(e) {
+  if (draggedItemIndex.value === null) return
+  
+  const container = contentPlanScrollContainer.value
+  if (!container) return
+  
+  const rect = container.getBoundingClientRect()
+  const threshold = 80
+  const topDist = e.clientY - rect.top
+  const bottomDist = rect.bottom - e.clientY
+  
+  if (topDist < threshold || bottomDist < threshold) {
+    if (autoScrollInterval) return // Already scrolling
+    
+    autoScrollInterval = setInterval(() => {
+      const currentRect = container.getBoundingClientRect()
+      const currentTopDist = lastMouseY - currentRect.top
+      const currentBottomDist = currentRect.bottom - lastMouseY
+      
+      if (currentTopDist < threshold) {
+        container.scrollTop -= Math.max(5, (threshold - currentTopDist) / 2)
+      } else if (currentBottomDist < threshold) {
+        container.scrollTop += Math.max(5, (threshold - currentBottomDist) / 2)
+      } else {
+        stopAutoScroll()
+      }
+    }, 20)
+  } else {
+    stopAutoScroll()
+  }
+}
+
+let lastMouseY = 0
+function onDragOver(index, e) {
+  dragOverItemIndex.value = index
+  lastMouseY = e.clientY
+  handleAutoScroll(e)
+}
+
+function onDragStart(index) {
+  draggedItemIndex.value = index
+}
+
+function onDragEnd() {
+  draggedItemIndex.value = null
+  dragOverItemIndex.value = null
+  stopAutoScroll()
+}
+
+async function onDrop(toIndex) {
+  stopAutoScroll()
+  const plans = [...contentPlanStore.getContentPlans]
+  const fromIndex = draggedItemIndex.value
+  
+  if (fromIndex !== null && fromIndex !== toIndex) {
+    const item = plans.splice(fromIndex, 1)[0]
+    plans.splice(toIndex, 0, item)
+    
+    // Update local state immediately for responsiveness
+    contentPlanStore.contentPlans.items = plans
+    
+    // Show loading notification
+    const dismiss = q.notify({
+      group: false,
+      timeout: 0,
+      spinner: true,
+      message: 'Сохранение порядка...',
+      position: 'top'
+    })
+
+    // Persist changes to backend
+    try {
+      const updatePromises = []
+      plans.forEach((p, i) => {
+        const newPos = i + 1
+        if (p.position !== newPos) {
+          p.position = newPos
+          updatePromises.push(contentPlanStore.patchContentPlan({ position: newPos }, p.id))
+        }
+      })
+      
+      await Promise.all(updatePromises)
+      
+      dismiss()
+      q.notify({
+        message: 'Порядок сохранен',
+        type: 'positive',
+        position: 'top',
+        timeout: 1000
+      })
+    } catch (e) {
+      dismiss()
+      console.error('Error persisting order:', e)
+      q.notify({
+        message: 'Ошибка при сохранении порядка',
+        type: 'negative',
+        position: 'top'
+      })
+      // Refresh from server to revert if failed
+      contentPlanStore.fetchContentPlan(selectedProjectId.value)
+    }
+  }
+  draggedItemIndex.value = null
+  dragOverItemIndex.value = null
+}
 
 function openContentDialog() {
   cancelContentEdit()
@@ -616,7 +755,8 @@ function addToContentList() {
     format: contentPlanForm.value.format,
     idea: contentPlanForm.value.idea,
     date: contentPlanForm.value.date,
-    status: contentPlanForm.value.status
+    status: contentPlanForm.value.status,
+    position: contentPlanForm.value.position || (contentPlanStore.getContentPlans.length + 1)
   }
   contentPlanStore.createContentPlan(newRow).then(() => {
     contentPlanStore.fetchContentPlan(selectedProjectId.value)
@@ -628,7 +768,7 @@ function addToContentList() {
       position: 'top'
     })
   })
-  contentPlanForm.value = { post: '', format: '', idea: '', date: '', id: null, status: 'В плане' }
+  contentPlanForm.value = { post: '', format: '', idea: '', date: '', id: null, status: 'В плане', position: 0 }
 }
 
 function editContentPlan(plan) {
@@ -639,14 +779,15 @@ function editContentPlan(plan) {
     idea: plan.idea,
     date: plan.date.slice(0, 10),
     id: plan.id,
-    status: plan.status || 'В плане'
+    status: plan.status || 'В плане',
+    position: plan.position || 0
   }
   showContentDialog.value = true
 }
 
 function cancelContentEdit() {
   editingContent.value = null
-  contentPlanForm.value = { post: '', format: '', idea: '', date: '', id: null, status: 'В плане' }
+  contentPlanForm.value = { post: '', format: '', idea: '', date: '', id: null, status: 'В плане', position: 0 }
   showContentDialog.value = false
 }
 
@@ -656,7 +797,8 @@ function saveEditedContentPlan() {
     format: contentPlanForm.value.format,
     date: contentPlanForm.value.date,
     idea: contentPlanForm.value.idea,
-    status: contentPlanForm.value.status
+    status: contentPlanForm.value.status,
+    position: contentPlanForm.value.position
   }, editingContent.value.id).then(() => {
     contentPlanStore.fetchContentPlan(selectedProjectId.value)
     fetchTodaysContentPlans()
@@ -1005,6 +1147,55 @@ onMounted(() => {
       background-color: var(--bg-hover) !important;
     }
   }
+}
+
+.draggable-row {
+  cursor: grab;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.drag-handle {
+  cursor: move;
+}
+
+.dragged-item {
+  opacity: 0.05 !important;
+  background-color: var(--bg-tertiary) !important;
+  border: 2px dashed #3b82f6 !important;
+}
+
+.drag-over {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+  transform: translateY(15px);
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: #3b82f6;
+    border-radius: 4px;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+    animation: drag-pulse 1s infinite;
+  }
+}
+
+@keyframes drag-pulse {
+  0% { opacity: 0.6; transform: scaleX(0.98); }
+  50% { opacity: 1; transform: scaleX(1); }
+  100% { opacity: 0.6; transform: scaleX(0.98); }
+}
+
+.selected-row {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+  border-left: 3px solid #3b82f6;
 }
 
 .action-buttons {

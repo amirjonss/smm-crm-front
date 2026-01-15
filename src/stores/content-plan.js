@@ -60,7 +60,7 @@ export const useContentPlanStore = defineStore('content-plan', {
     fetchContentPlan(projectId) {
       return new Promise((resolve, reject) => {
         api
-          .get('/content_plans?project.id=' + projectId)
+          .get('/content_plans?project.id=' + projectId + '&order[position]=asc')
           .then((response) => {
             this.contentPlans.totalItems = response.data.totalItems
             this.contentPlans.items = response.data.member
