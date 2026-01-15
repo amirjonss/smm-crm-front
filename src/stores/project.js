@@ -5,15 +5,15 @@ export const useProjectStore = defineStore('project', {
   state: () => ({
     projects: {
       totalItems: 0,
-      items: []
+      items: [],
     },
-    globalTotal: 0
+    globalTotal: 0,
   }),
 
   getters: {
     getProjectsTotalItems: (state) => state.projects.totalItems,
-    getProjects: state => state.projects.items,
-    getGlobalTotal: (state) => state.globalTotal
+    getProjects: (state) => state.projects.items,
+    getGlobalTotal: (state) => state.globalTotal,
   },
 
   actions: {
@@ -101,7 +101,7 @@ export const useProjectStore = defineStore('project', {
     clearProjects() {
       this.projects.totalItems = 0
       this.projects.items = []
-    }
+    },
   },
 })
 

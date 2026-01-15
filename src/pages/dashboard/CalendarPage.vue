@@ -9,31 +9,26 @@
             Календарь контента
           </h1>
         </div>
-        
+
         <div class="header-controls">
-          <q-btn 
+          <q-btn
             v-if="!isCurrentMonthView"
-            outline 
-            label="Сегодня" 
-            @click="goToToday" 
+            outline
+            label="Сегодня"
+            @click="goToToday"
             class="today-btn text-weight-medium"
           />
-          
+
           <div class="row items-center">
             <q-btn flat round icon="chevron_left" @click="prevMonth" class="gt-xs" />
-            <div class="current-month q-mx-md">
-              {{ currentMonthName }} {{ currentYear }}
-            </div>
+            <div class="current-month q-mx-md">{{ currentMonthName }} {{ currentYear }}</div>
             <q-btn flat round icon="chevron_right" @click="nextMonth" class="gt-xs" />
           </div>
         </div>
       </div>
 
       <!-- Calendar Grid -->
-      <div 
-        class="calendar-wrapper"
-        v-touch-swipe.mouse.left.right="handleSwipe"
-      >
+      <div class="calendar-wrapper" v-touch-swipe.mouse.left.right="handleSwipe">
         <!-- Weekday Headers -->
         <div class="weekdays-grid">
           <div v-for="day in weekDays" :key="day" class="weekday-header">
@@ -43,17 +38,14 @@
 
         <!-- Days Grid -->
         <transition :name="transitionName" mode="out-in">
-          <div
-            :key="currentMonthKey"
-            class="days-grid"
-          >
+          <div :key="currentMonthKey" class="days-grid">
             <div
               v-for="(day, index) in calendarDays"
               :key="index"
               class="day-cell cursor-pointer"
               :class="{
                 'other-month': !day.isCurrentMonth,
-                'today': day.isToday
+                today: day.isToday,
               }"
               @click="handleDayClick(day)"
               @mouseenter="handleMouseEnter(day.date)"
@@ -62,38 +54,42 @@
               <div class="day-header">
                 <span class="day-number">{{ day.date.getDate() }}</span>
               </div>
-              
+
               <div class="day-content">
-                              <!-- Desktop: Chips -->
-                              <template v-if="$q.screen.gt.xs">
-                                                <div
-                                                  v-for="event in getEventsForDate(day.date).slice(0, 2)"
-                                                  :key="event.id"
-                                                  class="event-chip"
-                                                  :class="`type-${event.type}`"
-                                                  @click.stop="openEventDialog(event)"
-                                                >
-                                                  <div class="event-title">{{ truncateText(event.projectName, 30) }}</div>
-                                                  <div class="event-type">{{ event.typeLabel }}</div>
-                                                </div>                                
-                                <div 
-                                  v-if="getEventsForDate(day.date).length > 2"
-                                  class="more-events-chip"
-                                  @click.stop="openDayList(day.date)"
-                                >
-                                  +{{ getEventsForDate(day.date).length - 2 }} еще
-                                </div>
-                              </template>
-                
-                              <!-- Mobile: Dots -->                <template v-else>
-                   <div class="day-dots-container">
-                      <div 
-                        v-for="event in getEventsForDate(day.date)" 
-                        :key="event.id" 
-                        class="day-dot"
-                        :class="'dot-' + event.type"
-                      ></div>
-                   </div>
+                <!-- Desktop: Chips -->
+                <template v-if="$q.screen.gt.xs">
+                  <div
+                    v-for="event in getEventsForDate(day.date).slice(0, 2)"
+                    :key="event.id"
+                    class="event-chip"
+                    :class="`status-${event.status}`"
+                    @click.stop="openEventDialog(event)"
+                  >
+                    <div class="row no-wrap items-center q-gutter-x-xs">
+                      <q-icon :name="getIconForFormat(event.format)" size="xs" />
+                      <div class="event-title">{{ truncateText(event.projectName, 30) }}</div>
+                    </div>
+                    <div class="event-type">{{ event.format }}</div>
+                  </div>
+                  <div
+                    v-if="getEventsForDate(day.date).length > 2"
+                    class="more-events-chip"
+                    @click.stop="openDayList(day.date)"
+                  >
+                    +{{ getEventsForDate(day.date).length - 2 }} еще
+                  </div>
+                </template>
+
+                <!-- Mobile: Dots -->
+                <template v-else>
+                  <div class="day-dots-container">
+                    <div
+                      v-for="event in getEventsForDate(day.date)"
+                      :key="event.id"
+                      class="day-dot"
+                      :class="'status-' + event.status"
+                    ></div>
+                  </div>
                 </template>
               </div>
 
@@ -113,27 +109,33 @@
                 @mouseleave="handleMouseLeave"
               >
                 <div class="glass-day-card column q-gutter-y-xs">
-                   <div class="glass-content custom-scroll" style="max-height: 60vh; overflow-y: auto;">
-                     <div
-                        v-for="event in getEventsForDate(day.date)"
-                        :key="event.id"
-                        class="event-chip glass-chip cursor-pointer"
-                        :class="`type-${event.type}`"
-                        @click="openEventDialog(event)"
-                     >
+                  <div
+                    class="glass-content custom-scroll"
+                    style="max-height: 60vh; overflow-y: auto"
+                  >
+                    <div
+                      v-for="event in getEventsForDate(day.date)"
+                      :key="event.id"
+                      class="event-chip glass-chip cursor-pointer"
+                      :class="`status-${event.status}`"
+                      @click="openEventDialog(event)"
+                    >
+                      <div class="row no-wrap items-center q-gutter-x-xs">
+                        <q-icon :name="getIconForFormat(event.format)" size="xs" />
                         <div class="event-title">{{ truncateText(event.projectName, 30) }}</div>
-                        <div class="event-type">{{ event.typeLabel }}</div>
-                     </div>
-                     
-                     <!-- Add Button as a Floating Card -->
-                     <div 
-                       v-if="!userStore.isAdmin"
-                       class="event-chip glass-chip add-event-card cursor-pointer"
-                       @click="openCreateDialog(day.date)"
-                     >
-                        <q-icon name="add" size="sm" />
-                     </div>
-                   </div>
+                      </div>
+                      <div class="event-type">{{ event.format }}</div>
+                    </div>
+
+                    <!-- Add Button as a Floating Card -->
+                    <div
+                      v-if="!userStore.isAdmin"
+                      class="event-chip glass-chip add-event-card cursor-pointer"
+                      @click="openCreateDialog(day.date)"
+                    >
+                      <q-icon name="add" size="sm" />
+                    </div>
+                  </div>
                 </div>
               </q-menu>
             </div>
@@ -148,30 +150,45 @@
         <q-card-section class="row items-center justify-between">
           <div class="text-h6">{{ selectedDateLabel }}</div>
           <div class="row q-gutter-xs">
-            <q-btn v-if="!userStore.isAdmin" flat round dense icon="add" color="primary" @click="openCreateDialog(selectedDateForMobileList)" />
+            <q-btn
+              v-if="!userStore.isAdmin"
+              flat
+              round
+              dense
+              icon="add"
+              color="primary"
+              @click="openCreateDialog(selectedDateForMobileList)"
+            />
             <q-btn icon="close" flat round dense v-close-popup />
           </div>
         </q-card-section>
-        
+
         <q-card-section class="q-pt-none">
           <div v-if="selectedDayEvents.length === 0" class="text-grey text-center q-pa-md">
             Нет запланированного контента
           </div>
           <q-list v-else separator>
-            <q-item 
-              v-for="event in selectedDayEvents" 
-              :key="event.id" 
-              clickable 
+            <q-item
+              v-for="event in selectedDayEvents"
+              :key="event.id"
+              clickable
               v-ripple
               @click="openEventDialog(event)"
             >
               <q-item-section avatar>
-                <q-icon :name="getIconForType(event.type)" :color="getColorForType(event.type)" />
+                <q-icon
+                  :name="getIconForFormat(event.format)"
+                  :color="getColorForStatus(event.status)"
+                />
               </q-item-section>
               <q-item-section>
-                <q-item-label class="text-weight-bold text-primary">{{ event.projectName }}</q-item-label>
+                <q-item-label class="text-weight-bold text-primary">{{
+                  event.projectName
+                }}</q-item-label>
                 <q-item-label caption lines="1">{{ event.title }}</q-item-label>
-                <q-item-label caption>{{ event.typeLabel }}</q-item-label>
+                <q-item-label caption
+                  >{{ event.format }} • {{ getStatusLabel(event.status) }}</q-item-label
+                >
               </q-item-section>
               <q-item-section side>
                 <q-icon name="chevron_right" color="grey" />
@@ -184,13 +201,22 @@
 
     <!-- Global Event Detail/Edit Dialog -->
     <q-dialog v-model="isEventDialogOpen">
-      <q-card class="q-pa-none" style="min-width: 320px; max-width: 400px; overflow: hidden;">
+      <q-card class="q-pa-none" style="min-width: 320px; max-width: 400px; overflow: hidden">
         <!-- VIEW MODE -->
         <div v-if="!isEditing && tempEvent.id">
           <q-card-section class="row items-center justify-between q-pb-sm">
             <div class="text-subtitle1 text-weight-bold">Детали контента</div>
             <div class="row q-gutter-xs">
-              <q-btn v-if="!userStore.isAdmin" flat round dense icon="edit" size="sm" color="primary" @click="isEditing = true">
+              <q-btn
+                v-if="!userStore.isAdmin"
+                flat
+                round
+                dense
+                icon="edit"
+                size="sm"
+                color="primary"
+                @click="isEditing = true"
+              >
                 <q-tooltip>Редактировать</q-tooltip>
               </q-btn>
               <q-btn flat round dense icon="close" size="sm" v-close-popup />
@@ -200,12 +226,16 @@
           <q-card-section class="q-pt-none q-gutter-y-sm">
             <div>
               <div class="text-caption text-grey-7">Проект</div>
-              <div class="text-body2 text-weight-medium text-primary">{{ tempEvent.projectName || 'Без проекта' }}</div>
+              <div class="text-body2 text-weight-medium text-primary">
+                {{ tempEvent.projectName || 'Без проекта' }}
+              </div>
             </div>
 
             <div v-if="userStore.isAdmin">
               <div class="text-caption text-grey-7">Исполнитель</div>
-              <div class="text-body2 text-weight-medium text-secondary">{{ tempEvent.responsibleName || 'Не назначен' }}</div>
+              <div class="text-body2 text-weight-medium text-secondary">
+                {{ tempEvent.responsibleName || 'Не назначен' }}
+              </div>
             </div>
 
             <div>
@@ -213,22 +243,42 @@
               <div class="text-body2">{{ tempEvent.title }}</div>
             </div>
 
-            <div>
-              <div class="text-caption text-grey-7">Format (Тип)</div>
-              <q-chip
-                dense
-                square
-                :label="tempEvent.typeLabel"
-                class="q-ma-none q-mt-xs popup-chip"
-                :class="'chip-' + tempEvent.type"
-              />
+            <div class="row q-col-gutter-sm">
+              <div class="col-6">
+                <div class="text-caption text-grey-7">Format (Тип)</div>
+                <q-chip
+                  dense
+                  square
+                  outline
+                  color="primary"
+                  :label="tempEvent.format"
+                  :icon="getIconForFormat(tempEvent.format)"
+                  class="q-ma-none q-mt-xs"
+                />
+              </div>
+              <div class="col-6">
+                <div class="text-caption text-grey-7">Status</div>
+                <q-chip
+                  dense
+                  square
+                  :label="getStatusLabel(tempEvent.status)"
+                  :color="getColorForStatus(tempEvent.status)"
+                  text-color="white"
+                  class="q-ma-none q-mt-xs"
+                />
+              </div>
             </div>
 
             <div>
               <div class="text-caption text-grey-7">Idea (Идея)</div>
-              <div class="text-body2 popup-idea-box q-pa-sm rounded-borders" style="white-space: pre-wrap;">{{ tempEvent.idea || 'Нет описания идеи...' }}</div>
+              <div
+                class="text-body2 popup-idea-box q-pa-sm rounded-borders"
+                style="white-space: pre-wrap"
+              >
+                {{ tempEvent.idea || 'Нет описания идеи...' }}
+              </div>
             </div>
-            
+
             <div>
               <div class="text-caption text-grey-7">Дата</div>
               <div class="text-body2">{{ date.formatDate(tempEvent.date, 'D MMMM YYYY') }}</div>
@@ -239,9 +289,19 @@
         <!-- EDIT/CREATE MODE -->
         <div v-else>
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-subtitle1">{{ tempEvent.id ? 'Редактирование' : 'Создание контента' }}</div>
+            <div class="text-subtitle1">
+              {{ tempEvent.id ? 'Редактирование' : 'Создание контента' }}
+            </div>
             <q-space />
-            <q-btn v-if="tempEvent.id" icon="arrow_back" flat round dense size="sm" @click="isEditing = false" />
+            <q-btn
+              v-if="tempEvent.id"
+              icon="arrow_back"
+              flat
+              round
+              dense
+              size="sm"
+              @click="isEditing = false"
+            />
             <q-btn v-else icon="close" flat round dense size="sm" v-close-popup />
           </q-card-section>
 
@@ -255,7 +315,7 @@
                 outlined
                 emit-value
                 map-options
-                :rules="[val => !!val || 'Выберите проект']"
+                :rules="[(val) => !!val || 'Выберите проект']"
               />
 
               <q-select
@@ -275,18 +335,33 @@
                 dense
                 outlined
                 autofocus
-                :rules="[val => !!val || 'Обязательное поле']"
+                :rules="[(val) => !!val || 'Обязательное поле']"
               />
-              
-              <q-select
-                v-model="tempEvent.type"
-                :options="typeOptions"
-                label="Format (Тип)"
-                dense
-                outlined
-                emit-value
-                map-options
-              />
+
+              <div class="row q-col-gutter-sm">
+                <div class="col-6">
+                  <q-select
+                    v-model="tempEvent.format"
+                    :options="typeOptions"
+                    label="Format (Тип)"
+                    dense
+                    outlined
+                    emit-value
+                    map-options
+                  />
+                </div>
+                <div class="col-6">
+                  <q-select
+                    v-model="tempEvent.status"
+                    :options="statusOptions"
+                    label="Status"
+                    dense
+                    outlined
+                    emit-value
+                    map-options
+                  />
+                </div>
+              </div>
 
               <q-input
                 v-model="tempEvent.idea"
@@ -297,22 +372,10 @@
                 rows="3"
               />
 
-              <q-input
-                v-model="tempEvent.dateString"
-                label="Дата"
-                dense
-                outlined
-                type="date"
-              />
+              <q-input v-model="tempEvent.dateString" label="Дата" dense outlined type="date" />
 
               <div class="row justify-end q-mt-md">
-                <q-btn 
-                  label="Сохранить" 
-                  color="primary" 
-                  unelevated 
-                  size="sm"
-                  @click="saveEvent" 
-                />
+                <q-btn label="Сохранить" color="primary" unelevated size="sm" @click="saveEvent" />
               </div>
             </q-form>
           </q-card-section>
@@ -350,42 +413,62 @@ const hoveredDayKey = ref(null)
 const tempEvent = ref({
   id: null,
   title: '',
-  type: '',
+  format: 'Post', // Default Format
+  status: 'NOT_PUBLISHED', // Default Status
   dateString: '',
   idea: '',
   date: new Date(),
   projectId: null,
   projectName: '',
   responsibleId: null,
-  responsibleName: ''
+  responsibleName: '',
 })
 
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const monthNames = [
-  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+  'Январь',
+  'Февраль',
+  'Март',
+  'Апрель',
+  'Май',
+  'Июнь',
+  'Июль',
+  'Август',
+  'Сентябрь',
+  'Октябрь',
+  'Ноябрь',
+  'Декабрь',
 ]
 
+// API Strict Values: Reels, Carousel, Post, Animation, Story
 const typeOptions = [
-  { label: 'Post', value: 'post' },
-  { label: 'Story', value: 'story' },
-  { label: 'Reels', value: 'video' },
-  { label: 'Carousel', value: 'carousel' },
-  { label: 'Animation', value: 'animation' }
+  { label: 'Post', value: 'Post' },
+  { label: 'Story', value: 'Story' },
+  { label: 'Reels', value: 'Reels' },
+  { label: 'Carousel', value: 'Carousel' },
+  { label: 'Animation', value: 'Animation' },
+]
+
+// API Strict Values: PUBLISHED, CANCELED, NOT_PUBLISHED, RESCHEDULED
+const statusOptions = [
+  { label: 'Не опубликовано', value: 'NOT_PUBLISHED', color: 'grey' },
+  { label: 'Опубликовано', value: 'PUBLISHED', color: 'positive' },
+  { label: 'Отменено', value: 'CANCELED', color: 'negative' },
+  { label: 'Перенесено', value: 'RESCHEDULED', color: 'orange' },
 ]
 
 // 3. Computed Properties
 const projectOptions = computed(() => {
-  return projectStore.getProjects.map(p => ({
+  return projectStore.getProjects.map((p) => ({
     label: p.name,
-    value: p.id
+    value: p.id,
   }))
 })
 
 const userOptions = computed(() => {
-  return userStore.getUsers.map(u => ({
+  return userStore.getUsers.map((u) => ({
     label: `${u.givenName} ${u.familyName}`.trim() || u.email,
-    value: u.id
+    value: u.id,
   }))
 })
 
@@ -399,63 +482,67 @@ const currentMonthKey = computed(() => `${currentYear.value}-${currentDate.value
 
 const isCurrentMonthView = computed(() => {
   const today = new Date()
-  return currentDate.value.getMonth() === today.getMonth() &&
-         currentDate.value.getFullYear() === today.getFullYear()
+  return (
+    currentDate.value.getMonth() === today.getMonth() &&
+    currentDate.value.getFullYear() === today.getFullYear()
+  )
 })
 
 const calendarDays = computed(() => {
   const year = currentDate.value.getFullYear()
   const month = currentDate.value.getMonth()
-  
+
   const firstDayOfMonth = new Date(year, month, 1)
   const lastDayOfMonth = new Date(year, month + 1, 0)
-  
+
   const days = []
-  
+
   let startDay = firstDayOfMonth.getDay() - 1
   if (startDay === -1) startDay = 6
-  
+
   for (let i = startDay; i > 0; i--) {
     const date = new Date(year, month, 1 - i)
     days.push({
       date: date,
       isCurrentMonth: false,
-      isToday: isSameDate(date, new Date())
+      isToday: isSameDate(date, new Date()),
     })
   }
-  
+
   for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
     const date = new Date(year, month, i)
     days.push({
       date: date,
       isCurrentMonth: true,
-      isToday: isSameDate(date, new Date())
+      isToday: isSameDate(date, new Date()),
     })
   }
-  
+
   const remainingCells = 42 - days.length
   for (let i = 1; i <= remainingCells; i++) {
     const date = new Date(year, month + 1, i)
     days.push({
       date: date,
       isCurrentMonth: false,
-      isToday: isSameDate(date, new Date())
+      isToday: isSameDate(date, new Date()),
     })
   }
-  
+
   return days
 })
 
 // 4. Helper Functions
 function isSameDate(d1, d2) {
-  return d1.getDate() === d2.getDate() &&
-         d1.getMonth() === d2.getMonth() &&
-         d1.getFullYear() === d2.getFullYear()
+  return (
+    d1.getDate() === d2.getDate() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getFullYear() === d2.getFullYear()
+  )
 }
 
 const eventsMap = computed(() => {
   const map = {}
-  events.value.forEach(event => {
+  events.value.forEach((event) => {
     const key = date.formatDate(event.date, 'YYYY-MM-DD')
     if (!map[key]) map[key] = []
     map[key].push(event)
@@ -468,48 +555,40 @@ function getEventsForDate(dateObj) {
   return eventsMap.value[key] || []
 }
 
-function mapFormatToType(format) {
-  const map = {
-    'Post': 'post',
-    'Story': 'story',
-    'Reels': 'video',
-    'Carousel': 'carousel',
-    'Animation': 'animation'
-  }
-  return map[format] || 'post'
-}
-
-function mapTypeToFormat(type) {
-  const map = {
-    'post': 'Post',
-    'story': 'Story',
-    'video': 'Reels',
-    'carousel': 'Carousel',
-    'animation': 'Animation'
-  }
-  return map[type] || 'Post'
-}
-
-function getIconForType(type) {
-  switch (type) {
-    case 'post': return 'article'
-    case 'story': return 'history_edu'
-    case 'video': return 'videocam'
-    case 'carousel': return 'view_carousel'
-    case 'animation': return 'animation'
-    default: return 'event'
+function getIconForFormat(format) {
+  switch (format) {
+    case 'Post':
+      return 'article'
+    case 'Story':
+      return 'history_edu'
+    case 'Reels':
+      return 'videocam'
+    case 'Carousel':
+      return 'view_carousel'
+    case 'Animation':
+      return 'animation'
+    default:
+      return 'event'
   }
 }
 
-function getColorForType(type) {
-  switch (type) {
-    case 'post': return 'blue-9'
-    case 'story': return 'orange-9'
-    case 'video': return 'pink-9'
-    case 'carousel': return 'green-9'
-    case 'animation': return 'purple-9'
-    default: return 'grey'
+function getColorForStatus(status) {
+  switch (status) {
+    case 'PUBLISHED':
+      return 'positive' // Green
+    case 'CANCELED':
+      return 'negative' // Red
+    case 'RESCHEDULED':
+      return 'orange' // Orange
+    case 'NOT_PUBLISHED':
+    default:
+      return 'grey-7' // Gray
   }
+}
+
+function getStatusLabel(status) {
+  const opt = statusOptions.find((o) => o.value === status)
+  return opt ? opt.label : status
 }
 
 function truncateText(text, length) {
@@ -521,29 +600,31 @@ function truncateText(text, length) {
 async function fetchEvents() {
   const year = currentDate.value.getFullYear()
   const month = currentDate.value.getMonth()
-  
+
   // Calculate range: First day of month - 7 days to Last day of month + 14 days
   const firstDay = new Date(year, month, 1)
   const startDate = date.formatDate(date.subtractFromDate(firstDay, { days: 7 }), 'YYYY-MM-DD')
-  
+
   const lastDay = new Date(year, month + 1, 0)
   const endDate = date.formatDate(date.addToDate(lastDay, { days: 14 }), 'YYYY-MM-DD')
 
   try {
     const data = await contentPlanStore.fetchContentPlansByDateRange(startDate, endDate)
-    events.value = data.map(item => {
+    events.value = data.map((item) => {
       const executor = item.executor || item.project?.executor
       return {
         id: item.id,
         title: item.post,
         date: new Date(item.date),
-        type: mapFormatToType(item.format),
-        typeLabel: item.format,
+        format: item.format || 'Post', // API Field
+        status: item.status || 'NOT_PUBLISHED', // API Field
         idea: item.idea,
         projectId: item.project?.id,
         projectName: item.project?.name,
         responsibleId: executor?.id,
-        responsibleName: executor ? `${executor.givenName || ''} ${executor.familyName || ''}`.trim() : null
+        responsibleName: executor
+          ? `${executor.givenName || ''} ${executor.familyName || ''}`.trim()
+          : null,
       }
     })
   } catch (e) {
@@ -555,10 +636,11 @@ async function fetchEvents() {
 async function saveEvent() {
   const payload = {
     post: tempEvent.value.title,
-    format: mapTypeToFormat(tempEvent.value.type),
+    format: tempEvent.value.format, // strict value
+    status: tempEvent.value.status, // strict value
     idea: tempEvent.value.idea,
     date: new Date(tempEvent.value.dateString).toISOString(),
-    project: tempEvent.value.projectId ? `/api/projects/${tempEvent.value.projectId}` : null
+    project: tempEvent.value.projectId ? `/api/projects/${tempEvent.value.projectId}` : null,
     // executor: tempEvent.value.responsibleId ? `/api/users/${tempEvent.value.responsibleId}` : null
   }
 
@@ -575,8 +657,9 @@ async function saveEvent() {
     isEditing.value = false
   } catch (e) {
     console.error(e)
-    const message = e.response?.data?.detail || e.response?.data?.['hydra:description'] || 'Ошибка сохранения'
-    const violations = e.response?.data?.violations?.map(v => v.message).join('\n')
+    const message =
+      e.response?.data?.detail || e.response?.data?.['hydra:description'] || 'Ошибка сохранения'
+    const violations = e.response?.data?.violations?.map((v) => v.message).join('\n')
     $q.notify({ type: 'negative', message: violations || message })
   }
 }
@@ -630,10 +713,10 @@ function openEventDialog(event) {
   isEditing.value = false
   tempEvent.value = {
     ...event,
-    dateString: date.formatDate(event.date, 'YYYY-MM-DD')
+    dateString: date.formatDate(event.date, 'YYYY-MM-DD'),
   }
   isEventDialogOpen.value = true
-  showDayList.value = false 
+  showDayList.value = false
 }
 
 function openCreateDialog(dateObj) {
@@ -641,15 +724,15 @@ function openCreateDialog(dateObj) {
   tempEvent.value = {
     id: null,
     title: '',
-    type: 'post',
-    typeLabel: 'Post',
+    format: 'Post',
+    status: 'NOT_PUBLISHED',
     idea: '',
     date: dateObj,
     dateString: date.formatDate(dateObj, 'YYYY-MM-DD'),
     projectId: null,
     projectName: '',
     responsibleId: null,
-    responsibleName: ''
+    responsibleName: '',
   }
   isEventDialogOpen.value = true
   showDayList.value = false
@@ -774,7 +857,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  
+
   @media (max-width: 599px) {
     width: 100%;
     justify-content: space-between;
@@ -837,7 +920,7 @@ onMounted(() => {
   grid-auto-rows: minmax(140px, auto);
   background: var(--border-color);
   gap: 1px;
-  
+
   @media (max-width: 599px) {
     grid-auto-rows: minmax(90px, auto);
   }
@@ -850,7 +933,7 @@ onMounted(() => {
   transition: background-color 0.2s;
   min-width: 0;
   overflow: hidden;
-  
+
   &:hover {
     background: var(--bg-hover);
   }
@@ -861,23 +944,23 @@ onMounted(() => {
     flex-direction: column;
     justify-content: space-between;
   }
-  
+
   &.other-month {
     background: var(--bg-tertiary);
-    
+
     .day-number,
     .day-content {
       opacity: 0.5;
     }
-    
+
     .day-number {
       color: var(--text-muted);
     }
   }
-  
+
   &.today {
     background: rgba(139, 92, 246, 0.03);
-    
+
     .day-number {
       background: #8b5cf6;
       color: white;
@@ -937,18 +1020,6 @@ onMounted(() => {
   margin-top: 2px;
 }
 
-.day-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  
-  &.dot-post { background-color: #3b82f6; }
-  &.dot-story { background-color: #f59e0b; }
-  &.dot-video { background-color: #ec4899; }
-  &.dot-carousel { background-color: #22c55e; }
-  &.dot-animation { background-color: #8b5cf6; }
-}
-
 .more-events-chip {
   font-size: 11px;
   font-weight: 600;
@@ -957,7 +1028,7 @@ onMounted(() => {
   cursor: pointer;
   border-radius: 4px;
   transition: background-color 0.2s;
-  
+
   &:hover {
     background-color: var(--bg-hover);
     color: var(--text-primary);
@@ -984,9 +1055,11 @@ onMounted(() => {
 .custom-scroll::-webkit-scrollbar {
   width: 4px;
 }
-.custom-scroll::-webkit-scrollbar-track { background: transparent; }
+.custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
 .custom-scroll::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,0.1);
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 4px;
 }
 
@@ -1000,29 +1073,29 @@ onMounted(() => {
   transition: all 0.2s ease;
   max-width: 100%;
   overflow: hidden;
-  
+
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 }
 
 /* Specific styles for cards in the floating menu */
 .glass-chip {
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   /* Use slightly more opaque background for menu items to ensure visibility */
-  border: 1px solid rgba(255,255,255,0.2);
-  
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
   .body--dark & {
-    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   &:hover {
     transform: scale(1.03) translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
   }
 }
 
@@ -1035,47 +1108,72 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   height: 38px;
-  
+
   &:hover {
     background: rgba(139, 92, 246, 0.1);
     border-style: solid;
   }
 }
 
-/* Color Coding */
-.type-post {
-  background: rgba(59, 130, 246, 0.15);
-  border-left-color: #3b82f6;
-  color: #1e40af;
-  .body--dark & { background: rgba(59, 130, 246, 0.25); color: #93c5fd; }
+/* Status Color Coding */
+.status-PUBLISHED {
+  background: rgba(33, 186, 69, 0.15);
+  border-left-color: #21ba45;
+  color: #1b5e20;
+  .body--dark & {
+    background: rgba(33, 186, 69, 0.25);
+    color: #a5d6a7;
+  }
 }
 
-.type-story {
-  background: rgba(245, 158, 11, 0.15);
-  border-left-color: #f59e0b;
-  color: #92400e;
-  .body--dark & { background: rgba(245, 158, 11, 0.25); color: #fcd34d; }
+.status-CANCELED {
+  background: rgba(193, 0, 21, 0.15);
+  border-left-color: #c10015;
+  color: #b71c1c;
+  .body--dark & {
+    background: rgba(193, 0, 21, 0.25);
+    color: #ef9a9a;
+  }
 }
 
-.type-video {
-  background: rgba(236, 72, 153, 0.15);
-  border-left-color: #ec4899;
-  color: #9d174d;
-  .body--dark & { background: rgba(236, 72, 153, 0.25); color: #f9a8d4; }
+.status-RESCHEDULED {
+  background: rgba(242, 192, 55, 0.15);
+  border-left-color: #f2c037;
+  color: #e65100;
+  .body--dark & {
+    background: rgba(242, 192, 55, 0.25);
+    color: #ffe0b2;
+  }
 }
 
-.type-carousel {
-  background: rgba(34, 197, 94, 0.15);
-  border-left-color: #22c55e;
-  color: #166534;
-  .body--dark & { background: rgba(34, 197, 94, 0.25); color: #bbf7d0; }
+.status-NOT_PUBLISHED {
+  background: rgba(158, 158, 158, 0.15);
+  border-left-color: #9e9e9e;
+  color: #424242;
+  .body--dark & {
+    background: rgba(158, 158, 158, 0.25);
+    color: #eeeeee;
+  }
 }
 
-.type-animation {
-  background: rgba(139, 92, 246, 0.15);
-  border-left-color: #8b5cf6;
-  color: #5b21b6;
-  .body--dark & { background: rgba(139, 92, 246, 0.25); color: #ddd6fe; }
+/* Mobile Dots */
+.day-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+
+  &.status-PUBLISHED {
+    background-color: #21ba45;
+  }
+  &.status-CANCELED {
+    background-color: #c10015;
+  }
+  &.status-RESCHEDULED {
+    background-color: #f2c037;
+  }
+  &.status-NOT_PUBLISHED {
+    background-color: #9e9e9e;
+  }
 }
 
 .event-title {
@@ -1099,35 +1197,50 @@ onMounted(() => {
 
 .popup-chip {
   font-weight: 600;
-  
+
   &.chip-post {
     background: #e3f2fd;
     color: #0d47a1;
-    .body--dark & { background: #1e3a8a; color: #bfdbfe; }
+    .body--dark & {
+      background: #1e3a8a;
+      color: #bfdbfe;
+    }
   }
-  
+
   &.chip-story {
     background: #fff3e0;
     color: #e65100;
-    .body--dark & { background: #7c2d12; color: #fed7aa; }
+    .body--dark & {
+      background: #7c2d12;
+      color: #fed7aa;
+    }
   }
-  
+
   &.chip-video {
     background: #fce4ec;
     color: #880e4f;
-    .body--dark & { background: #831843; color: #fbcfe8; }
+    .body--dark & {
+      background: #831843;
+      color: #fbcfe8;
+    }
   }
 
   &.chip-carousel {
     background: #f0fdf4;
     color: #166534;
-    .body--dark & { background: #14532d; color: #bbf7d0; }
+    .body--dark & {
+      background: #14532d;
+      color: #bbf7d0;
+    }
   }
 
   &.chip-animation {
     background: #f5f3ff;
     color: #5b21b6;
-    .body--dark & { background: #4c1d95; color: #ddd6fe; }
+    .body--dark & {
+      background: #4c1d95;
+      color: #ddd6fe;
+    }
   }
 }
 </style>

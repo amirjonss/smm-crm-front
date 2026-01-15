@@ -19,7 +19,7 @@
             <q-icon name="folder_off" class="empty-state-icon" />
             <p class="empty-state-text">Проекты не найдены</p>
           </div>
-          
+
           <!-- Mobile Cards View -->
           <div v-else class="mobile-cards show-mobile-only">
             <div
@@ -53,34 +53,39 @@
               </div>
             </div>
           </div>
-          
-                      <!-- Desktop Table View -->
-                      <q-markup-table v-if="projectStore.getProjects.length > 0" flat class="modern-table hide-mobile-only">
-                        <thead>
-                          <tr>
-                            <th>#</th>
-                            <th>Проект</th>
-                            <th>Менеджер</th>
-                            <th>Телефон</th>
-                            <th>Дата</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr
-                            v-for="(item, index) in projectStore.getProjects"
-                            :key="index"
-                            :class="{ 'selected-row': item.id === selectedProjectId }"
-                            @click="setProject(item)"
-                            class="cursor-pointer"
-                          >
-                            <td>{{ index + 1 }}</td>
-                            <td class="project-name">{{ item.name }}</td>
-                            <td>{{ item.executor?.givenName || '-' }}</td>
-                            <td>{{ item.phone }}</td>
-                            <td>{{ item.createdAt?.slice(0, 10) || '-' }}</td>
-                          </tr>
-                        </tbody>
-                      </q-markup-table>        </div>
+
+          <!-- Desktop Table View -->
+          <q-markup-table
+            v-if="projectStore.getProjects.length > 0"
+            flat
+            class="modern-table hide-mobile-only"
+          >
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Проект</th>
+                <th>Менеджер</th>
+                <th>Телефон</th>
+                <th>Дата</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(item, index) in projectStore.getProjects"
+                :key="index"
+                :class="{ 'selected-row': item.id === selectedProjectId }"
+                @click="setProject(item)"
+                class="cursor-pointer"
+              >
+                <td>{{ index + 1 }}</td>
+                <td class="project-name">{{ item.name }}</td>
+                <td>{{ item.executor?.givenName || '-' }}</td>
+                <td>{{ item.phone }}</td>
+                <td>{{ item.createdAt?.slice(0, 10) || '-' }}</td>
+              </tr>
+            </tbody>
+          </q-markup-table>
+        </div>
       </div>
     </div>
 
@@ -109,7 +114,7 @@
               {{ selectedProjectId ? 'Контент-план пуст' : 'Выберите проект' }}
             </p>
           </div>
-          
+
           <!-- Mobile Cards View -->
           <draggable
             v-else
@@ -120,15 +125,25 @@
             :force-fallback="true"
             ghost-class="drag-ghost"
             drag-class="drag-fallback"
+            :disabled="userStore.isAdmin"
           >
             <template #item="{ element: item }">
-              <div class="mobile-card">
+              <div
+                class="mobile-card"
+                :class="`status-border-${item.status || 'NOT_PUBLISHED'}`"
+              >
                 <div class="mobile-card-header">
-                  <div class="drag-handle-wrapper q-mr-sm">
-                    <q-icon name="drag_handle" size="20px" color="grey-6" style="cursor: grab;" />
+                  <div v-if="!userStore.isAdmin" class="drag-handle-wrapper q-mr-sm">
+                    <q-icon name="drag_handle" size="20px" color="grey-6" style="cursor: grab" />
                   </div>
                   <span class="mobile-card-title">{{ item.post }}</span>
-                  <span class="format-badge">{{ item.format }}</span>
+                  <div class="row items-center q-gutter-x-xs">
+                    <span class="format-badge">{{ item.format }}</span>
+                    <q-badge
+                      :color="getColorForStatus(item.status)"
+                      :label="getStatusLabel(item.status)"
+                    />
+                  </div>
                 </div>
                 <div class="mobile-card-body">
                   <div class="mobile-card-row">
@@ -143,25 +158,41 @@
               </div>
             </template>
           </draggable>
-          
+
           <!-- Desktop Table View -->
-          <q-markup-table v-if="contentPlanStore.getContentPlans.length > 0" flat class="modern-table hide-mobile-only">
+          <q-markup-table
+            v-if="contentPlanStore.getContentPlans.length > 0"
+            flat
+            class="modern-table hide-mobile-only"
+          >
             <thead>
               <tr>
                 <th>#</th>
                 <th>Пост</th>
                 <th>Формат</th>
+                <th>Статус</th>
                 <th>Идея</th>
                 <th>Дата</th>
               </tr>
             </thead>
-            <draggable v-model="contentPlansList" tag="tbody" item-key="id">
+            <draggable
+              v-model="contentPlansList"
+              tag="tbody"
+              item-key="id"
+              :disabled="userStore.isAdmin"
+            >
               <template #item="{ element: item, index }">
-                <tr>
+                <tr :style="!userStore.isAdmin ? 'cursor: grab' : ''">
                   <td>{{ index + 1 }}</td>
                   <td class="post-name">{{ item.post }}</td>
                   <td>
                     <span class="format-badge">{{ item.format }}</span>
+                  </td>
+                  <td>
+                    <q-badge
+                      :color="getColorForStatus(item.status)"
+                      :label="getStatusLabel(item.status)"
+                    />
                   </td>
                   <td class="idea-cell">{{ item.idea }}</td>
                   <td>{{ item.date?.slice(0, 10) || '-' }}</td>
@@ -179,26 +210,48 @@
 import { ref, watch, computed } from 'vue'
 import { useProjectStore } from 'stores/project.js'
 import { useContentPlanStore } from 'stores/content-plan.js'
+import { useUserStore } from 'stores/user.js'
 import PdfPrinterComponent from 'components/PdfPrinterComponent.vue'
 import draggable from 'vuedraggable'
 
 const projectStore = useProjectStore()
 const contentPlanStore = useContentPlanStore()
+const userStore = useUserStore()
 const selectedProjectId = ref(null)
 const selectedProject = ref(null)
 
 const props = defineProps({
   parentSelectedUserId: {
-    default: null
-  }
+    default: null,
+  },
 })
+
+function getStatusLabel(status) {
+  const labels = {
+    PUBLISHED: 'Опубликовано',
+    CANCELED: 'Отменено',
+    NOT_PUBLISHED: 'Не опубликовано',
+    RESCHEDULED: 'Перенесено',
+  }
+  return labels[status] || 'Не опубликовано'
+}
+
+function getColorForStatus(status) {
+  const colors = {
+    PUBLISHED: 'positive',
+    CANCELED: 'negative',
+    NOT_PUBLISHED: 'grey-7',
+    RESCHEDULED: 'orange',
+  }
+  return colors[status] || 'grey-7'
+}
 
 const contentPlansList = computed({
   get: () => contentPlanStore.getContentPlans,
   set: (val) => {
     contentPlanStore.setContentPlans(val)
     updateOrder(val)
-  }
+  },
 })
 
 function updateOrder(items) {
@@ -231,17 +284,20 @@ watch(selectedProjectId, () => {
   }
 })
 
-watch(() => props.parentSelectedUserId, async (newId) => {
-  if (newId == null) {
-    projectStore.clearProjects()
-    selectedProjectId.value = null
-    selectedProject.value = null
-  } else {
-    selectedProjectId.value = null
-    selectedProject.value = null
-    await projectStore.fetchProjectsByUser(newId)
-  }
-})
+watch(
+  () => props.parentSelectedUserId,
+  async (newId) => {
+    if (newId == null) {
+      projectStore.clearProjects()
+      selectedProjectId.value = null
+      selectedProject.value = null
+    } else {
+      selectedProjectId.value = null
+      selectedProject.value = null
+      await projectStore.fetchProjectsByUser(newId)
+    }
+  },
+)
 </script>
 
 <style scoped lang="scss">
@@ -365,7 +421,7 @@ watch(() => props.parentSelectedUserId, async (newId) => {
   background: transparent;
   border: none;
   width: 100%;
-  
+
   :deep(thead tr th) {
     background: transparent !important;
     color: var(--text-muted) !important;
@@ -374,16 +430,16 @@ watch(() => props.parentSelectedUserId, async (newId) => {
     border-top: none !important;
     text-align: left !important;
   }
-  
+
   :deep(tbody tr td) {
     text-align: left !important;
   }
-  
+
   :deep(tbody tr) {
     &:nth-child(even) {
       background-color: var(--bg-tertiary);
     }
-    
+
     &:hover {
       background-color: var(--bg-hover) !important;
     }
@@ -452,7 +508,7 @@ watch(() => props.parentSelectedUserId, async (newId) => {
   padding: 0.375rem 0.75rem;
   border-radius: 8px;
   transition: all 0.2s ease;
-  
+
   &:hover {
     transform: translateY(-1px);
   }
@@ -467,7 +523,7 @@ watch(() => props.parentSelectedUserId, async (newId) => {
 
 .show-mobile-only {
   display: none !important;
-  
+
   @media (max-width: 767px) {
     display: block !important;
   }
@@ -491,9 +547,22 @@ watch(() => props.parentSelectedUserId, async (newId) => {
   padding: 0.875rem;
   margin-bottom: 0.75rem;
   transition: all 0.2s ease;
-  
+
   &:last-child {
     margin-bottom: 0;
+  }
+
+  &.status-border-PUBLISHED {
+    border-left: 4px solid var(--q-positive);
+  }
+  &.status-border-CANCELED {
+    border-left: 4px solid var(--q-negative);
+  }
+  &.status-border-RESCHEDULED {
+    border-left: 4px solid var(--q-orange);
+  }
+  &.status-border-NOT_PUBLISHED {
+    border-left: 4px solid var(--q-grey-7);
   }
 }
 
@@ -555,16 +624,16 @@ watch(() => props.parentSelectedUserId, async (newId) => {
   .section-title {
     font-size: 1rem;
   }
-  
+
   .card-title {
     font-size: 0.875rem;
   }
-  
+
   .action-btn {
     padding: 0.5rem 0.75rem;
     font-size: 0.75rem;
   }
-  
+
   .modern-table :deep(td),
   .modern-table :deep(th) {
     padding: 0.75rem 0.5rem;

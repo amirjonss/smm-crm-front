@@ -43,21 +43,21 @@ const menuList = [
     icon: 'home',
     label: 'Главная',
     separator: false,
-    to: '/dashboard'
+    to: '/dashboard',
   },
   {
     icon: 'calendar_month',
     label: 'Календарь',
     separator: false,
-    to: '/calendar'
+    to: '/calendar',
   },
   {
     icon: 'logout',
     label: 'Выйти',
     separator: false,
     action: 'logout',
-    position: 'bottom'
-  }
+    position: 'bottom',
+  },
 ]
 const currentPage = ref('')
 

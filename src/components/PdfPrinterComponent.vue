@@ -22,14 +22,14 @@ import './Roboto-Bold-normal.js'
 const themeStore = useThemeStore()
 const props = defineProps({
   selectedProjectId: {
-    default: null
+    default: null,
   },
   selectedProject: {
-    default: null
+    default: null,
   },
   contentPlans: {
-    default: null
-  }
+    default: null,
+  },
 })
 
 function getFullName(project) {
@@ -141,7 +141,7 @@ async function printPage() {
     // Доли ширины колонок подобраны под картинку
     columnStyles: {
       0: { cellWidth: tableWidth * 0.07, halign: 'center' }, // №
-      1: { cellWidth: tableWidth * 0.20 }, // Post
+      1: { cellWidth: tableWidth * 0.2 }, // Post
       2: { cellWidth: tableWidth * 0.15 }, // Format
       3: { cellWidth: tableWidth * 0.38 }, // Idea
       4: { cellWidth: tableWidth * 0.2, halign: 'center' }, // Sana
@@ -175,7 +175,7 @@ async function printPage() {
           linkMatches.push({
             start: match.index,
             end: match.index + match[0].length,
-            url: match[0]
+            url: match[0],
           })
         }
 
@@ -229,7 +229,7 @@ async function printPage() {
                 currentLineX,
                 textBaselineY + 0.5,
                 currentLineX + segWidth,
-                textBaselineY + 0.5
+                textBaselineY + 0.5,
               )
 
               // Link
