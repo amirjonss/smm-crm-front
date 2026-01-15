@@ -23,7 +23,10 @@ const routes = [
   {
     path: '/',
     component: () => import('layouts/MainLayout.vue'),
-    children: [{ path: '', component: () => import('pages/main/IndexPage.vue') }],
+    children: [
+      { path: '', component: () => import('pages/main/IndexPage.vue') },
+      { path: 'calendar', component: () => import('pages/dashboard/CalendarPage.vue') },
+    ],
     beforeEnter: [isAuthorised],
   },
   {

@@ -46,6 +46,12 @@ const menuList = [
     to: '/dashboard'
   },
   {
+    icon: 'calendar_month',
+    label: 'Календарь',
+    separator: false,
+    to: '/calendar'
+  },
+  {
     icon: 'logout',
     label: 'Выйти',
     separator: false,

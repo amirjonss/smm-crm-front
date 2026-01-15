@@ -239,33 +239,45 @@
               </div>
 
               <!-- Mobile Cards View -->
-              <div v-else class="mobile-cards show-mobile-only">
-                <div
-                  v-for="(row, index) in contentPlanStore.getContentPlans"
-                  :key="index"
-                  class="mobile-card"
-                  :class="{ 'mobile-card-selected': row.id === contentPlanForm.id }"
-                >
-                  <div class="mobile-card-header">
-                    <span class="mobile-card-title">{{ row.post }}</span>
-                    <span class="format-badge">{{ row.format }}</span>
-                  </div>
-                  <div class="mobile-card-body">
-                    <div class="mobile-card-row">
-                      <span class="mobile-card-label">Идея:</span>
-                      <span class="mobile-card-idea">{{ row.idea }}</span>
+              <draggable
+                v-else
+                v-model="contentPlansList"
+                item-key="id"
+                class="mobile-cards show-mobile-only"
+                handle=".drag-handle-wrapper"
+                :force-fallback="true"
+                ghost-class="drag-ghost"
+                drag-class="drag-fallback"
+              >
+                <template #item="{ element: row }">
+                  <div
+                    class="mobile-card"
+                    :class="{ 'mobile-card-selected': row.id === contentPlanForm.id }"
+                  >
+                    <div class="mobile-card-header">
+                      <div class="drag-handle-wrapper q-mr-sm">
+                        <q-icon name="drag_handle" size="20px" color="grey-6" style="cursor: grab;" />
+                      </div>
+                      <span class="mobile-card-title">{{ row.post }}</span>
+                      <span class="format-badge">{{ row.format }}</span>
                     </div>
-                    <div class="mobile-card-row">
-                      <span class="mobile-card-label">Дата:</span>
-                      <span>{{ row.date.slice(0, 10) }}</span>
+                    <div class="mobile-card-body">
+                      <div class="mobile-card-row">
+                        <span class="mobile-card-label">Идея:</span>
+                        <span class="mobile-card-idea">{{ row.idea }}</span>
+                      </div>
+                      <div class="mobile-card-row">
+                        <span class="mobile-card-label">Дата:</span>
+                        <span>{{ row.date.slice(0, 10) }}</span>
+                      </div>
+                    </div>
+                    <div class="mobile-card-actions">
+                      <q-btn flat dense size="sm" icon="edit" label="Изменить" no-caps @click="editContentPlan(row)" />
+                      <q-btn flat dense size="sm" icon="delete_outline" label="Удалить" no-caps color="negative" @click="confirmContentPlanDeletion(row.id)" />
                     </div>
                   </div>
-                  <div class="mobile-card-actions">
-                    <q-btn flat dense size="sm" icon="edit" label="Изменить" no-caps @click="editContentPlan(row)" />
-                    <q-btn flat dense size="sm" icon="delete_outline" label="Удалить" no-caps color="negative" @click="confirmContentPlanDeletion(row.id)" />
-                  </div>
-                </div>
-              </div>
+                </template>
+              </draggable>
 
               <!-- Desktop Table View -->
               <q-markup-table v-if="contentPlanStore.getContentPlans.length > 0" flat class="modern-table hide-mobile-only">
@@ -466,6 +478,7 @@ import { useQuasar } from 'quasar'
 import { useContentPlanStore } from 'stores/content-plan.js'
 import { api } from 'boot/axios.js'
 import PdfPrinterComponent from 'components/PdfPrinterComponent.vue'
+import draggable from 'vuedraggable'
 
 const form = ref({ phone: '', name: '' })
 const selectedProjectId = ref(null)
@@ -682,6 +695,59 @@ function onDragEnd() {
   stopAutoScroll()
 }
 
+const contentPlansList = computed({
+  get: () => contentPlanStore.getContentPlans,
+  set: (val) => {
+    contentPlanStore.setContentPlans(val)
+    persistOrder(val)
+  }
+})
+
+async function persistOrder(plans) {
+  // Show loading notification
+  const dismiss = q.notify({
+    group: false,
+    timeout: 0,
+    spinner: true,
+    message: 'Сохранение порядка...',
+    position: 'top'
+  })
+
+  // Persist changes to backend
+  try {
+    const updatePromises = []
+    plans.forEach((p, i) => {
+      const newPos = i + 1
+      if (p.position !== newPos) {
+        p.position = newPos
+        updatePromises.push(contentPlanStore.patchContentPlan({ position: newPos }, p.id))
+      }
+    })
+    
+    await Promise.all(updatePromises)
+    
+    dismiss()
+    q.notify({
+      message: 'Порядок сохранен',
+      type: 'positive',
+      position: 'top',
+      timeout: 1000
+    })
+  } catch (e) {
+    dismiss()
+    console.error('Error persisting order:', e)
+    q.notify({
+      message: 'Ошибка при сохранении порядка',
+      type: 'negative',
+      position: 'top'
+    })
+    // Refresh from server to revert if failed
+    if (selectedProjectId.value) {
+      contentPlanStore.fetchContentPlan(selectedProjectId.value)
+    }
+  }
+}
+
 async function onDrop(toIndex) {
   stopAutoScroll()
   const plans = [...contentPlanStore.getContentPlans]
@@ -694,46 +760,8 @@ async function onDrop(toIndex) {
     // Update local state immediately for responsiveness
     contentPlanStore.contentPlans.items = plans
     
-    // Show loading notification
-    const dismiss = q.notify({
-      group: false,
-      timeout: 0,
-      spinner: true,
-      message: 'Сохранение порядка...',
-      position: 'top'
-    })
-
-    // Persist changes to backend
-    try {
-      const updatePromises = []
-      plans.forEach((p, i) => {
-        const newPos = i + 1
-        if (p.position !== newPos) {
-          p.position = newPos
-          updatePromises.push(contentPlanStore.patchContentPlan({ position: newPos }, p.id))
-        }
-      })
-      
-      await Promise.all(updatePromises)
-      
-      dismiss()
-      q.notify({
-        message: 'Порядок сохранен',
-        type: 'positive',
-        position: 'top',
-        timeout: 1000
-      })
-    } catch (e) {
-      dismiss()
-      console.error('Error persisting order:', e)
-      q.notify({
-        message: 'Ошибка при сохранении порядка',
-        type: 'negative',
-        position: 'top'
-      })
-      // Refresh from server to revert if failed
-      contentPlanStore.fetchContentPlan(selectedProjectId.value)
-    }
+    // Persist
+    persistOrder(plans)
   }
   draggedItemIndex.value = null
   dragOverItemIndex.value = null
@@ -1453,5 +1481,22 @@ onMounted(() => {
   .page-title {
     font-size: 1.375rem;
   }
+}
+.modern-table {
+  min-width: 100%;
+}
+
+.drag-ghost {
+  opacity: 0.5;
+  background: var(--bg-tertiary);
+  border: 2px dashed #3b82f6;
+}
+
+.drag-fallback {
+  opacity: 1 !important;
+  background: var(--bg-card);
+  border: 1px solid #3b82f6;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  transform: scale(1.02);
 }
 </style>

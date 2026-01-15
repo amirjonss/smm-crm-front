@@ -8,13 +8,24 @@
           <span class="brand-badge hide-mobile">Админ</span>
         </router-link>
 
+        <!-- Header Navigation (Desktop) -->
+        <div class="header-nav q-ml-md gt-sm">
+          <q-btn
+            flat
+            no-caps
+            label="Календарь"
+            to="/calendar"
+            class="nav-btn"
+          />
+        </div>
+
         <q-space />
 
-        <!-- Settings menu -->
+        <!-- Settings/Burger menu -->
         <q-btn
           flat
           round
-          icon="settings"
+          :icon="$q.screen.lt.md ? 'menu' : 'settings'"
           class="settings-btn"
         >
           <q-menu auto-close class="settings-menu shadow-10">
@@ -33,6 +44,19 @@
               </q-item>
 
               <q-separator />
+
+              <!-- Mobile Calendar Link -->
+              <template v-if="$q.screen.lt.md">
+                <q-item clickable to="/calendar" class="menu-item">
+                  <q-item-section avatar>
+                    <q-icon name="calendar_month" size="20px" />
+                  </q-item-section>
+                  <q-item-section>
+                    Календарь
+                  </q-item-section>
+                </q-item>
+                <q-separator />
+              </template>
 
               <q-item clickable @click="themeStore.toggleTheme" class="menu-item">
                 <q-item-section avatar>
@@ -53,7 +77,7 @@
               </q-item>
             </q-list>
           </q-menu>
-          <q-tooltip>Настройки</q-tooltip>
+          <q-tooltip>{{ $q.screen.lt.md ? 'Меню' : 'Настройки' }}</q-tooltip>
         </q-btn>
       </div>
     </q-toolbar>
@@ -66,11 +90,13 @@ import { useAuthStore } from 'stores/auth.js'
 import { useThemeStore } from 'stores/theme.js'
 import { useRouter } from 'vue-router'
 import { computed } from 'vue'
+import { useQuasar } from 'quasar'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
+const $q = useQuasar()
 
 const shortName = computed(() => {
   const user = userStore.getUser
@@ -142,6 +168,7 @@ function logout() {
   height: 32px;
   width: auto;
   display: block;
+  filter: brightness(0) invert(1);
   
   @media (max-width: 599px) {
     height: 28px;
@@ -161,6 +188,20 @@ function logout() {
   @media (max-width: 599px) {
     font-size: 0.5625rem;
     padding: 0.15rem 0.375rem;
+  }
+}
+
+.nav-btn {
+  color: var(--text-secondary);
+  
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+  }
+  
+  &.q-router-link-active {
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.1);
   }
 }
 

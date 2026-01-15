@@ -96,6 +96,9 @@ export const useContentPlanStore = defineStore('content-plan', {
           })
       })
     },
+    setContentPlans(items) {
+      this.contentPlans.items = items
+    },
     clearContentPlans() {
       this.contentPlans.totalItems = 0
       this.contentPlans.items = []

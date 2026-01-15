@@ -111,28 +111,38 @@
           </div>
           
           <!-- Mobile Cards View -->
-          <div v-else class="mobile-cards show-mobile-only">
-            <div
-              v-for="(item, index) in contentPlanStore.getContentPlans"
-              :key="index"
-              class="mobile-card"
-            >
-              <div class="mobile-card-header">
-                <span class="mobile-card-title">{{ item.post }}</span>
-                <span class="format-badge">{{ item.format }}</span>
-              </div>
-              <div class="mobile-card-body">
-                <div class="mobile-card-row">
-                  <span class="mobile-card-label">Идея:</span>
-                  <span class="mobile-card-idea">{{ item.idea }}</span>
+          <draggable
+            v-else
+            v-model="contentPlansList"
+            item-key="id"
+            class="mobile-cards show-mobile-only"
+            handle=".drag-handle-wrapper"
+            :force-fallback="true"
+            ghost-class="drag-ghost"
+            drag-class="drag-fallback"
+          >
+            <template #item="{ element: item }">
+              <div class="mobile-card">
+                <div class="mobile-card-header">
+                  <div class="drag-handle-wrapper q-mr-sm">
+                    <q-icon name="drag_handle" size="20px" color="grey-6" style="cursor: grab;" />
+                  </div>
+                  <span class="mobile-card-title">{{ item.post }}</span>
+                  <span class="format-badge">{{ item.format }}</span>
                 </div>
-                <div class="mobile-card-row">
-                  <span class="mobile-card-label">Дата:</span>
-                  <span>{{ item.date?.slice(0, 10) || '-' }}</span>
+                <div class="mobile-card-body">
+                  <div class="mobile-card-row">
+                    <span class="mobile-card-label">Идея:</span>
+                    <span class="mobile-card-idea">{{ item.idea }}</span>
+                  </div>
+                  <div class="mobile-card-row">
+                    <span class="mobile-card-label">Дата:</span>
+                    <span>{{ item.date?.slice(0, 10) || '-' }}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </template>
+          </draggable>
           
           <!-- Desktop Table View -->
           <q-markup-table v-if="contentPlanStore.getContentPlans.length > 0" flat class="modern-table hide-mobile-only">
@@ -145,17 +155,19 @@
                 <th>Дата</th>
               </tr>
             </thead>
-            <tbody>
-              <tr v-for="(item, index) in contentPlanStore.getContentPlans" :key="index">
-                <td>{{ index + 1 }}</td>
-                <td class="post-name">{{ item.post }}</td>
-                <td>
-                  <span class="format-badge">{{ item.format }}</span>
-                </td>
-                <td class="idea-cell">{{ item.idea }}</td>
-                <td>{{ item.date?.slice(0, 10) || '-' }}</td>
-              </tr>
-            </tbody>
+            <draggable v-model="contentPlansList" tag="tbody" item-key="id">
+              <template #item="{ element: item, index }">
+                <tr>
+                  <td>{{ index + 1 }}</td>
+                  <td class="post-name">{{ item.post }}</td>
+                  <td>
+                    <span class="format-badge">{{ item.format }}</span>
+                  </td>
+                  <td class="idea-cell">{{ item.idea }}</td>
+                  <td>{{ item.date?.slice(0, 10) || '-' }}</td>
+                </tr>
+              </template>
+            </draggable>
           </q-markup-table>
         </div>
       </div>
@@ -164,10 +176,11 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useProjectStore } from 'stores/project.js'
 import { useContentPlanStore } from 'stores/content-plan.js'
 import PdfPrinterComponent from 'components/PdfPrinterComponent.vue'
+import draggable from 'vuedraggable'
 
 const projectStore = useProjectStore()
 const contentPlanStore = useContentPlanStore()
@@ -179,6 +192,26 @@ const props = defineProps({
     default: null
   }
 })
+
+const contentPlansList = computed({
+  get: () => contentPlanStore.getContentPlans,
+  set: (val) => {
+    contentPlanStore.setContentPlans(val)
+    updateOrder(val)
+  }
+})
+
+function updateOrder(items) {
+  items.forEach((item, index) => {
+    // Check if position changed to avoid unnecessary requests
+    // We assume backend uses 'position' field.
+    if (item.position !== index) {
+      // Optimistically update local item position to avoid repeated updates if drag happens quickly
+      item.position = index
+      contentPlanStore.patchContentPlan({ position: index }, item.id)
+    }
+  })
+}
 
 function setProject(project) {
   if (project.id === selectedProjectId.value) {
@@ -547,5 +580,19 @@ watch(() => props.parentSelectedUserId, async (newId) => {
 
 .modern-table {
   min-width: 100%;
+}
+
+.drag-ghost {
+  opacity: 0.5;
+  background: var(--bg-tertiary);
+  border: 2px dashed #3b82f6;
+}
+
+.drag-fallback {
+  opacity: 1 !important;
+  background: var(--bg-card);
+  border: 1px solid #3b82f6;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  transform: scale(1.02);
 }
 </style>
