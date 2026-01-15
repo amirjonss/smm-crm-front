@@ -33,7 +33,7 @@ export const useContentPlanStore = defineStore('content-plan', {
     fetchContentPlansCount() {
       return new Promise((resolve, reject) => {
         api
-          .get('/content_plans')
+          .get('/content_plans?itemsPerPage=1000')
           .then((response) => {
             this.globalTotal = response.data.totalItems
             resolve()
@@ -60,7 +60,7 @@ export const useContentPlanStore = defineStore('content-plan', {
     fetchContentPlan(projectId) {
       return new Promise((resolve, reject) => {
         api
-          .get('/content_plans?project.id=' + projectId + '&order[position]=asc')
+          .get('/content_plans?project.id=' + projectId + '&order[position]=asc&itemsPerPage=1000')
           .then((response) => {
             this.contentPlans.totalItems = response.data.totalItems
             this.contentPlans.items = response.data.member
@@ -74,7 +74,7 @@ export const useContentPlanStore = defineStore('content-plan', {
     fetchContentPlansByDateRange(startDate, endDate) {
       return new Promise((resolve, reject) => {
         api
-          .get(`/content_plans?date[after]=${startDate}&date[before]=${endDate}`)
+          .get(`/content_plans?date[after]=${startDate}&date[before]=${endDate}&itemsPerPage=1000`)
           .then((response) => {
             resolve(response.data.member)
           })

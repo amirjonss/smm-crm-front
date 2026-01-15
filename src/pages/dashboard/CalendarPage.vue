@@ -56,8 +56,8 @@
                 'today': day.isToday
               }"
               @click="handleDayClick(day)"
-              @mouseenter="hoveredDayKey = date.formatDate(day.date, 'YYYY-MM-DD')"
-              @mouseleave="hoveredDayKey = null"
+              @mouseenter="handleMouseEnter(day.date)"
+              @mouseleave="handleMouseLeave"
             >
               <div class="day-header">
                 <span class="day-number">{{ day.date.getDate() }}</span>
@@ -106,8 +106,10 @@
                 no-parent-event
                 persistent
                 class="bg-transparent no-shadow no-padding overflow-visible"
-                @mouseenter="hoveredDayKey = date.formatDate(day.date, 'YYYY-MM-DD')"
-                @mouseleave="hoveredDayKey = null"
+                transition-show="scale"
+                transition-hide="scale"
+                @mouseenter="handleMouseEnter(day.date)"
+                @mouseleave="handleMouseLeave"
               >
                 <div class="glass-day-card column q-gutter-y-xs">
                    <div class="glass-content custom-scroll" style="max-height: 320px; overflow-y: auto;">
@@ -574,6 +576,25 @@ async function saveEvent() {
 }
 
 // 6. Navigation & UI Logic
+let closeTimer = null
+
+function handleMouseEnter(dayDate) {
+  if (closeTimer) {
+    clearTimeout(closeTimer)
+    closeTimer = null
+  }
+  if (dayDate) {
+    hoveredDayKey.value = date.formatDate(dayDate, 'YYYY-MM-DD')
+  }
+}
+
+function handleMouseLeave() {
+  if (closeTimer) clearTimeout(closeTimer)
+  closeTimer = setTimeout(() => {
+    hoveredDayKey.value = null
+  }, 200)
+}
+
 function prevMonth() {
   transitionDirection.value = 'prev'
   currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() - 1, 1)

@@ -513,7 +513,7 @@ async function fetchTodaysContentPlans() {
   const today = new Date().toISOString().slice(0, 10)
   try {
     // Today
-    const response = await api.get('/content_plans?date=' + today)
+    const response = await api.get('/content_plans?date=' + today + '&itemsPerPage=1000')
     todaysContentPlans.value = response.data.member
 
     // Week
