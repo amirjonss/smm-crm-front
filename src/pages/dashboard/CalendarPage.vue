@@ -56,6 +56,8 @@
                 'today': day.isToday
               }"
               @click="handleDayClick(day)"
+              @mouseenter="hoveredDayKey = date.formatDate(day.date, 'YYYY-MM-DD')"
+              @mouseleave="hoveredDayKey = null"
             >
               <div class="day-header">
                 <span class="day-number">{{ day.date.getDate() }}</span>
@@ -75,7 +77,7 @@
                                                   <div class="event-type">{{ event.typeLabel }}</div>
                                                 </div>                                
                                 <div 
-                                  v-if="getEventsForDate(day.date).length > 2" 
+                                  v-if="getEventsForDate(day.date).length > 2"
                                   class="more-events-chip"
                                   @click.stop="openDayList(day.date)"
                                 >
@@ -94,6 +96,43 @@
                    </div>
                 </template>
               </div>
+
+              <!-- Floating Cards Menu (Replaces Tooltip) -->
+              <q-menu
+                v-if="$q.screen.gt.xs && getEventsForDate(day.date).length > 2"
+                :model-value="hoveredDayKey === date.formatDate(day.date, 'YYYY-MM-DD')"
+                anchor="center middle"
+                self="center middle"
+                no-parent-event
+                persistent
+                class="bg-transparent no-shadow no-padding overflow-visible"
+                @mouseenter="hoveredDayKey = date.formatDate(day.date, 'YYYY-MM-DD')"
+                @mouseleave="hoveredDayKey = null"
+              >
+                <div class="glass-day-card column q-gutter-y-xs">
+                   <div class="glass-content custom-scroll" style="max-height: 320px; overflow-y: auto;">
+                     <div
+                        v-for="event in getEventsForDate(day.date)"
+                        :key="event.id"
+                        class="event-chip glass-chip cursor-pointer"
+                        :class="`type-${event.type}`"
+                        @click="openEventDialog(event)"
+                     >
+                        <div class="event-title">{{ event.projectName }}</div>
+                        <div class="event-type">{{ event.typeLabel }}</div>
+                     </div>
+                     
+                     <!-- Add Button as a Floating Card -->
+                     <div 
+                       v-if="!userStore.isAdmin"
+                       class="event-chip glass-chip add-event-card cursor-pointer"
+                       @click="openCreateDialog(day.date)"
+                     >
+                        <q-icon name="add" size="sm" />
+                     </div>
+                   </div>
+                </div>
+              </q-menu>
             </div>
           </div>
         </transition>
@@ -303,6 +342,7 @@ const showDayList = ref(false)
 const selectedDayEvents = ref([])
 const selectedDateLabel = ref('')
 const selectedDateForMobileList = ref(null)
+const hoveredDayKey = ref(null)
 
 const tempEvent = ref({
   id: null,
@@ -410,8 +450,19 @@ function isSameDate(d1, d2) {
          d1.getFullYear() === d2.getFullYear()
 }
 
-function getEventsForDate(date) {
-  return events.value.filter(event => isSameDate(event.date, date))
+const eventsMap = computed(() => {
+  const map = {}
+  events.value.forEach(event => {
+    const key = date.formatDate(event.date, 'YYYY-MM-DD')
+    if (!map[key]) map[key] = []
+    map[key].push(event)
+  })
+  return map
+})
+
+function getEventsForDate(dateObj) {
+  const key = date.formatDate(dateObj, 'YYYY-MM-DD')
+  return eventsMap.value[key] || []
 }
 
 function mapFormatToType(format) {
@@ -472,18 +523,21 @@ async function fetchEvents() {
 
   try {
     const data = await contentPlanStore.fetchContentPlansByDateRange(startDate, endDate)
-    events.value = data.map(item => ({
-      id: item.id,
-      title: item.post,
-      date: new Date(item.date),
-      type: mapFormatToType(item.format),
-      typeLabel: item.format,
-      idea: item.idea,
-      projectId: item.project?.id,
-      projectName: item.project?.name,
-      responsibleId: item.executor?.id,
-      responsibleName: item.executor ? `${item.executor.givenName} ${item.executor.familyName}`.trim() : null
-    }))
+    events.value = data.map(item => {
+      const executor = item.executor || item.project?.executor
+      return {
+        id: item.id,
+        title: item.post,
+        date: new Date(item.date),
+        type: mapFormatToType(item.format),
+        typeLabel: item.format,
+        idea: item.idea,
+        projectId: item.project?.id,
+        projectName: item.project?.name,
+        responsibleId: executor?.id,
+        responsibleName: executor ? `${executor.givenName || ''} ${executor.familyName || ''}`.trim() : null
+      }
+    })
   } catch (e) {
     console.error('Error fetching events', e)
     $q.notify({ type: 'negative', message: 'Ошибка загрузки событий' })
@@ -866,23 +920,132 @@ onMounted(() => {
   &.dot-animation { background-color: #8b5cf6; }
 }
 
-// Event Chips
+.more-events-chip {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 2px 4px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  
+  &:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+  }
+}
+
+/* Floating Cards Menu Styles */
+.glass-day-card {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  min-width: 200px;
+  max-width: 240px;
+  padding: 10px;
+}
+
+.glass-content {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Custom Scrollbar */
+.custom-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scroll::-webkit-scrollbar-track { background: transparent; }
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.1);
+  border-radius: 4px;
+}
+
+/* Unified Chip Styles */
 .event-chip {
   padding: 0.375rem 0.5rem;
   border-radius: 6px;
   font-size: 0.75rem;
   cursor: pointer;
   border-left: 3px solid transparent;
-  transition: transform 0.1s;
+  transition: all 0.2s ease;
   
   &:hover {
-    transform: scale(1.02);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+}
+
+/* Specific styles for cards in the floating menu */
+.glass-chip {
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  /* Use slightly more opaque background for menu items to ensure visibility */
+  border: 1px solid rgba(255,255,255,0.2);
+  
+  .body--dark & {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
   }
 
-  @media (max-width: 599px) {
-    padding: 2px 4px;
-    font-size: 0.65rem;
+  &:hover {
+    transform: scale(1.03) translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
   }
+}
+
+/* Add Button Card Style */
+.add-event-card {
+  border: 2px dashed #8b5cf6;
+  background: rgba(139, 92, 246, 0.05);
+  color: #8b5cf6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  
+  &:hover {
+    background: rgba(139, 92, 246, 0.1);
+    border-style: solid;
+  }
+}
+
+/* Color Coding */
+.type-post {
+  background: rgba(59, 130, 246, 0.15);
+  border-left-color: #3b82f6;
+  color: #1e40af;
+  .body--dark & { background: rgba(59, 130, 246, 0.25); color: #93c5fd; }
+}
+
+.type-story {
+  background: rgba(245, 158, 11, 0.15);
+  border-left-color: #f59e0b;
+  color: #92400e;
+  .body--dark & { background: rgba(245, 158, 11, 0.25); color: #fcd34d; }
+}
+
+.type-video {
+  background: rgba(236, 72, 153, 0.15);
+  border-left-color: #ec4899;
+  color: #9d174d;
+  .body--dark & { background: rgba(236, 72, 153, 0.25); color: #f9a8d4; }
+}
+
+.type-carousel {
+  background: rgba(34, 197, 94, 0.15);
+  border-left-color: #22c55e;
+  color: #166534;
+  .body--dark & { background: rgba(34, 197, 94, 0.25); color: #bbf7d0; }
+}
+
+.type-animation {
+  background: rgba(139, 92, 246, 0.15);
+  border-left-color: #8b5cf6;
+  color: #5b21b6;
+  .body--dark & { background: rgba(139, 92, 246, 0.25); color: #ddd6fe; }
 }
 
 .event-title {
@@ -896,65 +1059,6 @@ onMounted(() => {
 .event-type {
   font-size: 0.625rem;
   opacity: 0.8;
-
-  @media (max-width: 599px) {
-    font-size: 0.55rem;
-  }
-}
-
-.type-post {
-  background: rgba(59, 130, 246, 0.1);
-  border-left-color: #3b82f6;
-  color: #1e40af;
-  
-  .body--dark & {
-    background: rgba(59, 130, 246, 0.2);
-    color: #93c5fd;
-  }
-}
-
-.type-story {
-  background: rgba(245, 158, 11, 0.1);
-  border-left-color: #f59e0b;
-  color: #92400e;
-
-  .body--dark & {
-    background: rgba(245, 158, 11, 0.2);
-    color: #fcd34d;
-  }
-}
-
-.type-video {
-  background: rgba(236, 72, 153, 0.1);
-  border-left-color: #ec4899;
-  color: #9d174d;
-
-  .body--dark & {
-    background: rgba(236, 72, 153, 0.2);
-    color: #f9a8d4;
-  }
-}
-
-.type-carousel {
-  background: rgba(34, 197, 94, 0.1);
-  border-left-color: #22c55e;
-  color: #166534;
-
-  .body--dark & {
-    background: rgba(34, 197, 94, 0.2);
-    color: #bbf7d0;
-  }
-}
-
-.type-animation {
-  background: rgba(139, 92, 246, 0.1);
-  border-left-color: #8b5cf6;
-  color: #5b21b6;
-
-  .body--dark & {
-    background: rgba(139, 92, 246, 0.2);
-    color: #ddd6fe;
-  }
 }
 
 .popup-idea-box {
@@ -969,66 +1073,31 @@ onMounted(() => {
   &.chip-post {
     background: #e3f2fd;
     color: #0d47a1;
-    
-    .body--dark & {
-      background: #1e3a8a;
-      color: #bfdbfe;
-    }
+    .body--dark & { background: #1e3a8a; color: #bfdbfe; }
   }
   
   &.chip-story {
     background: #fff3e0;
     color: #e65100;
-    
-    .body--dark & {
-      background: #7c2d12;
-      color: #fed7aa;
-    }
+    .body--dark & { background: #7c2d12; color: #fed7aa; }
   }
   
   &.chip-video {
     background: #fce4ec;
     color: #880e4f;
-    
-    .body--dark & {
-      background: #831843;
-      color: #fbcfe8;
-    }
+    .body--dark & { background: #831843; color: #fbcfe8; }
   }
 
   &.chip-carousel {
     background: #f0fdf4;
     color: #166534;
-    
-    .body--dark & {
-      background: #14532d;
-      color: #bbf7d0;
-    }
+    .body--dark & { background: #14532d; color: #bbf7d0; }
   }
 
   &.chip-animation {
     background: #f5f3ff;
     color: #5b21b6;
-    
-    .body--dark & {
-      background: #4c1d95;
-      color: #ddd6fe;
-    }
-  }
-}
-
-.more-events-chip {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  padding: 2px 4px;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-  
-  &:hover {
-    background-color: var(--bg-hover);
-    color: var(--text-primary);
+    .body--dark & { background: #4c1d95; color: #ddd6fe; }
   }
 }
 </style>
