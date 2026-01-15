@@ -156,6 +156,7 @@ async function printPage() {
     },
     didDrawCell: (data) => {
       if (data.section === 'body' && data.column.index === 3) {
+        const raw = String(data.cell.raw || '')
         const lines = data.cell.text
         const fontSize = data.cell.styles.fontSize
         const scaleFactor = doc.internal.scaleFactor
@@ -163,49 +164,94 @@ async function printPage() {
 
         // Calculate vertical centering
         const totalTextHeight = lines.length * lineHeight
-        // data.cell.y is top-left. data.cell.height is full cell height.
-        // We center the text block vertically.
         const startY = data.cell.y + (data.cell.height - totalTextHeight) / 2
         const startX = data.cell.x + data.cell.padding('left')
 
+        // Find all links in raw text
+        const linkMatches = []
         const urlRegex = /(https?:\/\/[^\s]+)/g
+        let match
+        while ((match = urlRegex.exec(raw)) !== null) {
+          linkMatches.push({
+            start: match.index,
+            end: match.index + match[0].length,
+            url: match[0]
+          })
+        }
 
+        let searchPos = 0
         lines.forEach((line, i) => {
-          // Calculate baseline for the current line
-          // Text is drawn from baseline. We approximate baseline from top of line.
           const lineTopY = startY + i * lineHeight
           const textBaselineY = lineTopY + (fontSize * 0.75) / scaleFactor
-
-          // Split line by URL
-          const parts = line.split(urlRegex)
           let currentLineX = startX
 
-          parts.forEach((part) => {
-            if (!part) return
+          if (!line) return
 
-            if (part.match(/^https?:\/\//)) {
-              // It's a link
-              doc.setTextColor(0, 0, 255) // Blue
-              doc.text(part, currentLineX, textBaselineY)
+          // Find where this line sits in the raw text
+          // We search starting from searchPos to keep order
+          const foundIdx = raw.indexOf(line, searchPos)
 
-              const partWidth = doc.getTextWidth(part)
+          if (foundIdx === -1) {
+            // Fallback: just draw black text if we can't map it
+            doc.setTextColor(0, 0, 0)
+            doc.text(line, currentLineX, textBaselineY)
+            return
+          }
+
+          const lineStart = foundIdx
+          const lineEnd = lineStart + line.length
+          searchPos = lineEnd // Advance search position
+
+          let localCursor = 0
+          while (localCursor < line.length) {
+            const globalPos = lineStart + localCursor
+
+            // Check if current char is inside a link
+            const activeLink = linkMatches.find((l) => globalPos >= l.start && globalPos < l.end)
+
+            if (activeLink) {
+              // We are in a link segment
+              // Determine length of this segment within the line
+              // It ends at the line end OR the link end, whichever comes first
+              const segmentEndGlobal = Math.min(lineEnd, activeLink.end)
+              const segmentLen = segmentEndGlobal - globalPos
+              const segmentText = line.substr(localCursor, segmentLen)
+
+              const segWidth = doc.getTextWidth(segmentText)
+
+              doc.setTextColor(0, 0, 255)
+              doc.text(segmentText, currentLineX, textBaselineY)
 
               // Underline
               doc.setDrawColor(0, 0, 255)
               doc.setLineWidth(0.1)
-              doc.line(currentLineX, textBaselineY + 0.5, currentLineX + partWidth, textBaselineY + 0.5)
+              doc.line(
+                currentLineX,
+                textBaselineY + 0.5,
+                currentLineX + segWidth,
+                textBaselineY + 0.5
+              )
 
-              // Clickable Area
-              doc.link(currentLineX, lineTopY, partWidth, lineHeight, { url: part })
+              // Link
+              doc.link(currentLineX, lineTopY, segWidth, lineHeight, { url: activeLink.url })
 
-              currentLineX += partWidth
+              currentLineX += segWidth
+              localCursor += segmentLen
             } else {
-              // Normal Text
-              doc.setTextColor(0, 0, 0) // Black
-              doc.text(part, currentLineX, textBaselineY)
-              currentLineX += doc.getTextWidth(part)
+              // Normal text segment
+              // Ends at line end OR next link start
+              const nextLink = linkMatches.find((l) => l.start > globalPos)
+              const segmentEndGlobal = nextLink ? Math.min(lineEnd, nextLink.start) : lineEnd
+              const segmentLen = segmentEndGlobal - globalPos
+              const segmentText = line.substr(localCursor, segmentLen)
+
+              doc.setTextColor(0, 0, 0)
+              doc.text(segmentText, currentLineX, textBaselineY)
+
+              currentLineX += doc.getTextWidth(segmentText)
+              localCursor += segmentLen
             }
-          })
+          }
         })
       }
     },
