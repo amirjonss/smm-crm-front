@@ -8,13 +8,25 @@
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  font-family:
+    'Roboto',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
   min-height: 100vh;
 }
 
 // Typography
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   color: var(--text-primary);
   font-weight: 600;
   line-height: 1.3;
@@ -27,7 +39,7 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
-  
+
   &:hover {
     box-shadow: var(--shadow-md);
   }
@@ -42,11 +54,11 @@ h1, h2, h3, h4, h5, h6 {
 // Form inputs styling
 .q-field--outlined .q-field__control {
   border-radius: var(--radius-md) !important;
-  
+
   &:before {
     border-color: var(--border-color) !important;
   }
-  
+
   &:hover:before {
     border-color: $primary !important;
   }
@@ -55,7 +67,7 @@ h1, h2, h3, h4, h5, h6 {
 .q-field--filled .q-field__control {
   border-radius: var(--radius-md) !important;
   background-color: var(--bg-tertiary) !important;
-  
+
   &:before {
     background: transparent !important;
   }
@@ -73,7 +85,7 @@ h1, h2, h3, h4, h5, h6 {
 .btn-primary {
   background: linear-gradient(135deg, $primary 0%, #1d4ed8 100%) !important;
   box-shadow: 0 2px 8px rgba($primary, 0.3);
-  
+
   &:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba($primary, 0.4);
@@ -84,7 +96,7 @@ h1, h2, h3, h4, h5, h6 {
 .q-table {
   border-radius: var(--radius-md);
   overflow: hidden;
-  
+
   thead tr th {
     background-color: var(--bg-tertiary);
     color: var(--text-secondary);
@@ -94,14 +106,14 @@ h1, h2, h3, h4, h5, h6 {
     letter-spacing: 0.05em;
     border-bottom: 1px solid var(--border-color);
   }
-  
+
   tbody tr {
     transition: background-color 0.15s ease;
-    
+
     &:hover {
       background-color: var(--bg-hover);
     }
-    
+
     td {
       color: var(--text-primary);
       border-bottom: 1px solid var(--border-light);
@@ -114,7 +126,7 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 0;
   overflow: visible;
   border: none;
-  
+
   thead tr th {
     background-color: transparent;
     color: var(--text-muted);
@@ -126,18 +138,18 @@ h1, h2, h3, h4, h5, h6 {
     border-bottom: 1px solid var(--border-color);
     border-top: none;
   }
-  
+
   tbody tr {
     transition: background-color 0.15s ease;
-    
+
     &:nth-child(even) {
       background-color: var(--bg-tertiary);
     }
-    
+
     &:hover {
       background-color: var(--bg-hover);
     }
-    
+
     td {
       color: var(--text-primary);
       padding: 1rem;
@@ -161,7 +173,7 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb {
   background: var(--text-muted);
   border-radius: 4px;
-  
+
   &:hover {
     background: var(--text-secondary);
   }
@@ -201,7 +213,7 @@ h1, h2, h3, h4, h5, h6 {
   max-width: 1400px;
   margin: 0 auto;
   padding: 1.5rem;
-  
+
   @media (max-width: 599px) {
     padding: 1rem;
   }
@@ -213,7 +225,7 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 1.5rem;
-  
+
   &::after {
     content: '';
     display: block;
@@ -230,13 +242,13 @@ h1, h2, h3, h4, h5, h6 {
   text-align: center;
   padding: 3rem 1.5rem;
   color: var(--text-muted);
-  
+
   .empty-state-icon {
     font-size: 3rem;
     margin-bottom: 1rem;
     opacity: 0.5;
   }
-  
+
   .empty-state-text {
     font-size: 1rem;
   }
@@ -274,7 +286,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .show-mobile {
   display: none !important;
-  
+
   @media (max-width: 599px) {
     display: block !important;
   }
@@ -285,11 +297,11 @@ h1, h2, h3, h4, h5, h6 {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  
+
   &::-webkit-scrollbar {
     height: 6px;
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background: var(--text-muted);
     border-radius: 3px;
@@ -301,7 +313,7 @@ h1, h2, h3, h4, h5, h6 {
   .q-btn {
     min-height: 44px; // iOS touch target
   }
-  
+
   .q-btn--dense {
     min-height: 36px;
   }
@@ -309,7 +321,8 @@ h1, h2, h3, h4, h5, h6 {
 
 // Mobile card adjustments
 @media (max-width: 599px) {
-  .q-card, .card {
+  .q-card,
+  .card {
     border-radius: var(--radius-md);
   }
 }
@@ -319,11 +332,11 @@ h1, h2, h3, h4, h5, h6 {
   h1 {
     font-size: 1.5rem;
   }
-  
+
   h2 {
     font-size: 1.25rem;
   }
-  
+
   h3 {
     font-size: 1.125rem;
   }

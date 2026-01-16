@@ -16,27 +16,45 @@ async function isAdmin() {
     }
   }
   if (!user.isAdmin) {
-    return { path: '/login' }
+    return { path: '/projects' }
+  }
+}
+
+async function isNotAdmin() {
+  const user = useUserStore()
+  if (!user.loaded) {
+    try {
+      await user.fetchUser({})
+    } catch {
+      return { path: '/login' }
+    }
+  }
+  if (user.isAdmin) {
+    return { path: '/' }
   }
 }
 const routes = [
   {
     path: '/',
+    component: () => import('layouts/DashboardLayout.vue'),
+    children: [{ path: '', component: () => import('pages/dashboard/HomePage.vue') }],
+    beforeEnter: [isAuthorised, isAdmin],
+  },
+  {
+    path: '/projects',
     component: () => import('layouts/MainLayout.vue'),
     children: [{ path: '', component: () => import('pages/main/IndexPage.vue') }],
+    beforeEnter: [isAuthorised, isNotAdmin],
+  },
+  {
+    path: '/calendar',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [{ path: '', component: () => import('pages/dashboard/CalendarPage.vue') }],
     beforeEnter: [isAuthorised],
   },
   {
     path: '/login',
     component: () => import('pages/LoginPage.vue'),
-  },
-  {
-    path: '/dashboard',
-    component: () => import('layouts/DashboardLayout.vue'),
-    children: [
-      { path: '', component: () => import('pages/dashboard/HomePage.vue') },
-    ],
-    beforeEnter: [isAuthorised, isAdmin],
   },
   {
     path: '/:catchAll(.*)*',

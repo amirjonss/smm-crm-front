@@ -29,7 +29,7 @@
               outlined
               placeholder="example@email.com"
               lazy-rules
-              :rules="[val => val && val.length > 0 || 'Введите email']"
+              :rules="[(val) => (val && val.length > 0) || 'Введите email']"
               class="modern-input"
             >
               <template v-slot:prepend>
@@ -46,7 +46,7 @@
               outlined
               placeholder="••••••••"
               lazy-rules
-              :rules="[val => val.length > 0 || 'Введите пароль']"
+              :rules="[(val) => val.length > 0 || 'Введите пароль']"
               class="modern-input"
             >
               <template v-slot:prepend>
@@ -79,9 +79,7 @@
       </div>
 
       <!-- Footer -->
-      <p class="login-footer">
-        © {{ new Date().getFullYear() }} KH Agency. Все права защищены.
-      </p>
+      <p class="login-footer">© {{ new Date().getFullYear() }} KH Agency. Все права защищены.</p>
     </div>
   </div>
 </template>
@@ -96,7 +94,7 @@ import ThemeToggle from 'components/ThemeToggle.vue'
 
 const form = reactive({
   email: '',
-  password: ''
+  password: '',
 })
 const userStore = useUserStore()
 const user = useAuthStore()
@@ -107,25 +105,28 @@ const isLoading = ref(false)
 
 function auth() {
   isLoading.value = true
-  user.fetchToken(form).then(() => {
-    userStore.fetchUser().then(() => {
+  user
+    .fetchToken(form)
+    .then(() => {
+      userStore.fetchUser().then(() => {
+        isLoading.value = false
+        if (userStore.isAdmin) {
+          router.push('/dashboard')
+        } else {
+          router.push('/')
+        }
+      })
+    })
+    .catch((e) => {
       isLoading.value = false
-      if (userStore.isAdmin) {
-        router.push('/dashboard')
-      } else {
-        router.push('/')
-      }
+      console.log(e)
+      q.notify({
+        message: 'Неверный email или пароль',
+        type: 'negative',
+        position: 'top',
+        timeout: 3000,
+      })
     })
-  }).catch((e) => {
-    isLoading.value = false
-    console.log(e)
-    q.notify({
-      message: 'Неверный email или пароль',
-      type: 'negative',
-      position: 'top',
-      timeout: 3000
-    })
-  })
 }
 </script>
 
@@ -274,13 +275,13 @@ function auth() {
     padding: 1.75rem;
     border-radius: var(--radius-lg);
   }
-  
+
   .brand-icon {
     width: 60px;
     height: 60px;
     border-radius: 16px;
   }
-  
+
   .brand-title {
     font-size: 1.75rem;
   }

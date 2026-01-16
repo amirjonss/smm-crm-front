@@ -1,21 +1,21 @@
 <template>
   <q-header class="app-header">
     <q-toolbar class="header-toolbar">
-      <div class="header-container">
+      <div class="header-container relative-position">
         <!-- Logo/Brand -->
         <router-link to="/" class="header-brand">
           <img src="~assets/logo.svg" alt="KH Agency" class="header-logo" />
         </router-link>
 
+        <!-- Header Navigation (Desktop) -->
+        <div class="header-nav q-ml-md gt-sm">
+          <q-btn flat no-caps label="Календарь" to="/calendar" class="nav-btn" />
+        </div>
+
         <q-space />
 
-        <!-- Settings menu -->
-        <q-btn
-          flat
-          round
-          icon="settings"
-          class="settings-btn"
-        >
+        <!-- Settings/Burger menu -->
+        <q-btn flat round :icon="$q.screen.lt.md ? 'menu' : 'settings'" class="settings-btn">
           <q-menu auto-close class="settings-menu shadow-10">
             <q-list class="settings-list">
               <!-- User Info Header -->
@@ -26,12 +26,27 @@
                   </q-avatar>
                 </q-item-section>
                 <q-item-section>
-                  <q-item-label class="text-weight-bold user-name-label">{{ shortName }}</q-item-label>
-                  <q-item-label caption class="user-email-label">{{ userStore.getUser.email }}</q-item-label>
+                  <q-item-label class="text-weight-bold user-name-label">{{
+                    shortName
+                  }}</q-item-label>
+                  <q-item-label caption class="user-email-label">{{
+                    userStore.getUser.email
+                  }}</q-item-label>
                 </q-item-section>
               </q-item>
 
               <q-separator />
+
+              <!-- Mobile Calendar Link -->
+              <template v-if="$q.screen.lt.md">
+                <q-item clickable to="/calendar" class="menu-item">
+                  <q-item-section avatar>
+                    <q-icon name="calendar_month" size="20px" />
+                  </q-item-section>
+                  <q-item-section> Календарь </q-item-section>
+                </q-item>
+                <q-separator />
+              </template>
 
               <q-item clickable @click="themeStore.toggleTheme" class="menu-item">
                 <q-item-section avatar>
@@ -52,7 +67,7 @@
               </q-item>
             </q-list>
           </q-menu>
-          <q-tooltip>Настройки</q-tooltip>
+          <q-tooltip>{{ $q.screen.lt.md ? 'Меню' : 'Настройки' }}</q-tooltip>
         </q-btn>
       </div>
     </q-toolbar>
@@ -65,11 +80,13 @@ import { useAuthStore } from 'stores/auth.js'
 import { useThemeStore } from 'stores/theme.js'
 import { useRouter } from 'vue-router'
 import { computed } from 'vue'
+import { useQuasar } from 'quasar'
 
 const authStore = useAuthStore()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
 const router = useRouter()
+const $q = useQuasar()
 
 const shortName = computed(() => {
   const user = userStore.getUser
@@ -98,14 +115,18 @@ function logout() {
   background: rgba(255, 255, 255, 0.6) !important;
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1), 0 4px 20px rgba(0, 0, 0, 0.05) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.1),
+    0 4px 20px rgba(0, 0, 0, 0.05) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .body--dark .app-header {
   background: rgba(30, 41, 59, 0.7) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 20px rgba(0, 0, 0, 0.2) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05),
+    0 4px 20px rgba(0, 0, 0, 0.2) !important;
 }
 
 .header-toolbar {
@@ -141,9 +162,24 @@ function logout() {
   width: auto;
   display: block;
   filter: brightness(0) invert(1);
-  
+
   @media (max-width: 599px) {
     height: 28px;
+  }
+}
+
+.nav-btn {
+  color: var(--text-secondary);
+  font-weight: 500;
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+  }
+
+  &.q-router-link-active {
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.1);
   }
 }
 
@@ -158,7 +194,7 @@ function logout() {
 
 .settings-list {
   min-width: 220px;
-  
+
   @media (max-width: 599px) {
     min-width: 180px;
   }
@@ -166,7 +202,7 @@ function logout() {
 
 .user-info-item {
   padding: 12px 16px;
-  
+
   @media (max-width: 599px) {
     padding: 8px 12px;
   }
@@ -196,7 +232,7 @@ function logout() {
   @media (max-width: 599px) {
     min-height: 40px;
     font-size: 13px;
-    
+
     :deep(.q-item__section--avatar) {
       min-width: 40px;
     }

@@ -11,13 +11,13 @@ export const useUserStore = defineStore('user', {
       updatedAt: null,
       updatedBy: null,
       givenName: null,
-      familyName: null
+      familyName: null,
     },
     loaded: false,
     users: {
       totalItems: 0,
-      items: []
-    }
+      items: [],
+    },
   }),
 
   getters: {
@@ -25,10 +25,10 @@ export const useUserStore = defineStore('user', {
       return state.user
     },
     isAdmin(state) {
-      return state.user.roles.includes("ROLE_ADMIN")
+      return state.user.roles.includes('ROLE_ADMIN')
     },
-    isLoaded: ((state) => state.loaded),
-    getUsers: (state) => state.users.items
+    isLoaded: (state) => state.loaded,
+    getUsers: (state) => state.users.items,
   },
 
   actions: {

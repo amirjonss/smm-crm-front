@@ -22,12 +22,21 @@
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon stat-icon-green">
+          <div class="stat-icon stat-icon-teal">
             <q-icon name="article" size="1.5rem" />
           </div>
           <div class="stat-content">
-            <span class="stat-value">{{ contentPlanStore.getGlobalTotal }}</span>
-            <span class="stat-label">Контент-планы</span>
+            <span class="stat-value">{{ contentPlanStore.getMonthlyTotal }}</span>
+            <span class="stat-label">Планы на месяц</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-green">
+            <q-icon name="task_alt" size="1.5rem" />
+          </div>
+          <div class="stat-content">
+            <span class="stat-value">{{ contentPlanStore.getPublishedTotal }}</span>
+            <span class="stat-label">Опубликовано</span>
           </div>
         </div>
       </div>
@@ -42,7 +51,10 @@
               <span class="card-count q-ml-sm">{{ todaysContentPlans.length }}</span>
             </h2>
           </div>
-          <div class="card-body no-padding" style="min-height: auto; max-height: 400px; overflow-y: auto;">
+          <div
+            class="card-body no-padding"
+            style="min-height: auto; max-height: 400px; overflow-y: auto"
+          >
             <div v-if="todaysContentPlans.length === 0" class="empty-state">
               <q-icon name="event_busy" class="empty-state-icon" />
               <p class="empty-state-text">На сегодня планов нет</p>
@@ -55,10 +67,17 @@
                   v-for="plan in todaysContentPlans"
                   :key="plan.id"
                   class="mobile-card"
+                  :class="`status-border-${plan.status || 'NOT_PUBLISHED'}`"
                 >
                   <div class="mobile-card-header">
                     <span class="mobile-card-title">{{ plan.post }}</span>
-                    <span class="format-badge">{{ plan.format }}</span>
+                    <div class="row items-center q-gutter-x-xs">
+                      <span class="format-badge">{{ plan.format }}</span>
+                      <q-badge
+                        :color="getColorForStatus(plan.status)"
+                        :label="getStatusLabel(plan.status)"
+                      />
+                    </div>
                   </div>
                   <div class="mobile-card-body">
                     <div class="mobile-card-row">
@@ -80,6 +99,7 @@
                     <th>Проект</th>
                     <th>Пост</th>
                     <th>Формат</th>
+                    <th>Статус</th>
                     <th>Идея</th>
                   </tr>
                 </thead>
@@ -87,7 +107,15 @@
                   <tr v-for="plan in todaysContentPlans" :key="plan.id">
                     <td class="project-name-table">{{ getProjectName(plan.project) }}</td>
                     <td class="post-name-table">{{ plan.post }}</td>
-                    <td><span class="format-badge">{{ plan.format }}</span></td>
+                    <td>
+                      <span class="format-badge">{{ plan.format }}</span>
+                    </td>
+                    <td>
+                      <q-badge
+                        :color="getColorForStatus(plan.status)"
+                        :label="getStatusLabel(plan.status)"
+                      />
+                    </td>
                     <td class="idea-cell-table">{{ plan.idea }}</td>
                   </tr>
                 </tbody>
@@ -131,7 +159,7 @@
                   class="user-item cursor-pointer"
                   :class="{
                     'user-item-editing': row.id === editingUserId,
-                    'user-item-selected': row.id === selectedUserId
+                    'user-item-selected': row.id === selectedUserId,
                   }"
                   @click="selectUser(row)"
                 >
@@ -186,7 +214,9 @@
       <q-dialog v-model="showUserDialog" persistent>
         <q-card class="user-dialog-card">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">{{ editingUserId ? 'Редактировать персонал' : 'Добавить персонал' }}</div>
+            <div class="text-h6">
+              {{ editingUserId ? 'Редактировать персонал' : 'Добавить персонал' }}
+            </div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup @click="clearForm" />
           </q-card-section>
@@ -200,7 +230,7 @@
                   outlined
                   placeholder="Введите имя"
                   lazy-rules
-                  :rules="[val => val && val.length > 0 || 'Заполните поле']"
+                  :rules="[(val) => (val && val.length > 0) || 'Заполните поле']"
                   class="modern-input"
                 />
               </div>
@@ -211,7 +241,7 @@
                   outlined
                   placeholder="Введите фамилию"
                   lazy-rules
-                  :rules="[val => val && val.length > 0 || 'Заполните поле']"
+                  :rules="[(val) => (val && val.length > 0) || 'Заполните поле']"
                   class="modern-input"
                 />
               </div>
@@ -223,7 +253,7 @@
                   type="email"
                   placeholder="example@email.com"
                   lazy-rules
-                  :rules="[val => val && val.length > 0 || 'Заполните поле']"
+                  :rules="[(val) => (val && val.length > 0) || 'Заполните поле']"
                   class="modern-input"
                 />
               </div>
@@ -269,7 +299,7 @@ const contentPlanStore = useContentPlanStore()
 const userForm = ref({
   givenName: '',
   familyName: '',
-  email: ''
+  email: '',
 })
 const isLoading = ref(false)
 const selectedUserId = ref(null)
@@ -282,7 +312,7 @@ const todaysContentPlans = ref([])
 async function fetchTodaysContentPlans() {
   const today = new Date().toISOString().slice(0, 10)
   try {
-    const response = await api.get('/content_plans?date=' + today)
+    const response = await api.get('/content_plans?date=' + today + '&itemsPerPage=1000')
     todaysContentPlans.value = response.data.member
   } catch (e) {
     console.error('Error fetching stats:', e)
@@ -294,14 +324,34 @@ function getProjectName(project) {
   if (typeof project === 'object' && project.name) return project.name
   if (typeof project === 'string') {
     const id = project.split('/').pop()
-    const found = projectStore.getProjects.find(p => String(p.id) === String(id))
+    const found = projectStore.getProjects.find((p) => String(p.id) === String(id))
     return found ? found.name : '---'
   }
   return '---'
 }
 
+function getStatusLabel(status) {
+  const labels = {
+    PUBLISHED: 'Опубликовано',
+    CANCELED: 'Отменено',
+    NOT_PUBLISHED: 'Не опубликовано',
+    RESCHEDULED: 'Перенесено',
+  }
+  return labels[status] || 'Не опубликовано'
+}
+
+function getColorForStatus(status) {
+  const colors = {
+    PUBLISHED: 'positive',
+    CANCELED: 'negative',
+    NOT_PUBLISHED: 'grey-7',
+    RESCHEDULED: 'orange',
+  }
+  return colors[status] || 'grey-7'
+}
+
 const filteredUsers = computed(() => {
-  return userStore.getUsers.filter(n => n.id !== userStore.user?.id)
+  return userStore.getUsers
 })
 
 function openCreateDialog() {
@@ -314,25 +364,28 @@ function createUser() {
   if (editingUserId.value) {
     saveEditedUser()
   } else {
-    userStore.createUser(userForm.value).then(() => {
-      isLoading.value = false
-      userStore.fetchUsers()
-      showUserDialog.value = false
-      clearForm()
-      q.notify({
-        message: 'Пользователь создан',
-        type: 'positive',
-        position: 'top'
+    userStore
+      .createUser(userForm.value)
+      .then(() => {
+        isLoading.value = false
+        userStore.fetchUsers()
+        showUserDialog.value = false
+        clearForm()
+        q.notify({
+          message: 'Пользователь создан',
+          type: 'positive',
+          position: 'top',
+        })
       })
-    }).catch((e) => {
-      isLoading.value = false
-      console.log(e)
-      q.notify({
-        message: 'Такой email уже существует',
-        type: 'negative',
-        position: 'top'
+      .catch((e) => {
+        isLoading.value = false
+        console.log(e)
+        q.notify({
+          message: 'Такой email уже существует',
+          type: 'negative',
+          position: 'top',
+        })
       })
-    })
   }
 }
 
@@ -360,7 +413,7 @@ function saveEditedUser() {
       q.notify({
         message: 'Пользователь обновлён',
         type: 'positive',
-        position: 'top'
+        position: 'top',
       })
     })
   })
@@ -378,7 +431,7 @@ function deleteUser(id) {
     q.notify({
       message: 'Пользователь удалён',
       type: 'positive',
-      position: 'top'
+      position: 'top',
     })
   })
 }
@@ -389,14 +442,15 @@ function confirmUserDeletion(user) {
     message: `Вы уверены, что хотите удалить пользователя "${user.givenName} ${user.familyName}"?`,
     cancel: { flat: true, label: 'Отмена' },
     ok: { color: 'negative', label: 'Удалить' },
-    persistent: true
+    persistent: true,
   }).onOk(() => deleteUser(user.id))
 }
 
 onMounted(() => {
   userStore.fetchUsers()
   projectStore.fetchProjectsCount()
-  contentPlanStore.fetchContentPlansCount()
+  contentPlanStore.fetchMonthlyContentPlansCount()
+  contentPlanStore.fetchPublishedContentPlansCount()
   fetchTodaysContentPlans()
 })
 </script>
@@ -419,12 +473,16 @@ onMounted(() => {
 // Stats Cards
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
   margin-bottom: 2rem;
 
-  @media (max-width: 767px) {
-    grid-template-columns: 1fr;
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 599px) {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -460,6 +518,10 @@ onMounted(() => {
   background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
 }
 
+.stat-icon-teal {
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+}
+
 .stat-content {
   display: flex;
   flex-direction: column;
@@ -492,30 +554,31 @@ onMounted(() => {
 .dashboard-content {
   display: grid;
   grid-template-columns: 4fr 6fr;
-  grid-template-areas: 
-    "users projects"
-    "content content";
-  gap: 1.5rem;  margin-bottom: 2rem;
+  grid-template-areas:
+    'users projects'
+    'content content';
+  gap: 1.5rem;
+  margin-bottom: 2rem;
   transition: all 0.3s ease;
   align-items: start;
 
   @media (max-width: 1023px) {
     grid-template-columns: 1fr;
     grid-template-areas:
-      "users"
-      "projects"
-      "content";
+      'users'
+      'projects'
+      'content';
   }
 }
 
 .user-list-section {
   grid-area: users;
-  
+
   .card {
     display: flex;
     flex-direction: column;
   }
-  
+
   .card-body {
     min-height: 500px;
     max-height: 500px;
@@ -689,7 +752,11 @@ onMounted(() => {
   width: 450px;
   max-width: 95vw;
   border-radius: 12px;
-  background: var(--bg-card);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 
   @media (max-width: 599px) {
     width: 90vw;
@@ -705,11 +772,11 @@ onMounted(() => {
 
   @media (max-width: 599px) {
     flex-direction: column;
-    
+
     .q-btn {
       width: 100%;
     }
-    
+
     .btn-primary-action {
       order: -1;
     }
@@ -889,19 +956,36 @@ onMounted(() => {
   &:last-child {
     margin-bottom: 0;
   }
+
+  &.status-border-PUBLISHED {
+    border-left: 4px solid var(--q-positive);
+  }
+  &.status-border-CANCELED {
+    border-left: 4px solid var(--q-negative);
+  }
+  &.status-border-RESCHEDULED {
+    border-left: 4px solid var(--q-orange);
+  }
+  &.status-border-NOT_PUBLISHED {
+    border-left: 4px solid var(--q-grey-7);
+  }
 }
 
 .mobile-card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .mobile-card-title {
   font-weight: 600;
   font-size: 1rem;
   color: var(--text-primary);
+  margin-right: auto;
+  word-break: break-word;
 }
 
 .mobile-card-body {
@@ -978,18 +1062,24 @@ onMounted(() => {
 
   .stat-card {
     padding: 1rem;
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
+    text-align: center;
+    gap: 0.75rem;
   }
 
   .stat-icon {
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     flex-shrink: 0;
+
+    :deep(.q-icon) {
+      font-size: 1.25rem !important;
+    }
   }
 
   .stat-value {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
   }
 
   .stat-label {
@@ -1005,44 +1095,44 @@ onMounted(() => {
     margin-left: auto;
   }
 
-    .user-item {
-      flex-direction: row;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.75rem 1rem !important;
-    }
-    
-    .user-info {
-      flex: 1;
-      min-width: 0;
-    }
-    
-    .user-details {
-      flex: 1;
-      min-width: 0;
-    }
-    
-    .user-name {
-      font-size: 0.875rem;
-      word-break: break-word;
-    }
-    
-    .user-email {
-      font-size: 0.75rem;
-      word-break: break-all;
-    }
-    
-    .user-actions {
-      width: auto;
-      justify-content: flex-end;
-      gap: 0.25rem;
-    }
-    
-    .action-btn-icon {
-      width: 32px;
-      height: 32px;
-      min-width: 32px;
-    }
+  .user-item {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem !important;
+  }
+
+  .user-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .user-details {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .user-name {
+    font-size: 0.875rem;
+    word-break: break-word;
+  }
+
+  .user-email {
+    font-size: 0.75rem;
+    word-break: break-all;
+  }
+
+  .user-actions {
+    width: auto;
+    justify-content: flex-end;
+    gap: 0.25rem;
+  }
+
+  .action-btn-icon {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+  }
   .form-actions {
     flex-direction: column;
 
@@ -1058,8 +1148,6 @@ onMounted(() => {
 
 // Tablet responsive
 @media (max-width: 1023px) and (min-width: 600px) {
-  .stats-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  // .stats-grid media query moved to main declaration
 }
 </style>

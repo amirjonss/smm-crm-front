@@ -36,12 +36,12 @@
             <span class="stat-label">На месяц</span>
           </div>
         </div>
-        <div class="stat-card stat-card-disabled">
+        <div class="stat-card">
           <div class="stat-icon stat-icon-orange">
             <q-icon name="task_alt" size="1.5rem" />
           </div>
           <div class="stat-content">
-            <span class="stat-value">Скоро</span>
+            <span class="stat-value">{{ contentPlanStore.getMyPublishedTotal }}</span>
             <span class="stat-label">Выполнено</span>
           </div>
         </div>
@@ -57,7 +57,7 @@
               <span class="card-count q-ml-sm">{{ todaysContentPlans.length }}</span>
             </h2>
           </div>
-          <div class="card-body no-padding" style="min-height: auto; max-height: 400px;">
+          <div class="card-body no-padding" style="min-height: auto; max-height: 400px">
             <div v-if="todaysContentPlans.length === 0" class="empty-state">
               <q-icon name="event_busy" class="empty-state-icon" />
               <p class="empty-state-text">На сегодня планов нет</p>
@@ -70,10 +70,34 @@
                   v-for="plan in todaysContentPlans"
                   :key="plan.id"
                   class="mobile-card"
+                  :class="`status-border-${plan.status || 'NOT_PUBLISHED'}`"
                 >
                   <div class="mobile-card-header">
                     <span class="mobile-card-title">{{ plan.post }}</span>
-                    <span class="format-badge">{{ plan.format }}</span>
+                    <div class="row items-center q-gutter-x-xs">
+                      <span class="format-badge">{{ plan.format }}</span>
+                      <q-badge
+                        :color="getColorForStatus(plan.status)"
+                        :label="getStatusLabel(plan.status)"
+                        class="cursor-pointer"
+                      >
+                        <q-menu auto-close>
+                          <q-list style="min-width: 150px">
+                            <q-item
+                              v-for="opt in statusOptions"
+                              :key="opt.value"
+                              clickable
+                              @click="updateStatus(plan, opt.value)"
+                            >
+                              <q-item-section side>
+                                <q-badge :color="getColorForStatus(opt.value)" rounded />
+                              </q-item-section>
+                              <q-item-section>{{ opt.label }}</q-item-section>
+                            </q-item>
+                          </q-list>
+                        </q-menu>
+                      </q-badge>
+                    </div>
                   </div>
                   <div class="mobile-card-body">
                     <div class="mobile-card-row">
@@ -95,6 +119,7 @@
                     <th>Проект</th>
                     <th>Пост</th>
                     <th>Формат</th>
+                    <th>Статус</th>
                     <th>Идея</th>
                   </tr>
                 </thead>
@@ -102,7 +127,32 @@
                   <tr v-for="plan in todaysContentPlans" :key="plan.id">
                     <td class="project-name">{{ getProjectName(plan.project) }}</td>
                     <td class="post-name">{{ plan.post }}</td>
-                    <td><span class="format-badge">{{ plan.format }}</span></td>
+                    <td>
+                      <span class="format-badge">{{ plan.format }}</span>
+                    </td>
+                    <td>
+                      <q-badge
+                        :color="getColorForStatus(plan.status)"
+                        :label="getStatusLabel(plan.status)"
+                        class="cursor-pointer"
+                      >
+                        <q-menu auto-close>
+                          <q-list style="min-width: 150px">
+                            <q-item
+                              v-for="opt in statusOptions"
+                              :key="opt.value"
+                              clickable
+                              @click="updateStatus(plan, opt.value)"
+                            >
+                              <q-item-section side>
+                                <q-badge :color="getColorForStatus(opt.value)" rounded />
+                              </q-item-section>
+                              <q-item-section>{{ opt.label }}</q-item-section>
+                            </q-item>
+                          </q-list>
+                        </q-menu>
+                      </q-badge>
+                    </td>
                     <td class="idea-cell">{{ plan.idea }}</td>
                   </tr>
                 </tbody>
@@ -203,7 +253,9 @@
               <h2 class="card-title">
                 <q-icon name="list_alt" class="card-icon" />
                 Контент-план
-                <span class="card-count q-ml-sm">{{ contentPlanStore.getContentPlans.length }}</span>
+                <span class="card-count q-ml-sm">{{
+                  contentPlanStore.getContentPlans.length
+                }}</span>
               </h2>
               <div class="card-header-actions">
                 <q-btn
@@ -215,7 +267,9 @@
                   :disable="!selectedProjectId"
                   @click="openContentDialog"
                 >
-                  <q-tooltip>{{ selectedProjectId ? 'Добавить контент' : 'Выберите проект' }}</q-tooltip>
+                  <q-tooltip>{{
+                    selectedProjectId ? 'Добавить контент' : 'Выберите проект'
+                  }}</q-tooltip>
                 </q-btn>
                 <pdf-printer-component
                   v-if="contentPlanStore.getContentPlans.length > 0"
@@ -225,10 +279,10 @@
                 />
               </div>
             </div>
-            <div 
-              class="card-body no-padding" 
-              ref="contentPlanScrollContainer" 
-              @dragover="handleAutoScroll" 
+            <div
+              class="card-body no-padding"
+              ref="contentPlanScrollContainer"
+              @dragover="handleAutoScroll"
               @wheel="onWheelDuringDrag"
             >
               <div v-if="contentPlanStore.getContentPlans.length === 0" class="empty-state">
@@ -239,41 +293,106 @@
               </div>
 
               <!-- Mobile Cards View -->
-              <div v-else class="mobile-cards show-mobile-only">
-                <div
-                  v-for="(row, index) in contentPlanStore.getContentPlans"
-                  :key="index"
-                  class="mobile-card"
-                  :class="{ 'mobile-card-selected': row.id === contentPlanForm.id }"
-                >
-                  <div class="mobile-card-header">
-                    <span class="mobile-card-title">{{ row.post }}</span>
-                    <span class="format-badge">{{ row.format }}</span>
-                  </div>
-                  <div class="mobile-card-body">
-                    <div class="mobile-card-row">
-                      <span class="mobile-card-label">Идея:</span>
-                      <span class="mobile-card-idea">{{ row.idea }}</span>
+              <draggable
+                v-else
+                v-model="contentPlansList"
+                item-key="id"
+                class="mobile-cards show-mobile-only"
+                handle=".drag-handle-wrapper"
+                :force-fallback="true"
+                ghost-class="drag-ghost"
+                drag-class="drag-fallback"
+              >
+                <template #item="{ element: row }">
+                  <div
+                    class="mobile-card"
+                    :class="[
+                      { 'mobile-card-selected': row.id === contentPlanForm.id },
+                      `status-border-${row.status || 'NOT_PUBLISHED'}`,
+                    ]"
+                  >
+                    <div class="mobile-card-header">
+                      <div class="drag-handle-wrapper q-mr-sm">
+                        <q-icon
+                          name="drag_handle"
+                          size="20px"
+                          color="grey-6"
+                          style="cursor: grab"
+                        />
+                      </div>
+                      <span class="mobile-card-title">{{ row.post }}</span>
+                      <div class="row items-center q-gutter-x-xs">
+                        <span class="format-badge">{{ row.format }}</span>
+                        <q-badge
+                          :color="getColorForStatus(row.status)"
+                          :label="getStatusLabel(row.status)"
+                          class="cursor-pointer"
+                        >
+                          <q-menu auto-close>
+                            <q-list style="min-width: 150px">
+                              <q-item
+                                v-for="opt in statusOptions"
+                                :key="opt.value"
+                                clickable
+                                @click="updateStatus(row, opt.value)"
+                              >
+                                <q-item-section side>
+                                  <q-badge :color="getColorForStatus(opt.value)" rounded />
+                                </q-item-section>
+                                <q-item-section>{{ opt.label }}</q-item-section>
+                              </q-item>
+                            </q-list>
+                          </q-menu>
+                        </q-badge>
+                      </div>
                     </div>
-                    <div class="mobile-card-row">
-                      <span class="mobile-card-label">Дата:</span>
-                      <span>{{ row.date.slice(0, 10) }}</span>
+                    <div class="mobile-card-body">
+                      <div class="mobile-card-row">
+                        <span class="mobile-card-label">Идея:</span>
+                        <span class="mobile-card-idea">{{ row.idea }}</span>
+                      </div>
+                      <div class="mobile-card-row">
+                        <span class="mobile-card-label">Дата:</span>
+                        <span>{{ row.date.slice(0, 10) }}</span>
+                      </div>
+                    </div>
+                    <div class="mobile-card-actions">
+                      <q-btn
+                        flat
+                        dense
+                        size="sm"
+                        icon="edit"
+                        label="Изменить"
+                        no-caps
+                        @click="editContentPlan(row)"
+                      />
+                      <q-btn
+                        flat
+                        dense
+                        size="sm"
+                        icon="delete_outline"
+                        label="Удалить"
+                        no-caps
+                        color="negative"
+                        @click="confirmContentPlanDeletion(row.id)"
+                      />
                     </div>
                   </div>
-                  <div class="mobile-card-actions">
-                    <q-btn flat dense size="sm" icon="edit" label="Изменить" no-caps @click="editContentPlan(row)" />
-                    <q-btn flat dense size="sm" icon="delete_outline" label="Удалить" no-caps color="negative" @click="confirmContentPlanDeletion(row.id)" />
-                  </div>
-                </div>
-              </div>
+                </template>
+              </draggable>
 
               <!-- Desktop Table View -->
-              <q-markup-table v-if="contentPlanStore.getContentPlans.length > 0" flat class="modern-table hide-mobile-only">
+              <q-markup-table
+                v-if="contentPlanStore.getContentPlans.length > 0"
+                flat
+                class="modern-table hide-mobile-only"
+              >
                 <thead>
                   <tr>
                     <th>#</th>
                     <th>Пост</th>
                     <th>Формат</th>
+                    <th>Статус</th>
                     <th>Идея</th>
                     <th>Дата</th>
                     <th>Действия</th>
@@ -283,12 +402,12 @@
                   <tr
                     v-for="(row, index) in contentPlanStore.getContentPlans"
                     :key="index"
-                    :class="{ 
+                    :class="{
                       'selected-row': row.id === contentPlanForm.id,
                       'drag-over': dragOverItemIndex === index,
-                      'dragged-item': draggedItemIndex === index
+                      'dragged-item': draggedItemIndex === index,
                     }"
-                    draggable="true"
+                    draggable
                     @dragstart="onDragStart(index)"
                     @dragover.prevent="onDragOver(index, $event)"
                     @drop="onDrop(index)"
@@ -300,14 +419,54 @@
                     <td>
                       <span class="format-badge">{{ row.format }}</span>
                     </td>
+                    <td>
+                      <q-badge
+                        :color="getColorForStatus(row.status)"
+                        :label="getStatusLabel(row.status)"
+                        class="cursor-pointer"
+                      >
+                        <q-menu auto-close>
+                          <q-list style="min-width: 150px">
+                            <q-item
+                              v-for="opt in statusOptions"
+                              :key="opt.value"
+                              clickable
+                              @click="updateStatus(row, opt.value)"
+                            >
+                              <q-item-section side>
+                                <q-badge :color="getColorForStatus(opt.value)" rounded />
+                              </q-item-section>
+                              <q-item-section>{{ opt.label }}</q-item-section>
+                            </q-item>
+                          </q-list>
+                        </q-menu>
+                      </q-badge>
+                    </td>
                     <td class="idea-cell">{{ row.idea }}</td>
                     <td>{{ row.date.slice(0, 10) }}</td>
                     <td>
                       <div class="action-buttons">
-                        <q-btn flat round dense size="sm" icon="edit" color="grey-6" @click="editContentPlan(row)">
+                        <q-btn
+                          flat
+                          round
+                          dense
+                          size="sm"
+                          icon="edit"
+                          color="grey-6"
+                          @click="editContentPlan(row)"
+                        >
                           <q-tooltip>Редактировать</q-tooltip>
                         </q-btn>
-                        <q-btn flat round dense size="sm" icon="delete_outline" color="grey-6" class="action-btn-danger" @click="confirmContentPlanDeletion(row.id)">
+                        <q-btn
+                          flat
+                          round
+                          dense
+                          size="sm"
+                          icon="delete_outline"
+                          color="grey-6"
+                          class="action-btn-danger"
+                          @click="confirmContentPlanDeletion(row.id)"
+                        >
                           <q-tooltip>Удалить</q-tooltip>
                         </q-btn>
                       </div>
@@ -323,7 +482,9 @@
       <q-dialog v-model="showProjectDialog" persistent>
         <q-card class="dialog-card">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">{{ editingProject ? 'Редактировать проект' : 'Создать проект' }}</div>
+            <div class="text-h6">
+              {{ editingProject ? 'Редактировать проект' : 'Создать проект' }}
+            </div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup @click="cancelEdit" />
           </q-card-section>
@@ -337,7 +498,7 @@
                   outlined
                   placeholder="Введите название"
                   lazy-rules
-                  :rules="[val => val.length > 0 || 'Заполните поле']"
+                  :rules="[(val) => val.length > 0 || 'Заполните поле']"
                   class="modern-input"
                 />
               </div>
@@ -350,7 +511,7 @@
                   fill-mask
                   placeholder="998 (__) ___ - __ - __"
                   lazy-rules
-                  :rules="[val => val.length > 0 || 'Заполните поле']"
+                  :rules="[(val) => val.length > 0 || 'Заполните поле']"
                   class="modern-input"
                 />
               </div>
@@ -380,7 +541,9 @@
       <q-dialog v-model="showContentDialog" persistent>
         <q-card class="dialog-card">
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-h6">{{ editingContent ? 'Редактировать контент' : 'Добавить контент' }}</div>
+            <div class="text-h6">
+              {{ editingContent ? 'Редактировать контент' : 'Добавить контент' }}
+            </div>
             <q-space />
             <q-btn icon="close" flat round dense v-close-popup @click="cancelContentEdit" />
           </q-card-section>
@@ -394,7 +557,7 @@
                   outlined
                   placeholder="Название поста"
                   lazy-rules
-                  :rules="[val => val.length > 0 || 'Заполните поле']"
+                  :rules="[(val) => val.length > 0 || 'Заполните поле']"
                   class="modern-input"
                 />
               </div>
@@ -406,7 +569,19 @@
                   outlined
                   placeholder="Выберите формат"
                   lazy-rules
-                  :rules="[val => val.length > 0 || 'Выберите формат']"
+                  :rules="[(val) => !!val || 'Выберите формат']"
+                  class="modern-input"
+                />
+              </div>
+              <div class="form-group q-mb-md">
+                <label class="form-label">Статус</label>
+                <q-select
+                  v-model="contentPlanForm.status"
+                  :options="statusOptions"
+                  outlined
+                  emit-value
+                  map-options
+                  placeholder="Выберите статус"
                   class="modern-input"
                 />
               </div>
@@ -417,7 +592,7 @@
                   type="date"
                   outlined
                   lazy-rules
-                  :rules="[val => val.length > 0 || 'Выберите дату']"
+                  :rules="[(val) => val.length > 0 || 'Выберите дату']"
                   class="modern-input"
                 />
               </div>
@@ -429,7 +604,7 @@
                   autogrow
                   placeholder="Опишите идею контента"
                   lazy-rules
-                  :rules="[val => val.length > 0 || 'Заполните поле']"
+                  :rules="[(val) => val.length > 0 || 'Заполните поле']"
                   class="modern-input"
                 />
               </div>
@@ -466,6 +641,7 @@ import { useQuasar } from 'quasar'
 import { useContentPlanStore } from 'stores/content-plan.js'
 import { api } from 'boot/axios.js'
 import PdfPrinterComponent from 'components/PdfPrinterComponent.vue'
+import draggable from 'vuedraggable'
 
 const form = ref({ phone: '', name: '' })
 const selectedProjectId = ref(null)
@@ -500,7 +676,7 @@ async function fetchTodaysContentPlans() {
   const today = new Date().toISOString().slice(0, 10)
   try {
     // Today
-    const response = await api.get('/content_plans?date=' + today)
+    const response = await api.get('/content_plans?date=' + today + '&itemsPerPage=1000')
     todaysContentPlans.value = response.data.member
 
     // Week
@@ -512,6 +688,9 @@ async function fetchTodaysContentPlans() {
     const { start: monthStart, end: monthEnd } = getMonthRange()
     const monthPlans = await contentPlanStore.fetchContentPlansByDateRange(monthStart, monthEnd)
     monthCount.value = monthPlans.length
+
+    // Published
+    await contentPlanStore.fetchMyPublishedContentPlansCount()
   } catch (e) {
     console.error('Error fetching stats:', e)
   }
@@ -522,7 +701,7 @@ function getProjectName(project) {
   if (typeof project === 'object' && project.name) return project.name
   if (typeof project === 'string') {
     const id = project.split('/').pop()
-    const found = projectStore.getProjects.find(p => String(p.id) === String(id))
+    const found = projectStore.getProjects.find((p) => String(p.id) === String(id))
     return found ? found.name : '---'
   }
   return '---'
@@ -540,7 +719,7 @@ function addToProjectList() {
     q.notify({
       message: 'Проект успешно создан',
       type: 'positive',
-      position: 'top'
+      position: 'top',
     })
   })
   form.value = { name: '', phone: '' }
@@ -564,7 +743,7 @@ function saveEditedProject() {
     q.notify({
       message: 'Проект успешно обновлён',
       type: 'positive',
-      position: 'top'
+      position: 'top',
     })
   })
   cancelEdit()
@@ -582,7 +761,7 @@ function deleteProject(id) {
     q.notify({
       message: 'Проект удалён',
       type: 'positive',
-      position: 'top'
+      position: 'top',
     })
   })
 }
@@ -593,12 +772,12 @@ function confirmProjectDeletion(project) {
     message: `Вы уверены, что хотите удалить проект "${project.name}"?`,
     cancel: { flat: true, label: 'Отмена' },
     ok: { color: 'negative', label: 'Удалить' },
-    persistent: true
+    persistent: true,
   }).onOk(() => deleteProject(project.id))
 }
 
 const selectedProject = computed(
-  () => projectStore.getProjects.find((p) => p.id === selectedProjectId.value) || null
+  () => projectStore.getProjects.find((p) => p.id === selectedProjectId.value) || null,
 )
 
 watch(selectedProjectId, async () => {
@@ -610,10 +789,65 @@ watch(selectedProjectId, async () => {
 })
 
 // Content plan
-const contentPlanForm = ref({ post: '', format: '', idea: '', date: '', id: null, status: 'В плане', position: 0 })
+const contentPlanForm = ref({
+  post: '',
+  format: 'Post',
+  idea: '',
+  date: '',
+  id: null,
+  status: 'NOT_PUBLISHED',
+  position: 0,
+})
 const editingContent = ref(null)
 const showContentDialog = ref(false)
 const options = ref(['Reels', 'Carousel', 'Post', 'Animation', 'Story'])
+
+const statusOptions = [
+  { label: 'Не опубликовано', value: 'NOT_PUBLISHED' },
+  { label: 'Опубликовано', value: 'PUBLISHED' },
+  { label: 'Отменено', value: 'CANCELED' },
+  { label: 'Перенесено', value: 'RESCHEDULED' },
+]
+
+function getStatusLabel(status) {
+  const opt = statusOptions.find((o) => o.value === status)
+  return opt ? opt.label : 'Не опубликовано'
+}
+
+function getColorForStatus(status) {
+  const colors = {
+    PUBLISHED: 'positive',
+    CANCELED: 'negative',
+    NOT_PUBLISHED: 'grey-7',
+    RESCHEDULED: 'orange',
+  }
+  return colors[status] || 'grey-7'
+}
+
+async function updateStatus(plan, newStatus) {
+  if (plan.status === newStatus) return
+
+  try {
+    await contentPlanStore.patchContentPlan({ status: newStatus }, plan.id)
+    if (selectedProjectId.value) {
+      await contentPlanStore.fetchContentPlan(selectedProjectId.value)
+    }
+    await fetchTodaysContentPlans()
+    q.notify({
+      message: 'Статус обновлен',
+      type: 'positive',
+      position: 'top',
+      timeout: 1000,
+    })
+  } catch (e) {
+    console.error('Error updating status:', e)
+    q.notify({
+      message: 'Ошибка при обновлении статуса',
+      type: 'negative',
+      position: 'top',
+    })
+  }
+}
 
 const draggedItemIndex = ref(null)
 const dragOverItemIndex = ref(null)
@@ -635,23 +869,23 @@ function stopAutoScroll() {
 
 function handleAutoScroll(e) {
   if (draggedItemIndex.value === null) return
-  
+
   const container = contentPlanScrollContainer.value
   if (!container) return
-  
+
   const rect = container.getBoundingClientRect()
   const threshold = 80
   const topDist = e.clientY - rect.top
   const bottomDist = rect.bottom - e.clientY
-  
+
   if (topDist < threshold || bottomDist < threshold) {
     if (autoScrollInterval) return // Already scrolling
-    
+
     autoScrollInterval = setInterval(() => {
       const currentRect = container.getBoundingClientRect()
       const currentTopDist = lastMouseY - currentRect.top
       const currentBottomDist = currentRect.bottom - lastMouseY
-      
+
       if (currentTopDist < threshold) {
         container.scrollTop -= Math.max(5, (threshold - currentTopDist) / 2)
       } else if (currentBottomDist < threshold) {
@@ -682,58 +916,73 @@ function onDragEnd() {
   stopAutoScroll()
 }
 
+const contentPlansList = computed({
+  get: () => contentPlanStore.getContentPlans,
+  set: (val) => {
+    contentPlanStore.setContentPlans(val)
+    persistOrder(val)
+  },
+})
+
+async function persistOrder(plans) {
+  // Show loading notification
+  const dismiss = q.notify({
+    group: false,
+    timeout: 0,
+    spinner: true,
+    message: 'Сохранение порядка...',
+    position: 'top',
+  })
+
+  // Persist changes to backend
+  try {
+    const updatePromises = []
+    plans.forEach((p, i) => {
+      const newPos = i + 1
+      if (p.position !== newPos) {
+        p.position = newPos
+        updatePromises.push(contentPlanStore.patchContentPlan({ position: newPos }, p.id))
+      }
+    })
+
+    await Promise.all(updatePromises)
+
+    dismiss()
+    q.notify({
+      message: 'Порядок сохранен',
+      type: 'positive',
+      position: 'top',
+      timeout: 1000,
+    })
+  } catch (e) {
+    dismiss()
+    console.error('Error persisting order:', e)
+    q.notify({
+      message: 'Ошибка при сохранении порядка',
+      type: 'negative',
+      position: 'top',
+    })
+    // Refresh from server to revert if failed
+    if (selectedProjectId.value) {
+      contentPlanStore.fetchContentPlan(selectedProjectId.value)
+    }
+  }
+}
+
 async function onDrop(toIndex) {
   stopAutoScroll()
   const plans = [...contentPlanStore.getContentPlans]
   const fromIndex = draggedItemIndex.value
-  
+
   if (fromIndex !== null && fromIndex !== toIndex) {
     const item = plans.splice(fromIndex, 1)[0]
     plans.splice(toIndex, 0, item)
-    
+
     // Update local state immediately for responsiveness
     contentPlanStore.contentPlans.items = plans
-    
-    // Show loading notification
-    const dismiss = q.notify({
-      group: false,
-      timeout: 0,
-      spinner: true,
-      message: 'Сохранение порядка...',
-      position: 'top'
-    })
 
-    // Persist changes to backend
-    try {
-      const updatePromises = []
-      plans.forEach((p, i) => {
-        const newPos = i + 1
-        if (p.position !== newPos) {
-          p.position = newPos
-          updatePromises.push(contentPlanStore.patchContentPlan({ position: newPos }, p.id))
-        }
-      })
-      
-      await Promise.all(updatePromises)
-      
-      dismiss()
-      q.notify({
-        message: 'Порядок сохранен',
-        type: 'positive',
-        position: 'top',
-        timeout: 1000
-      })
-    } catch (e) {
-      dismiss()
-      console.error('Error persisting order:', e)
-      q.notify({
-        message: 'Ошибка при сохранении порядка',
-        type: 'negative',
-        position: 'top'
-      })
-      // Refresh from server to revert if failed
-      contentPlanStore.fetchContentPlan(selectedProjectId.value)
-    }
+    // Persist
+    persistOrder(plans)
   }
   draggedItemIndex.value = null
   dragOverItemIndex.value = null
@@ -756,7 +1005,7 @@ function addToContentList() {
     idea: contentPlanForm.value.idea,
     date: contentPlanForm.value.date,
     status: contentPlanForm.value.status,
-    position: contentPlanForm.value.position || (contentPlanStore.getContentPlans.length + 1)
+    position: contentPlanForm.value.position || contentPlanStore.getContentPlans.length + 1,
   }
   contentPlanStore.createContentPlan(newRow).then(() => {
     contentPlanStore.fetchContentPlan(selectedProjectId.value)
@@ -765,10 +1014,18 @@ function addToContentList() {
     q.notify({
       message: 'Контент добавлен',
       type: 'positive',
-      position: 'top'
+      position: 'top',
     })
   })
-  contentPlanForm.value = { post: '', format: '', idea: '', date: '', id: null, status: 'В плане', position: 0 }
+  contentPlanForm.value = {
+    post: '',
+    format: 'Post',
+    idea: '',
+    date: '',
+    id: null,
+    status: 'NOT_PUBLISHED',
+    position: 0,
+  }
 }
 
 function editContentPlan(plan) {
@@ -779,36 +1036,49 @@ function editContentPlan(plan) {
     idea: plan.idea,
     date: plan.date.slice(0, 10),
     id: plan.id,
-    status: plan.status || 'В плане',
-    position: plan.position || 0
+    status: plan.status || 'NOT_PUBLISHED',
+    position: plan.position || 0,
   }
   showContentDialog.value = true
 }
 
 function cancelContentEdit() {
   editingContent.value = null
-  contentPlanForm.value = { post: '', format: '', idea: '', date: '', id: null, status: 'В плане', position: 0 }
+  contentPlanForm.value = {
+    post: '',
+    format: 'Post',
+    idea: '',
+    date: '',
+    id: null,
+    status: 'NOT_PUBLISHED',
+    position: 0,
+  }
   showContentDialog.value = false
 }
 
 function saveEditedContentPlan() {
-  contentPlanStore.patchContentPlan({
-    post: contentPlanForm.value.post,
-    format: contentPlanForm.value.format,
-    date: contentPlanForm.value.date,
-    idea: contentPlanForm.value.idea,
-    status: contentPlanForm.value.status,
-    position: contentPlanForm.value.position
-  }, editingContent.value.id).then(() => {
-    contentPlanStore.fetchContentPlan(selectedProjectId.value)
-    fetchTodaysContentPlans()
-    showContentDialog.value = false
-    q.notify({
-      message: 'Контент обновлён',
-      type: 'positive',
-      position: 'top'
+  contentPlanStore
+    .patchContentPlan(
+      {
+        post: contentPlanForm.value.post,
+        format: contentPlanForm.value.format,
+        date: contentPlanForm.value.date,
+        idea: contentPlanForm.value.idea,
+        status: contentPlanForm.value.status,
+        position: contentPlanForm.value.position,
+      },
+      editingContent.value.id,
+    )
+    .then(() => {
+      contentPlanStore.fetchContentPlan(selectedProjectId.value)
+      fetchTodaysContentPlans()
+      showContentDialog.value = false
+      q.notify({
+        message: 'Контент обновлён',
+        type: 'positive',
+        position: 'top',
+      })
     })
-  })
   cancelContentEdit()
 }
 
@@ -819,7 +1089,7 @@ function deleteContentPlan(id) {
     q.notify({
       message: 'Контент удалён',
       type: 'positive',
-      position: 'top'
+      position: 'top',
     })
   })
 }
@@ -830,7 +1100,7 @@ function confirmContentPlanDeletion(contentPlanId) {
     message: 'Вы уверены, что хотите удалить этот контент?',
     cancel: { flat: true, label: 'Отмена' },
     ok: { color: 'negative', label: 'Удалить' },
-    persistent: true
+    persistent: true,
   }).onOk(() => deleteContentPlan(contentPlanId))
 }
 
@@ -857,7 +1127,11 @@ onMounted(() => {
   width: 450px;
   max-width: 95vw;
   border-radius: 12px;
-  background: var(--bg-card);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 
   @media (max-width: 599px) {
     width: 90vw;
@@ -909,7 +1183,34 @@ onMounted(() => {
   }
 
   @media (max-width: 599px) {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+
+    .stat-card {
+      padding: 1rem;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 0.75rem;
+    }
+
+    .stat-icon {
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+
+      :deep(.q-icon) {
+        font-size: 1.25rem !important;
+      }
+    }
+
+    .stat-value {
+      font-size: 1.25rem;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+    }
   }
 }
 
@@ -1151,7 +1452,9 @@ onMounted(() => {
 
 .draggable-row {
   cursor: grab;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease;
+  transition:
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 0.2s ease;
 
   &:active {
     cursor: grabbing;
@@ -1172,7 +1475,7 @@ onMounted(() => {
   background-color: rgba(59, 130, 246, 0.1) !important;
   transform: translateY(15px);
   position: relative;
-  
+
   &::after {
     content: '';
     position: absolute;
@@ -1188,9 +1491,18 @@ onMounted(() => {
 }
 
 @keyframes drag-pulse {
-  0% { opacity: 0.6; transform: scaleX(0.98); }
-  50% { opacity: 1; transform: scaleX(1); }
-  100% { opacity: 0.6; transform: scaleX(0.98); }
+  0% {
+    opacity: 0.6;
+    transform: scaleX(0.98);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0.6;
+    transform: scaleX(0.98);
+  }
 }
 
 .selected-row {
@@ -1376,6 +1688,19 @@ onMounted(() => {
   &:last-child {
     margin-bottom: 0;
   }
+
+  &.status-border-PUBLISHED {
+    border-left: 4px solid var(--q-positive);
+  }
+  &.status-border-CANCELED {
+    border-left: 4px solid var(--q-negative);
+  }
+  &.status-border-RESCHEDULED {
+    border-left: 4px solid var(--q-orange);
+  }
+  &.status-border-NOT_PUBLISHED {
+    border-left: 4px solid var(--q-grey-7);
+  }
 }
 
 .mobile-card-selected {
@@ -1386,14 +1711,18 @@ onMounted(() => {
 .mobile-card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .mobile-card-title {
   font-weight: 600;
   font-size: 1rem;
   color: var(--text-primary);
+  margin-right: auto;
+  word-break: break-word;
 }
 
 .mobile-card-body {
@@ -1453,5 +1782,22 @@ onMounted(() => {
   .page-title {
     font-size: 1.375rem;
   }
+}
+.modern-table {
+  min-width: 100%;
+}
+
+.drag-ghost {
+  opacity: 0.5;
+  background: var(--bg-tertiary);
+  border: 2px dashed #3b82f6;
+}
+
+.drag-fallback {
+  opacity: 1 !important;
+  background: var(--bg-card);
+  border: 1px solid #3b82f6;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  transform: scale(1.02);
 }
 </style>
