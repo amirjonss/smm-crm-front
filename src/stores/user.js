@@ -39,7 +39,6 @@ export const useUserStore = defineStore('user', {
           .then((response) => {
             this.user = response.data
             this.loaded = true
-            console.log(this.user, 'user')
             resolve()
           })
           .catch((e) => {
@@ -52,7 +51,6 @@ export const useUserStore = defineStore('user', {
         api
           .post('/users', data)
           .then(() => {
-            console.log('user successfully created')
             resolve()
           })
           .catch((e) => {
@@ -79,7 +77,6 @@ export const useUserStore = defineStore('user', {
         api
           .patch('/users/' + id, data)
           .then(() => {
-            console.log('user edited successfully')
             resolve()
           })
           .catch((e) => {
@@ -92,7 +89,6 @@ export const useUserStore = defineStore('user', {
         api
           .delete('/users/' + id)
           .then(() => {
-            console.log('user deleted successfully')
             resolve()
           })
           .catch((e) => {
