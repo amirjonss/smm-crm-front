@@ -279,12 +279,7 @@
                 />
               </div>
             </div>
-            <div
-              class="card-body no-padding"
-              ref="contentPlanScrollContainer"
-              @dragover="handleAutoScroll"
-              @wheel="onWheelDuringDrag"
-            >
+            <div class="card-body no-padding">
               <div v-if="contentPlanStore.getContentPlans.length === 0" class="empty-state">
                 <q-icon name="article" class="empty-state-icon" />
                 <p class="empty-state-text">
@@ -299,9 +294,16 @@
                 item-key="id"
                 class="mobile-cards show-mobile-only"
                 handle=".drag-handle-wrapper"
-                :force-fallback="true"
                 ghost-class="drag-ghost"
                 drag-class="drag-fallback"
+                :force-fallback="true"
+                :fallback-tolerance="3"
+                :fallback-on-body="true"
+                :animation="200"
+                :scroll="true"
+                :bubble-scroll="true"
+                :scroll-sensitivity="150"
+                :scroll-speed="20"
               >
                 <template #item="{ element: row }">
                   <div
@@ -381,71 +383,79 @@
                 </template>
               </draggable>
 
-              <!-- Desktop Table View -->
-              <q-markup-table
+              <!-- Desktop Table View (CSS Grid for Trello-like Dragging) -->
+              <div
                 v-if="contentPlanStore.getContentPlans.length > 0"
-                flat
-                class="modern-table hide-mobile-only"
+                class="modern-table-grid hide-mobile-only"
               >
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Пост</th>
-                    <th>Формат</th>
-                    <th>Статус</th>
-                    <th>Идея</th>
-                    <th>Дата</th>
-                    <th>Действия</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="(row, index) in contentPlanStore.getContentPlans"
-                    :key="index"
-                    :class="{
-                      'selected-row': row.id === contentPlanForm.id,
-                      'drag-over': dragOverItemIndex === index,
-                      'dragged-item': draggedItemIndex === index,
-                    }"
-                    draggable
-                    @dragstart="onDragStart(index)"
-                    @dragover.prevent="onDragOver(index, $event)"
-                    @drop="onDrop(index)"
-                    @dragend="onDragEnd"
-                    class="draggable-row"
-                  >
-                    <td>{{ index + 1 }}</td>
-                    <td class="post-name">{{ row.post }}</td>
-                    <td>
-                      <span class="format-badge">{{ row.format }}</span>
-                    </td>
-                    <td>
-                      <q-badge
-                        :color="getColorForStatus(row.status)"
-                        :label="getStatusLabel(row.status)"
-                        class="cursor-pointer"
-                      >
-                        <q-menu auto-close>
-                          <q-list style="min-width: 150px">
-                            <q-item
-                              v-for="opt in statusOptions"
-                              :key="opt.value"
-                              clickable
-                              @click="updateStatus(row, opt.value)"
-                            >
-                              <q-item-section side>
-                                <q-badge :color="getColorForStatus(opt.value)" rounded />
-                              </q-item-section>
-                              <q-item-section>{{ opt.label }}</q-item-section>
-                            </q-item>
-                          </q-list>
-                        </q-menu>
-                      </q-badge>
-                    </td>
-                    <td class="idea-cell">{{ row.idea }}</td>
-                    <td>{{ row.date.slice(0, 10) }}</td>
-                    <td>
-                      <div class="action-buttons">
+                <div class="grid-header">
+                  <div class="header-cell">#</div>
+                  <div class="header-cell">Проект</div>
+                  <div class="header-cell">Пост</div>
+                  <div class="header-cell">Формат</div>
+                  <div class="header-cell">Статус</div>
+                  <div class="header-cell">Идея</div>
+                  <div class="header-cell">Дата</div>
+                  <div class="header-cell text-right">Действия</div>
+                </div>
+
+                <draggable
+                  v-model="contentPlansList"
+                  tag="div"
+                  item-key="id"
+                  class="grid-body"
+                  ghost-class="drag-ghost"
+                  drag-class="drag-fallback"
+                  :force-fallback="true"
+                  :fallback-tolerance="3"
+                  :fallback-on-body="true"
+                  :animation="200"
+                  :scroll="true"
+                  :bubble-scroll="true"
+                  :scroll-sensitivity="150"
+                  :scroll-speed="20"
+                >
+                  <template #item="{ element: row, index }">
+                    <div
+                      :class="{
+                        'selected-row': row.id === contentPlanForm.id,
+                      }"
+                      class="grid-row draggable-row"
+                    >
+                      <div class="grid-cell text-muted">{{ index + 1 }}</div>
+                      <div class="grid-cell project-name">
+                        {{ getProjectName(row.project) }}
+                      </div>
+                      <div class="grid-cell post-name">{{ row.post }}</div>
+                      <div class="grid-cell">
+                        <span class="format-badge">{{ row.format }}</span>
+                      </div>
+                      <div class="grid-cell">
+                        <q-badge
+                          :color="getColorForStatus(row.status)"
+                          :label="getStatusLabel(row.status)"
+                          class="cursor-pointer"
+                        >
+                          <q-menu auto-close>
+                            <q-list style="min-width: 150px">
+                              <q-item
+                                v-for="opt in statusOptions"
+                                :key="opt.value"
+                                clickable
+                                @click="updateStatus(row, opt.value)"
+                              >
+                                <q-item-section side>
+                                  <q-badge :color="getColorForStatus(opt.value)" rounded />
+                                </q-item-section>
+                                <q-item-section>{{ opt.label }}</q-item-section>
+                              </q-item>
+                            </q-list>
+                          </q-menu>
+                        </q-badge>
+                      </div>
+                      <div class="grid-cell idea-cell">{{ row.idea }}</div>
+                      <div class="grid-cell">{{ row.date.slice(0, 10) }}</div>
+                      <div class="grid-cell action-buttons justify-end">
                         <q-btn
                           flat
                           round
@@ -470,10 +480,10 @@
                           <q-tooltip>Удалить</q-tooltip>
                         </q-btn>
                       </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </q-markup-table>
+                    </div>
+                  </template>
+                </draggable>
+              </div>
             </div>
           </div>
         </div>
@@ -849,72 +859,7 @@ async function updateStatus(plan, newStatus) {
   }
 }
 
-const draggedItemIndex = ref(null)
-const dragOverItemIndex = ref(null)
-const contentPlanScrollContainer = ref(null)
-let autoScrollInterval = null
 
-function onWheelDuringDrag(e) {
-  if (draggedItemIndex.value !== null && contentPlanScrollContainer.value) {
-    contentPlanScrollContainer.value.scrollTop += e.deltaY
-  }
-}
-
-function stopAutoScroll() {
-  if (autoScrollInterval) {
-    clearInterval(autoScrollInterval)
-    autoScrollInterval = null
-  }
-}
-
-function handleAutoScroll(e) {
-  if (draggedItemIndex.value === null) return
-
-  const container = contentPlanScrollContainer.value
-  if (!container) return
-
-  const rect = container.getBoundingClientRect()
-  const threshold = 80
-  const topDist = e.clientY - rect.top
-  const bottomDist = rect.bottom - e.clientY
-
-  if (topDist < threshold || bottomDist < threshold) {
-    if (autoScrollInterval) return // Already scrolling
-
-    autoScrollInterval = setInterval(() => {
-      const currentRect = container.getBoundingClientRect()
-      const currentTopDist = lastMouseY - currentRect.top
-      const currentBottomDist = currentRect.bottom - lastMouseY
-
-      if (currentTopDist < threshold) {
-        container.scrollTop -= Math.max(5, (threshold - currentTopDist) / 2)
-      } else if (currentBottomDist < threshold) {
-        container.scrollTop += Math.max(5, (threshold - currentBottomDist) / 2)
-      } else {
-        stopAutoScroll()
-      }
-    }, 20)
-  } else {
-    stopAutoScroll()
-  }
-}
-
-let lastMouseY = 0
-function onDragOver(index, e) {
-  dragOverItemIndex.value = index
-  lastMouseY = e.clientY
-  handleAutoScroll(e)
-}
-
-function onDragStart(index) {
-  draggedItemIndex.value = index
-}
-
-function onDragEnd() {
-  draggedItemIndex.value = null
-  dragOverItemIndex.value = null
-  stopAutoScroll()
-}
 
 const contentPlansList = computed({
   get: () => contentPlanStore.getContentPlans,
@@ -969,24 +914,7 @@ async function persistOrder(plans) {
   }
 }
 
-async function onDrop(toIndex) {
-  stopAutoScroll()
-  const plans = [...contentPlanStore.getContentPlans]
-  const fromIndex = draggedItemIndex.value
 
-  if (fromIndex !== null && fromIndex !== toIndex) {
-    const item = plans.splice(fromIndex, 1)[0]
-    plans.splice(toIndex, 0, item)
-
-    // Update local state immediately for responsiveness
-    contentPlanStore.contentPlans.items = plans
-
-    // Persist
-    persistOrder(plans)
-  }
-  draggedItemIndex.value = null
-  dragOverItemIndex.value = null
-}
 
 function openContentDialog() {
   cancelContentEdit()
@@ -1420,46 +1348,100 @@ onMounted(() => {
   gap: 0.25rem;
 }
 
-.modern-table {
-  background: transparent;
-  border: none;
+.modern-table-grid {
   width: 100%;
-  min-width: 100%;
-
-  :deep(thead tr th) {
-    background: transparent !important;
-    color: var(--text-muted) !important;
-    font-weight: 500;
-    font-size: 0.6875rem;
-    border-top: none !important;
-    text-align: left !important;
-  }
-
-  :deep(tbody tr td) {
-    text-align: left !important;
-  }
-
-  :deep(tbody tr) {
-    &:nth-child(even) {
-      background-color: var(--bg-tertiary);
-    }
-
-    &:hover {
-      background-color: var(--bg-hover) !important;
-    }
-  }
+  display: flex;
+  flex-direction: column;
+  user-select: none;
 }
 
-.draggable-row {
+.grid-header {
+  display: grid;
+  grid-template-columns: 50px 1.5fr 2fr 100px 150px 2fr 100px 100px;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.header-cell {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.grid-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-row {
+  display: grid;
+  grid-template-columns: 50px 1.5fr 2fr 100px 150px 2fr 100px 100px;
+  gap: 1rem;
+  padding: 1rem;
+  align-items: center;
+  border-bottom: 1px solid var(--border-light);
+  transition: background-color 0.2s ease;
+  background: var(--bg-card);
   cursor: grab;
-  transition:
-    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
-    background-color 0.2s ease;
+
+  &:hover {
+    background-color: var(--bg-hover);
+  }
 
   &:active {
     cursor: grabbing;
   }
+
+  &.selected-row {
+    background-color: rgba(59, 130, 246, 0.08);
+    border-left: 3px solid #3b82f6;
+    padding-left: calc(1rem - 3px);
+  }
 }
+
+.grid-cell {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &.post-name {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  &.idea-cell {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    font-size: 0.8125rem;
+  }
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.justify-end {
+  justify-content: flex-end;
+  display: flex;
+}
+
+
 
 .drag-handle {
   cursor: move;
@@ -1675,6 +1657,7 @@ onMounted(() => {
 // Mobile Cards
 .mobile-cards {
   padding: 0.75rem;
+  user-select: none;
 }
 
 .mobile-card {
@@ -1797,7 +1780,10 @@ onMounted(() => {
   opacity: 1 !important;
   background: var(--bg-card);
   border: 1px solid #3b82f6;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
   transform: scale(1.02);
+  z-index: 9999 !important;
+  cursor: grabbing !important;
+  display: grid !important; /* Ensure it stays a grid item */
 }
 </style>
