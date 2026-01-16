@@ -351,7 +351,7 @@ function getColorForStatus(status) {
 }
 
 const filteredUsers = computed(() => {
-  return userStore.getUsers.filter((n) => n.id !== userStore.user?.id)
+  return userStore.getUsers
 })
 
 function openCreateDialog() {
@@ -752,7 +752,11 @@ onMounted(() => {
   width: 450px;
   max-width: 95vw;
   border-radius: 12px;
-  background: var(--bg-card);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 
   @media (max-width: 599px) {
     width: 90vw;

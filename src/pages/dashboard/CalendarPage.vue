@@ -111,7 +111,7 @@
                 <div class="glass-day-card column q-gutter-y-xs">
                   <div
                     class="glass-content custom-scroll"
-                    style="max-height: 60vh; overflow-y: auto"
+                    style="max-height: 360px; overflow-y: auto"
                   >
                     <div
                       v-for="event in getEventsForDate(day.date)"
@@ -146,7 +146,7 @@
 
     <!-- Mobile/Busy Day Events List Dialog (Centered) -->
     <q-dialog v-model="showDayList">
-      <q-card style="width: 100%; min-width: 320px; max-width: 450px; border-radius: 16px">
+      <q-card class="calendar-dialog-card" style="width: 100%; min-width: 320px; max-width: 450px">
         <q-card-section class="row items-center justify-between">
           <div class="text-h6">{{ selectedDateLabel }}</div>
           <div class="row q-gutter-xs">
@@ -201,7 +201,7 @@
 
     <!-- Global Event Detail/Edit Dialog -->
     <q-dialog v-model="isEventDialogOpen">
-      <q-card class="q-pa-none" style="min-width: 320px; max-width: 400px; overflow: hidden">
+      <q-card class="calendar-dialog-card q-pa-none" style="min-width: 320px; max-width: 400px; overflow: hidden">
         <!-- VIEW MODE -->
         <div v-if="!isEditing && tempEvent.id">
           <q-card-section class="row items-center justify-between q-pb-sm">
@@ -809,6 +809,15 @@ onMounted(() => {
   padding: 0;
 }
 
+.calendar-dialog-card {
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
 .page-container {
   max-width: 1400px;
   margin: 0 auto;
@@ -1065,37 +1074,42 @@ onMounted(() => {
 
 /* Unified Chip Styles */
 .event-chip {
-  padding: 0.375rem 0.5rem;
-  border-radius: 6px;
+  padding: 0.5rem 0.625rem;
+  border-radius: 8px;
   font-size: 0.75rem;
   cursor: pointer;
   border-left: 3px solid transparent;
   transition: all 0.2s ease;
   max-width: 100%;
   overflow: hidden;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 
   &:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 }
 
 /* Specific styles for cards in the floating menu */
 .glass-chip {
+  background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  /* Use slightly more opaque background for menu items to ensure visibility */
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 
   .body--dark & {
+    background: rgba(30, 30, 30, 0.9);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   &:hover {
-    transform: scale(1.03) translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transform: scale(1.02) translateY(-1px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   }
 }
 

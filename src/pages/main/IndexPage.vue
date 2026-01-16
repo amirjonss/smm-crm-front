@@ -79,9 +79,9 @@
                       <q-badge
                         :color="getColorForStatus(plan.status)"
                         :label="getStatusLabel(plan.status)"
-                        :class="{ 'cursor-pointer': !userStore.isAdmin }"
+                        class="cursor-pointer"
                       >
-                        <q-menu v-if="!userStore.isAdmin" auto-close>
+                        <q-menu auto-close>
                           <q-list style="min-width: 150px">
                             <q-item
                               v-for="opt in statusOptions"
@@ -134,9 +134,9 @@
                       <q-badge
                         :color="getColorForStatus(plan.status)"
                         :label="getStatusLabel(plan.status)"
-                        :class="{ 'cursor-pointer': !userStore.isAdmin }"
+                        class="cursor-pointer"
                       >
-                        <q-menu v-if="!userStore.isAdmin" auto-close>
+                        <q-menu auto-close>
                           <q-list style="min-width: 150px">
                             <q-item
                               v-for="opt in statusOptions"
@@ -174,7 +174,6 @@
               </h2>
               <div class="card-header-actions">
                 <q-btn
-                  v-if="!userStore.isAdmin"
                   flat
                   round
                   dense
@@ -218,7 +217,6 @@
                   </div>
                   <div class="project-item-actions">
                     <q-btn
-                      v-if="!userStore.isAdmin"
                       flat
                       round
                       dense
@@ -230,7 +228,6 @@
                       <q-tooltip>Редактировать</q-tooltip>
                     </q-btn>
                     <q-btn
-                      v-if="!userStore.isAdmin"
                       flat
                       round
                       dense
@@ -262,7 +259,6 @@
               </h2>
               <div class="card-header-actions">
                 <q-btn
-                  v-if="!userStore.isAdmin"
                   flat
                   round
                   dense
@@ -306,7 +302,6 @@
                 :force-fallback="true"
                 ghost-class="drag-ghost"
                 drag-class="drag-fallback"
-                :disabled="userStore.isAdmin"
               >
                 <template #item="{ element: row }">
                   <div
@@ -317,7 +312,7 @@
                     ]"
                   >
                     <div class="mobile-card-header">
-                      <div v-if="!userStore.isAdmin" class="drag-handle-wrapper q-mr-sm">
+                      <div class="drag-handle-wrapper q-mr-sm">
                         <q-icon
                           name="drag_handle"
                           size="20px"
@@ -331,9 +326,9 @@
                         <q-badge
                           :color="getColorForStatus(row.status)"
                           :label="getStatusLabel(row.status)"
-                          :class="{ 'cursor-pointer': !userStore.isAdmin }"
+                          class="cursor-pointer"
                         >
-                          <q-menu v-if="!userStore.isAdmin" auto-close>
+                          <q-menu auto-close>
                             <q-list style="min-width: 150px">
                               <q-item
                                 v-for="opt in statusOptions"
@@ -363,7 +358,6 @@
                     </div>
                     <div class="mobile-card-actions">
                       <q-btn
-                        v-if="!userStore.isAdmin"
                         flat
                         dense
                         size="sm"
@@ -373,7 +367,6 @@
                         @click="editContentPlan(row)"
                       />
                       <q-btn
-                        v-if="!userStore.isAdmin"
                         flat
                         dense
                         size="sm"
@@ -402,7 +395,7 @@
                     <th>Статус</th>
                     <th>Идея</th>
                     <th>Дата</th>
-                    <th v-if="!userStore.isAdmin">Действия</th>
+                    <th>Действия</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -414,11 +407,11 @@
                       'drag-over': dragOverItemIndex === index,
                       'dragged-item': draggedItemIndex === index,
                     }"
-                    :draggable="!userStore.isAdmin"
-                    @dragstart="!userStore.isAdmin && onDragStart(index)"
-                    @dragover.prevent="!userStore.isAdmin && onDragOver(index, $event)"
-                    @drop="!userStore.isAdmin && onDrop(index)"
-                    @dragend="!userStore.isAdmin && onDragEnd"
+                    draggable
+                    @dragstart="onDragStart(index)"
+                    @dragover.prevent="onDragOver(index, $event)"
+                    @drop="onDrop(index)"
+                    @dragend="onDragEnd"
                     class="draggable-row"
                   >
                     <td>{{ index + 1 }}</td>
@@ -430,9 +423,9 @@
                       <q-badge
                         :color="getColorForStatus(row.status)"
                         :label="getStatusLabel(row.status)"
-                        :class="{ 'cursor-pointer': !userStore.isAdmin }"
+                        class="cursor-pointer"
                       >
-                        <q-menu v-if="!userStore.isAdmin" auto-close>
+                        <q-menu auto-close>
                           <q-list style="min-width: 150px">
                             <q-item
                               v-for="opt in statusOptions"
@@ -451,7 +444,7 @@
                     </td>
                     <td class="idea-cell">{{ row.idea }}</td>
                     <td>{{ row.date.slice(0, 10) }}</td>
-                    <td v-if="!userStore.isAdmin">
+                    <td>
                       <div class="action-buttons">
                         <q-btn
                           flat
@@ -644,7 +637,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useProjectStore } from 'stores/project.js'
-import { useUserStore } from 'stores/user.js'
 import { useQuasar } from 'quasar'
 import { useContentPlanStore } from 'stores/content-plan.js'
 import { api } from 'boot/axios.js'
@@ -656,7 +648,6 @@ const selectedProjectId = ref(null)
 const editingProject = ref(null)
 const showProjectDialog = ref(false)
 const projectStore = useProjectStore()
-const userStore = useUserStore()
 const contentPlanStore = useContentPlanStore()
 const q = useQuasar()
 
@@ -1136,7 +1127,11 @@ onMounted(() => {
   width: 450px;
   max-width: 95vw;
   border-radius: 12px;
-  background: var(--bg-card);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 
   @media (max-width: 599px) {
     width: 90vw;
