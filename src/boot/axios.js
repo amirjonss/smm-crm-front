@@ -2,7 +2,7 @@ import { defineBoot } from '#q-app/wrappers'
 import axios from 'axios'
 import { useAuthStore } from 'stores/auth.js'
 
-const baseUrl = process.env.VUE_APP_BASE_URL
+const baseUrl = import.meta.env.VITE_BASE_URL
 const api = axios.create({ baseURL: baseUrl })
 api.defaults.headers.common['Content-Type'] = 'application/ld+json'
 api.defaults.headers.patch['Content-Type'] = 'application/merge-patch+json'
