@@ -28,7 +28,7 @@ deploy-dev-job:
     - echo "Deploying dev project..."
     - ssh -tt -o StrictHostKeyChecking=no $SSH_HOST "cd /root/sites/static/kh-agency-crm-front-dev &&
       git reset --hard &&
-      git pull origin master &&
+      git pull origin dev &&
       docker compose --env-file=.env.local up --build"
 
 deploy-prod-job:
