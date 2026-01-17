@@ -47,9 +47,7 @@ export default defineConfig((ctx) => {
 
       // publicPath: '/',
       // analyze: true,
-      env: {
-        VUE_APP_BASE_URL: process.env.VUE_APP_BASE_URL
-      },
+      env: {},
       // rawDefine: {}
       // ignorePublicFolder: true,
       // minify: false,
