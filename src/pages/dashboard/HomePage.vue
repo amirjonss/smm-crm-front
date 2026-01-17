@@ -68,6 +68,51 @@
                       <span class="mobile-card-label">Проект:</span>
                       <span class="project-name-table">{{ getProjectName(plan.project) }}</span>
                     </div>
+                    
+                    <div v-if="plan.platforms?.length" class="mobile-card-row">
+                      <span class="mobile-card-label">Платформы:</span>
+                      <div class="platform-icons-row">
+                        <div
+                          v-for="p in plan.platforms"
+                          :key="p.name"
+                          class="platform-status-wrapper"
+                          :class="`status-${p.status}`"
+                        >
+                          <q-icon
+                            :name="PLATFORM_ICONS[p.name]"
+                            size="14px"
+                            :style="{ color: PLATFORM_COLORS[p.name] }"
+                          />
+                          <div v-if="getStatusIcon(p.status)" class="status-indicator-icon">
+                            <q-icon :name="getStatusIcon(p.status)" size="8px" />
+                          </div>
+                          
+                          <q-menu v-if="!userStore.isAdmin" auto-close anchor="top middle" self="bottom middle" class="glass-menu">
+                            <q-list style="min-width: 150px">
+                              <q-item 
+                                v-for="opt in statusOptions" 
+                                :key="opt.value"
+                                clickable 
+                                v-close-popup
+                                @click="setPlatformStatus(plan, p.name, opt.value)"
+                                :active="p.status === opt.value"
+                                active-class="bg-blue-1 text-primary"
+                              >
+                                <q-item-section avatar style="min-width: 32px; padding-right: 0">
+                                  <q-icon :name="getStatusIcon(opt.value)" size="xs" :color="STATUS_COLORS[opt.value]" />
+                                </q-item-section>
+                                <q-item-section>{{ opt.label }}</q-item-section>
+                              </q-item>
+                            </q-list>
+                          </q-menu>
+
+                          <q-tooltip class="glass-tooltip" :offset="[0, 8]">
+                            {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
+                          </q-tooltip>
+                        </div>
+                      </div>
+                    </div>
+
                     <div class="mobile-card-row">
                       <span class="mobile-card-label">Идея:</span>
                       <span class="mobile-card-idea">{{ plan.idea }}</span>
@@ -83,6 +128,7 @@
                     <th>Проект</th>
                     <th>Пост</th>
                     <th>Формат</th>
+                    <th>Платформы</th>
                     <th>Идея</th>
                   </tr>
                 </thead>
@@ -92,6 +138,49 @@
                     <td class="post-name-table">{{ plan.post }}</td>
                     <td>
                       <span class="format-badge">{{ plan.format }}</span>
+                    </td>
+                    <td class="platforms-cell">
+                      <div class="platform-icons-row">
+                        <div
+                          v-for="p in plan.platforms"
+                          :key="p.name"
+                          class="platform-status-wrapper"
+                          :class="`status-${p.status}`"
+                        >
+                          <q-icon
+                            :name="PLATFORM_ICONS[p.name]"
+                            size="16px"
+                            :style="{ color: PLATFORM_COLORS[p.name] }"
+                          />
+                          <div v-if="getStatusIcon(p.status)" class="status-indicator-icon">
+                            <q-icon :name="getStatusIcon(p.status)" size="8px" />
+                          </div>
+                          
+                          <q-menu v-if="!userStore.isAdmin" auto-close anchor="top middle" self="bottom middle" class="glass-menu">
+                            <q-list style="min-width: 150px">
+                              <q-item 
+                                v-for="opt in statusOptions" 
+                                :key="opt.value"
+                                clickable 
+                                v-close-popup
+                                @click="setPlatformStatus(plan, p.name, opt.value)"
+                                :active="p.status === opt.value"
+                                active-class="bg-blue-1 text-primary"
+                              >
+                                <q-item-section avatar style="min-width: 32px; padding-right: 0">
+                                  <q-icon :name="getStatusIcon(opt.value)" size="xs" :color="STATUS_COLORS[opt.value]" />
+                                </q-item-section>
+                                <q-item-section>{{ opt.label }}</q-item-section>
+                              </q-item>
+                            </q-list>
+                          </q-menu>
+
+                          <q-tooltip class="glass-tooltip" :offset="[0, 8]">
+                            {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
+                          </q-tooltip>
+                        </div>
+                        <span v-if="!plan.platforms?.length" class="text-grey-6">—</span>
+                      </div>
                     </td>
                     <td class="idea-cell-table">{{ plan.idea }}</td>
                   </tr>
@@ -271,6 +360,15 @@ import { useQuasar } from 'quasar'
 import { api } from 'boot/axios.js'
 import { getProjectName } from '@/utils/projectHelpers'
 import { getTodayISO } from '@/utils/dateHelpers'
+import {
+  PLATFORM_COLORS,
+  PLATFORM_LABELS,
+  PLATFORM_ICONS,
+  STATUS_COLORS,
+  STATUS_LABELS,
+  STATUS_OPTIONS,
+  STATUS,
+} from '@/constants/status'
 
 const userStore = useUserStore()
 const projectStore = useProjectStore()
@@ -281,10 +379,72 @@ const userForm = ref({
   email: '',
 })
 const isLoading = ref(false)
-const selectedUserId = ref(null)
 const editingUserId = ref(null)
 const showUserDialog = ref(false)
 const q = useQuasar()
+
+const selectedUserId = computed(() => userStore.getSelectedUserId)
+
+const statusOptions = STATUS_OPTIONS
+
+function getStatusIcon(status) {
+  switch (status) {
+    case STATUS.PUBLISHED:
+      return 'check'
+    case STATUS.CANCELED:
+      return 'close'
+    case STATUS.RESCHEDULED:
+      return 'schedule'
+    default:
+      return ''
+  }
+}
+
+async function setPlatformStatus(plan, platformName, newStatus) {
+  if (userStore.isAdmin) return // Admin restriction
+
+  const platform = plan.platforms.find((p) => p.name === platformName)
+  if (!platform || platform.status === newStatus) return
+
+  // Optimistic update
+  const originalStatus = platform.status
+  platform.status = newStatus
+
+  // Prepare payload
+  const updatedPlatforms = plan.platforms.map((p) => ({
+    name: p.name,
+    status: p.name === platformName ? newStatus : p.status,
+  }))
+
+  try {
+    await contentPlanStore.patchContentPlan(
+      { platforms: updatedPlatforms },
+      plan.id
+    )
+    q.notify({
+      message: `${PLATFORM_LABELS[platformName]}: ${STATUS_LABELS[newStatus]}`,
+      type: STATUS_COLORS[newStatus] || 'info',
+      position: 'top',
+      timeout: 1000,
+      icon: getStatusIcon(newStatus)
+    })
+    
+    // Refresh today's list if the plan is in it
+    if (todaysContentPlans.value.some(p => p.id === plan.id)) {
+        fetchTodaysContentPlans()
+    }
+
+  } catch (e) {
+    // Revert on error
+    platform.status = originalStatus
+    console.error('Error updating status:', e)
+    q.notify({
+      message: 'Ошибка обновления статуса',
+      type: 'negative',
+      position: 'top',
+    })
+  }
+}
 
 const todaysContentPlans = ref([])
 
@@ -347,9 +507,9 @@ function editUser(row) {
 
 function selectUser(user) {
   if (selectedUserId.value === user.id) {
-    selectedUserId.value = null
+    userStore.setSelectedUserId(null)
   } else {
-    selectedUserId.value = user.id
+    userStore.setSelectedUserId(user.id)
   }
 }
 
@@ -1083,5 +1243,169 @@ onMounted(() => {
 // Tablet responsive
 @media (max-width: 1023px) and (min-width: 600px) {
   // .stats-grid media query moved to main declaration
+}
+
+.platform-status-wrapper {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 2px solid transparent;
+  transition: all 0.2s ease-out;
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+
+  &.status-PUBLISHED {
+    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+  }
+  &.status-CANCELED {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+  }
+  &.status-NOT_PUBLISHED {
+    border-color: #9ca3af;
+    background: rgba(156, 163, 175, 0.1);
+  }
+  &.status-RESCHEDULED {
+    border-color: #f97316;
+    background: rgba(249, 115, 22, 0.1);
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.status-indicator-icon {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  z-index: 2;
+
+  .status-PUBLISHED & {
+    color: #22c55e;
+    border-color: #22c55e;
+    background: #ecfdf5; 
+  }
+  .status-CANCELED & {
+    color: #ef4444;
+    border-color: #ef4444;
+    background: #fef2f2;
+  }
+  .status-RESCHEDULED & {
+    color: #f97316;
+    border-color: #f97316;
+    background: #fff7ed;
+  }
+}
+
+.platforms-cell {
+  min-width: 0;
+}
+
+.platform-icons-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+</style>
+
+<style lang="scss">
+.glass-tooltip {
+  background: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+  color: #000 !important;
+  border-radius: 8px !important;
+  font-size: 10px !important;
+  padding: 4px 8px !important;
+  letter-spacing: 0.3px;
+  
+  .body--dark & {
+    background: rgba(20, 20, 20, 0.65) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+  }
+}
+
+.glass-menu {
+  background: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(15px) !important;
+  -webkit-backdrop-filter: blur(15px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+
+  .body--dark & {
+    background: rgba(20, 20, 20, 0.65) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  .q-list {
+    min-width: 130px !important;
+    background: transparent !important;
+    padding: 4px !important;
+  }
+
+  .q-item {
+    min-height: 32px !important;
+    padding: 4px 8px !important;
+    border-radius: 8px !important;
+    margin-bottom: 2px;
+    font-size: 11px !important;
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3) !important;
+      .body--dark & {
+        background: rgba(255, 255, 255, 0.05) !important;
+      }
+    }
+
+    &.bg-blue-1 {
+      background: rgba(59, 130, 246, 0.15) !important;
+      font-weight: 600;
+    }
+  }
+
+  .q-item__section--main {
+    font-size: 11px !important;
+  }
+
+  .q-icon {
+    font-size: 14px !important;
+  }
 }
 </style>
