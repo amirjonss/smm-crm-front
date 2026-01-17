@@ -16,4 +16,4 @@ services:
       node -v &&
       echo '--------------' &&
       npm install &&
-      quasar build"
+      quasar build -m production"
