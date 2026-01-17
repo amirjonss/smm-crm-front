@@ -62,7 +62,6 @@
                     v-for="event in getEventsForDate(day.date).slice(0, 2)"
                     :key="event.id"
                     class="event-chip"
-                    :class="`status-${event.status}`"
                     @click.stop="openEventDialog(event)"
                   >
                     <div class="row no-wrap items-center q-gutter-x-xs">
@@ -87,7 +86,6 @@
                       v-for="event in getEventsForDate(day.date)"
                       :key="event.id"
                       class="day-dot"
-                      :class="'status-' + event.status"
                     ></div>
                   </div>
                 </template>
@@ -117,7 +115,6 @@
                       v-for="event in getEventsForDate(day.date)"
                       :key="event.id"
                       class="event-chip glass-chip cursor-pointer"
-                      :class="`status-${event.status}`"
                       @click="openEventDialog(event)"
                     >
                       <div class="row no-wrap items-center q-gutter-x-xs">
@@ -178,7 +175,7 @@
               <q-item-section avatar>
                 <q-icon
                   :name="getIconForFormat(event.format)"
-                  :color="getColorForStatus(event.status)"
+                  color="primary"
                 />
               </q-item-section>
               <q-item-section>
@@ -186,9 +183,7 @@
                   event.projectName
                 }}</q-item-label>
                 <q-item-label caption lines="1">{{ event.title }}</q-item-label>
-                <q-item-label caption
-                  >{{ event.format }} • {{ getStatusLabel(event.status) }}</q-item-label
-                >
+                <q-item-label caption>{{ event.format }}</q-item-label>
               </q-item-section>
               <q-item-section side>
                 <q-icon name="chevron_right" color="grey" />
@@ -243,30 +238,17 @@
               <div class="text-body2">{{ tempEvent.title }}</div>
             </div>
 
-            <div class="row q-col-gutter-sm">
-              <div class="col-6">
-                <div class="text-caption text-grey-7">Format (Тип)</div>
-                <q-chip
-                  dense
-                  square
-                  outline
-                  color="primary"
-                  :label="tempEvent.format"
-                  :icon="getIconForFormat(tempEvent.format)"
-                  class="q-ma-none q-mt-xs"
-                />
-              </div>
-              <div class="col-6">
-                <div class="text-caption text-grey-7">Status</div>
-                <q-chip
-                  dense
-                  square
-                  :label="getStatusLabel(tempEvent.status)"
-                  :color="getColorForStatus(tempEvent.status)"
-                  text-color="white"
-                  class="q-ma-none q-mt-xs"
-                />
-              </div>
+            <div>
+              <div class="text-caption text-grey-7">Format (Тип)</div>
+              <q-chip
+                dense
+                square
+                outline
+                color="primary"
+                :label="tempEvent.format"
+                :icon="getIconForFormat(tempEvent.format)"
+                class="q-ma-none q-mt-xs"
+              />
             </div>
 
             <div>
@@ -282,6 +264,32 @@
             <div>
               <div class="text-caption text-grey-7">Дата</div>
               <div class="text-body2">{{ date.formatDate(tempEvent.date, 'D MMMM YYYY') }}</div>
+            </div>
+
+            <div v-if="getEnabledPlatforms(tempEvent.platforms).length > 0">
+              <div class="text-caption text-grey-7">Платформы</div>
+              <div class="platform-status-list q-mt-xs">
+                <div
+                  v-for="platform in getEnabledPlatforms(tempEvent.platforms)"
+                  :key="platform.name"
+                  class="platform-status-item"
+                  :style="{ '--platform-color': PLATFORM_COLORS[platform.name] }"
+                >
+                  <div class="platform-status-icon">
+                    <q-icon
+                      :name="PLATFORM_ICONS[platform.name]"
+                      size="18px"
+                      :style="{ color: PLATFORM_COLORS[platform.name] }"
+                    />
+                  </div>
+                  <span class="platform-status-name">{{ PLATFORM_LABELS[platform.name] }}</span>
+                  <q-badge
+                    :color="STATUS_COLORS[platform.status] || 'grey'"
+                    :label="STATUS_LABELS[platform.status] || platform.status"
+                    class="platform-status-badge"
+                  />
+                </div>
+              </div>
             </div>
           </q-card-section>
         </div>
@@ -338,30 +346,15 @@
                 :rules="[(val) => !!val || 'Обязательное поле']"
               />
 
-              <div class="row q-col-gutter-sm">
-                <div class="col-6">
-                  <q-select
-                    v-model="tempEvent.format"
-                    :options="typeOptions"
-                    label="Format (Тип)"
-                    dense
-                    outlined
-                    emit-value
-                    map-options
-                  />
-                </div>
-                <div class="col-6">
-                  <q-select
-                    v-model="tempEvent.status"
-                    :options="statusOptions"
-                    label="Status"
-                    dense
-                    outlined
-                    emit-value
-                    map-options
-                  />
-                </div>
-              </div>
+              <q-select
+                v-model="tempEvent.format"
+                :options="typeOptions"
+                label="Format (Тип)"
+                dense
+                outlined
+                emit-value
+                map-options
+              />
 
               <q-input
                 v-model="tempEvent.idea"
@@ -371,6 +364,85 @@
                 type="textarea"
                 rows="3"
               />
+
+              <div class="platform-section q-mt-sm">
+                <div class="text-caption text-grey-7 q-mb-sm">Платформы</div>
+                <div class="platforms-grid">
+                  <div
+                    v-for="platform in platformOptions"
+                    :key="platform.value"
+                    class="platform-card"
+                    :class="{
+                      'platform-card-active': tempEvent.platforms[platform.value]?.enabled,
+                    }"
+                    :style="{
+                      '--platform-color': PLATFORM_COLORS[platform.value],
+                    }"
+                  >
+                    <div class="platform-card-header" @click="togglePlatform(platform.value)">
+                      <div class="platform-card-icon">
+                        <q-icon
+                          :name="platform.icon"
+                          size="20px"
+                          :style="{ color: PLATFORM_COLORS[platform.value] }"
+                        />
+                      </div>
+                      <div class="platform-card-info">
+                        <span class="platform-card-name">{{ platform.label }}</span>
+                      </div>
+                      <q-checkbox
+                        :model-value="tempEvent.platforms[platform.value]?.enabled"
+                        @update:model-value="togglePlatform(platform.value)"
+                        dense
+                        size="sm"
+                        class="platform-card-checkbox"
+                        @click.stop
+                      />
+                    </div>
+                    <div
+                      v-if="tempEvent.platforms[platform.value]?.enabled"
+                      class="platform-card-status"
+                    >
+                      <q-select
+                        v-model="tempEvent.platforms[platform.value].status"
+                        :options="statusOptions"
+                        dense
+                        outlined
+                        emit-value
+                        map-options
+                        class="status-select"
+                        popup-content-class="status-popup"
+                      >
+                        <template #selected-item="{ opt }">
+                          <div class="row items-center no-wrap">
+                            <q-badge
+                              :color="STATUS_COLORS[opt.value] || 'grey'"
+                              rounded
+                              class="q-mr-sm"
+                              style="width: 8px; height: 8px; min-width: 8px"
+                            />
+                            <span class="text-caption">{{ opt.label }}</span>
+                          </div>
+                        </template>
+                        <template #option="{ itemProps, opt }">
+                          <q-item v-bind="itemProps" dense>
+                            <q-item-section avatar>
+                              <q-badge
+                                :color="STATUS_COLORS[opt.value] || 'grey'"
+                                rounded
+                                style="width: 10px; height: 10px; min-width: 10px"
+                              />
+                            </q-item-section>
+                            <q-item-section>
+                              <q-item-label>{{ opt.label }}</q-item-label>
+                            </q-item-section>
+                          </q-item>
+                        </template>
+                      </q-select>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <q-input v-model="tempEvent.dateString" label="Дата" dense outlined type="date" />
 
@@ -391,6 +463,17 @@ import { date, useQuasar } from 'quasar'
 import { useProjectStore } from 'stores/project.js'
 import { useUserStore } from 'stores/user.js'
 import { useContentPlanStore } from 'stores/content-plan.js'
+import {
+  PLATFORM_OPTIONS,
+  PLATFORM,
+  STATUS,
+  STATUS_OPTIONS,
+  PLATFORM_COLORS,
+  PLATFORM_ICONS,
+  PLATFORM_LABELS,
+  STATUS_COLORS,
+  STATUS_LABELS,
+} from '@/constants/status'
 
 // 1. Store Hooks
 const $q = useQuasar()
@@ -414,7 +497,6 @@ const tempEvent = ref({
   id: null,
   title: '',
   format: 'Post', // Default Format
-  status: 'NOT_PUBLISHED', // Default Status
   dateString: '',
   idea: '',
   date: new Date(),
@@ -422,7 +504,34 @@ const tempEvent = ref({
   projectName: '',
   responsibleId: null,
   responsibleName: '',
+  platforms: {}, // { INSTAGRAM: { enabled: true, status: 'NOT_PUBLISHED' }, ... }
 })
+
+const platformOptions = PLATFORM_OPTIONS
+const statusOptions = STATUS_OPTIONS
+
+// Initialize empty platforms object
+function getEmptyPlatforms() {
+  const platforms = {}
+  Object.values(PLATFORM).forEach((name) => {
+    platforms[name] = { enabled: false, status: STATUS.NOT_PUBLISHED }
+  })
+  return platforms
+}
+
+// Toggle platform selection
+function togglePlatform(platformName) {
+  tempEvent.value.platforms[platformName].enabled =
+    !tempEvent.value.platforms[platformName].enabled
+}
+
+// Get enabled platforms as array for display
+function getEnabledPlatforms(platforms) {
+  if (!platforms) return []
+  return Object.entries(platforms)
+    .filter(([, data]) => data.enabled)
+    .map(([name, data]) => ({ name, status: data.status }))
+}
 
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const monthNames = [
@@ -447,14 +556,6 @@ const typeOptions = [
   { label: 'Reels', value: 'Reels' },
   { label: 'Carousel', value: 'Carousel' },
   { label: 'Animation', value: 'Animation' },
-]
-
-// API Strict Values: PUBLISHED, CANCELED, NOT_PUBLISHED, RESCHEDULED
-const statusOptions = [
-  { label: 'Не опубликовано', value: 'NOT_PUBLISHED', color: 'grey' },
-  { label: 'Опубликовано', value: 'PUBLISHED', color: 'positive' },
-  { label: 'Отменено', value: 'CANCELED', color: 'negative' },
-  { label: 'Перенесено', value: 'RESCHEDULED', color: 'orange' },
 ]
 
 // 3. Computed Properties
@@ -572,25 +673,6 @@ function getIconForFormat(format) {
   }
 }
 
-function getColorForStatus(status) {
-  switch (status) {
-    case 'PUBLISHED':
-      return 'positive' // Green
-    case 'CANCELED':
-      return 'negative' // Red
-    case 'RESCHEDULED':
-      return 'orange' // Orange
-    case 'NOT_PUBLISHED':
-    default:
-      return 'grey-7' // Gray
-  }
-}
-
-function getStatusLabel(status) {
-  const opt = statusOptions.find((o) => o.value === status)
-  return opt ? opt.label : status
-}
-
 function truncateText(text, length) {
   if (!text) return ''
   return text.length > length ? text.substring(0, length) + '...' : text
@@ -617,7 +699,6 @@ async function fetchEvents() {
         title: item.post,
         date: new Date(item.date),
         format: item.format || 'Post', // API Field
-        status: item.status || 'NOT_PUBLISHED', // API Field
         idea: item.idea,
         projectId: item.project?.id,
         projectName: item.project?.name,
@@ -625,6 +706,7 @@ async function fetchEvents() {
         responsibleName: executor
           ? `${executor.givenName || ''} ${executor.familyName || ''}`.trim()
           : null,
+        platforms: item.platforms || [],
       }
     })
   } catch (e) {
@@ -634,13 +716,21 @@ async function fetchEvents() {
 }
 
 async function saveEvent() {
+  // Convert platforms object to array for API
+  const platforms = Object.entries(tempEvent.value.platforms)
+    .filter(([, data]) => data.enabled)
+    .map(([name, data]) => ({
+      name,
+      status: data.status,
+    }))
+
   const payload = {
     post: tempEvent.value.title,
     format: tempEvent.value.format, // strict value
-    status: tempEvent.value.status, // strict value
     idea: tempEvent.value.idea,
     date: new Date(tempEvent.value.dateString).toISOString(),
     project: tempEvent.value.projectId ? `/api/projects/${tempEvent.value.projectId}` : null,
+    platforms,
     // executor: tempEvent.value.responsibleId ? `/api/users/${tempEvent.value.responsibleId}` : null
   }
 
@@ -711,9 +801,17 @@ function goToToday() {
 
 function openEventDialog(event) {
   isEditing.value = false
+  // Build platforms object from existing data
+  const platforms = getEmptyPlatforms()
+  if (event.platforms) {
+    event.platforms.forEach((p) => {
+      platforms[p.name] = { enabled: true, status: p.status || STATUS.NOT_PUBLISHED }
+    })
+  }
   tempEvent.value = {
     ...event,
     dateString: date.formatDate(event.date, 'YYYY-MM-DD'),
+    platforms,
   }
   isEventDialogOpen.value = true
   showDayList.value = false
@@ -725,7 +823,6 @@ function openCreateDialog(dateObj) {
     id: null,
     title: '',
     format: 'Post',
-    status: 'NOT_PUBLISHED',
     idea: '',
     date: dateObj,
     dateString: date.formatDate(dateObj, 'YYYY-MM-DD'),
@@ -733,6 +830,7 @@ function openCreateDialog(dateObj) {
     projectName: '',
     responsibleId: null,
     responsibleName: '',
+    platforms: getEmptyPlatforms(),
   }
   isEventDialogOpen.value = true
   showDayList.value = false
@@ -1078,7 +1176,9 @@ onMounted(() => {
   border-radius: 8px;
   font-size: 0.75rem;
   cursor: pointer;
-  border-left: 3px solid transparent;
+  border-left: 3px solid #8b5cf6;
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--text-primary);
   transition: all 0.2s ease;
   max-width: 100%;
   overflow: hidden;
@@ -1129,65 +1229,12 @@ onMounted(() => {
   }
 }
 
-/* Status Color Coding */
-.status-PUBLISHED {
-  background: rgba(33, 186, 69, 0.15);
-  border-left-color: #21ba45;
-  color: #1b5e20;
-  .body--dark & {
-    background: rgba(33, 186, 69, 0.25);
-    color: #a5d6a7;
-  }
-}
-
-.status-CANCELED {
-  background: rgba(193, 0, 21, 0.15);
-  border-left-color: #c10015;
-  color: #b71c1c;
-  .body--dark & {
-    background: rgba(193, 0, 21, 0.25);
-    color: #ef9a9a;
-  }
-}
-
-.status-RESCHEDULED {
-  background: rgba(242, 192, 55, 0.15);
-  border-left-color: #f2c037;
-  color: #e65100;
-  .body--dark & {
-    background: rgba(242, 192, 55, 0.25);
-    color: #ffe0b2;
-  }
-}
-
-.status-NOT_PUBLISHED {
-  background: rgba(158, 158, 158, 0.15);
-  border-left-color: #9e9e9e;
-  color: #424242;
-  .body--dark & {
-    background: rgba(158, 158, 158, 0.25);
-    color: #eeeeee;
-  }
-}
-
 /* Mobile Dots */
 .day-dot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-
-  &.status-PUBLISHED {
-    background-color: #21ba45;
-  }
-  &.status-CANCELED {
-    background-color: #c10015;
-  }
-  &.status-RESCHEDULED {
-    background-color: #f2c037;
-  }
-  &.status-NOT_PUBLISHED {
-    background-color: #9e9e9e;
-  }
+  background-color: #8b5cf6;
 }
 
 .event-title {
@@ -1207,6 +1254,128 @@ onMounted(() => {
   background: var(--bg-tertiary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
+}
+
+.platform-section {
+  margin-top: 0.5rem;
+}
+
+.platforms-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.platform-card {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  overflow: hidden;
+
+  &:hover {
+    border-color: var(--platform-color, var(--border-color));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.platform-card-active {
+  border-color: var(--platform-color);
+}
+
+.platform-card-header {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  cursor: pointer;
+  gap: 0.5rem;
+}
+
+.platform-card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.platform-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.platform-card-name {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+}
+
+.platform-card-checkbox {
+  flex-shrink: 0;
+}
+
+.platform-card-status {
+  padding: 0 0.5rem 0.5rem;
+  border-top: 1px solid var(--border-light);
+  margin-top: -0.125rem;
+  padding-top: 0.375rem;
+}
+
+.status-select {
+  :deep(.q-field__control) {
+    min-height: 28px;
+    padding: 0 6px;
+  }
+
+  :deep(.q-field__native) {
+    padding: 0;
+  }
+
+  :deep(.q-field__marginal) {
+    height: 28px;
+  }
+}
+
+.platform-status-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.platform-status-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  border-left: 3px solid var(--platform-color);
+}
+
+.platform-status-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.platform-status-name {
+  flex: 1;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.platform-status-badge {
+  font-size: 0.6875rem;
+  padding: 0.125rem 0.375rem;
 }
 
 .popup-chip {

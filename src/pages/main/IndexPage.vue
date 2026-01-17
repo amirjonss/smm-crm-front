@@ -36,15 +36,6 @@
             <span class="stat-label">На месяц</span>
           </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon stat-icon-orange">
-            <q-icon name="task_alt" size="1.5rem" />
-          </div>
-          <div class="stat-content">
-            <span class="stat-value">{{ contentPlanStore.getMyPublishedTotal }}</span>
-            <span class="stat-label">Выполнено</span>
-          </div>
-        </div>
       </div>
 
       <!-- Today's Content Plan Table -->
@@ -70,39 +61,28 @@
                   v-for="plan in todaysContentPlans"
                   :key="plan.id"
                   class="mobile-card"
-                  :class="`status-border-${plan.status || 'NOT_PUBLISHED'}`"
                 >
                   <div class="mobile-card-header">
                     <span class="mobile-card-title">{{ plan.post }}</span>
-                    <div class="row items-center q-gutter-x-xs">
-                      <span class="format-badge">{{ plan.format }}</span>
-                      <q-badge
-                        :color="getColorForStatus(plan.status)"
-                        :label="getStatusLabel(plan.status)"
-                        class="cursor-pointer"
-                      >
-                        <q-menu auto-close>
-                          <q-list style="min-width: 150px">
-                            <q-item
-                              v-for="opt in statusOptions"
-                              :key="opt.value"
-                              clickable
-                              @click="updateStatus(plan, opt.value)"
-                            >
-                              <q-item-section side>
-                                <q-badge :color="getColorForStatus(opt.value)" rounded />
-                              </q-item-section>
-                              <q-item-section>{{ opt.label }}</q-item-section>
-                            </q-item>
-                          </q-list>
-                        </q-menu>
-                      </q-badge>
-                    </div>
+                    <span class="format-badge">{{ plan.format }}</span>
                   </div>
                   <div class="mobile-card-body">
                     <div class="mobile-card-row">
                       <span class="mobile-card-label">Проект:</span>
                       <span class="project-name">{{ getProjectName(plan.project) }}</span>
+                    </div>
+                    <div v-if="plan.platforms?.length" class="mobile-card-row">
+                      <span class="mobile-card-label">Платформы:</span>
+                      <div class="platform-icons-row">
+                        <q-icon
+                          v-for="p in plan.platforms"
+                          :key="p.name"
+                          :name="PLATFORM_ICONS[p.name]"
+                          size="16px"
+                          :style="{ color: PLATFORM_COLORS[p.name] }"
+                          class="platform-icon-item"
+                        />
+                      </div>
                     </div>
                     <div class="mobile-card-row">
                       <span class="mobile-card-label">Идея:</span>
@@ -119,7 +99,7 @@
                     <th>Проект</th>
                     <th>Пост</th>
                     <th>Формат</th>
-                    <th>Статус</th>
+                    <th>Платформы</th>
                     <th>Идея</th>
                   </tr>
                 </thead>
@@ -130,28 +110,22 @@
                     <td>
                       <span class="format-badge">{{ plan.format }}</span>
                     </td>
-                    <td>
-                      <q-badge
-                        :color="getColorForStatus(plan.status)"
-                        :label="getStatusLabel(plan.status)"
-                        class="cursor-pointer"
-                      >
-                        <q-menu auto-close>
-                          <q-list style="min-width: 150px">
-                            <q-item
-                              v-for="opt in statusOptions"
-                              :key="opt.value"
-                              clickable
-                              @click="updateStatus(plan, opt.value)"
-                            >
-                              <q-item-section side>
-                                <q-badge :color="getColorForStatus(opt.value)" rounded />
-                              </q-item-section>
-                              <q-item-section>{{ opt.label }}</q-item-section>
-                            </q-item>
-                          </q-list>
-                        </q-menu>
-                      </q-badge>
+                    <td class="platforms-cell">
+                      <div class="platform-icons-row">
+                        <q-icon
+                          v-for="p in plan.platforms"
+                          :key="p.name"
+                          :name="PLATFORM_ICONS[p.name]"
+                          size="18px"
+                          :style="{ color: PLATFORM_COLORS[p.name] }"
+                          class="platform-icon-item"
+                        >
+                          <q-tooltip>
+                            {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
+                          </q-tooltip>
+                        </q-icon>
+                        <span v-if="!plan.platforms?.length" class="text-grey-6">—</span>
+                      </div>
                     </td>
                     <td class="idea-cell">{{ plan.idea }}</td>
                   </tr>
@@ -308,10 +282,7 @@
                 <template #item="{ element: row }">
                   <div
                     class="mobile-card"
-                    :class="[
-                      { 'mobile-card-selected': row.id === contentPlanForm.id },
-                      `status-border-${row.status || 'NOT_PUBLISHED'}`,
-                    ]"
+                    :class="{ 'mobile-card-selected': row.id === contentPlanForm.id }"
                   >
                     <div class="mobile-card-header">
                       <div class="drag-handle-wrapper q-mr-sm">
@@ -323,32 +294,22 @@
                         />
                       </div>
                       <span class="mobile-card-title">{{ row.post }}</span>
-                      <div class="row items-center q-gutter-x-xs">
-                        <span class="format-badge">{{ row.format }}</span>
-                        <q-badge
-                          :color="getColorForStatus(row.status)"
-                          :label="getStatusLabel(row.status)"
-                          class="cursor-pointer"
-                        >
-                          <q-menu auto-close>
-                            <q-list style="min-width: 150px">
-                              <q-item
-                                v-for="opt in statusOptions"
-                                :key="opt.value"
-                                clickable
-                                @click="updateStatus(row, opt.value)"
-                              >
-                                <q-item-section side>
-                                  <q-badge :color="getColorForStatus(opt.value)" rounded />
-                                </q-item-section>
-                                <q-item-section>{{ opt.label }}</q-item-section>
-                              </q-item>
-                            </q-list>
-                          </q-menu>
-                        </q-badge>
-                      </div>
+                      <span class="format-badge">{{ row.format }}</span>
                     </div>
                     <div class="mobile-card-body">
+                      <div v-if="row.platforms?.length" class="mobile-card-row">
+                        <span class="mobile-card-label">Платформы:</span>
+                        <div class="platform-icons-row">
+                          <q-icon
+                            v-for="p in row.platforms"
+                            :key="p.name"
+                            :name="PLATFORM_ICONS[p.name]"
+                            size="16px"
+                            :style="{ color: PLATFORM_COLORS[p.name] }"
+                            class="platform-icon-item"
+                          />
+                        </div>
+                      </div>
                       <div class="mobile-card-row">
                         <span class="mobile-card-label">Идея:</span>
                         <span class="mobile-card-idea">{{ row.idea }}</span>
@@ -390,11 +351,9 @@
               >
                 <div class="grid-header">
                   <div class="header-cell">#</div>
-                  <div class="header-cell">Проект</div>
                   <div class="header-cell">Пост</div>
                   <div class="header-cell">Формат</div>
-                  <div class="header-cell">Статус</div>
-                  <div class="header-cell">Идея</div>
+                  <div class="header-cell">Платформы</div>
                   <div class="header-cell">Дата</div>
                   <div class="header-cell text-right">Действия</div>
                 </div>
@@ -423,37 +382,27 @@
                       class="grid-row draggable-row"
                     >
                       <div class="grid-cell text-muted">{{ index + 1 }}</div>
-                      <div class="grid-cell project-name">
-                        {{ getProjectName(row.project) }}
-                      </div>
                       <div class="grid-cell post-name">{{ row.post }}</div>
                       <div class="grid-cell">
                         <span class="format-badge">{{ row.format }}</span>
                       </div>
-                      <div class="grid-cell">
-                        <q-badge
-                          :color="getColorForStatus(row.status)"
-                          :label="getStatusLabel(row.status)"
-                          class="cursor-pointer"
-                        >
-                          <q-menu auto-close>
-                            <q-list style="min-width: 150px">
-                              <q-item
-                                v-for="opt in statusOptions"
-                                :key="opt.value"
-                                clickable
-                                @click="updateStatus(row, opt.value)"
-                              >
-                                <q-item-section side>
-                                  <q-badge :color="getColorForStatus(opt.value)" rounded />
-                                </q-item-section>
-                                <q-item-section>{{ opt.label }}</q-item-section>
-                              </q-item>
-                            </q-list>
-                          </q-menu>
-                        </q-badge>
+                      <div class="grid-cell platforms-cell">
+                        <div class="platform-icons-row">
+                          <q-icon
+                            v-for="p in row.platforms"
+                            :key="p.name"
+                            :name="PLATFORM_ICONS[p.name]"
+                            size="18px"
+                            :style="{ color: PLATFORM_COLORS[p.name] }"
+                            class="platform-icon-item"
+                          >
+                            <q-tooltip>
+                              {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
+                            </q-tooltip>
+                          </q-icon>
+                          <span v-if="!row.platforms?.length" class="text-grey-6">—</span>
+                        </div>
                       </div>
-                      <div class="grid-cell idea-cell">{{ row.idea }}</div>
                       <div class="grid-cell">{{ row.date.slice(0, 10) }}</div>
                       <div class="grid-cell action-buttons justify-end">
                         <q-btn
@@ -584,18 +533,6 @@
                 />
               </div>
               <div class="form-group q-mb-md">
-                <label class="form-label">Статус</label>
-                <q-select
-                  v-model="contentPlanForm.status"
-                  :options="statusOptions"
-                  outlined
-                  emit-value
-                  map-options
-                  placeholder="Выберите статус"
-                  class="modern-input"
-                />
-              </div>
-              <div class="form-group q-mb-md">
                 <label class="form-label">Дата</label>
                 <q-input
                   v-model="contentPlanForm.date"
@@ -606,7 +543,7 @@
                   class="modern-input"
                 />
               </div>
-              <div class="form-group q-mb-lg">
+              <div class="form-group q-mb-md">
                 <label class="form-label">Идея</label>
                 <q-input
                   v-model="contentPlanForm.idea"
@@ -617,6 +554,84 @@
                   :rules="[(val) => val.length > 0 || 'Заполните поле']"
                   class="modern-input"
                 />
+              </div>
+
+              <div class="form-group q-mb-lg">
+                <label class="form-label">Платформы</label>
+                <div class="platforms-grid q-mt-sm">
+                  <div
+                    v-for="platform in platformOptions"
+                    :key="platform.value"
+                    class="platform-card"
+                    :class="{
+                      'platform-card-active': contentPlanForm.platforms[platform.value]?.enabled,
+                    }"
+                    :style="{
+                      '--platform-color': PLATFORM_COLORS[platform.value],
+                    }"
+                  >
+                    <div class="platform-card-header" @click="togglePlatform(platform.value)">
+                      <div class="platform-card-icon">
+                        <q-icon
+                          :name="platform.icon"
+                          size="24px"
+                          :style="{ color: PLATFORM_COLORS[platform.value] }"
+                        />
+                      </div>
+                      <div class="platform-card-info">
+                        <span class="platform-card-name">{{ platform.label }}</span>
+                      </div>
+                      <q-checkbox
+                        :model-value="contentPlanForm.platforms[platform.value]?.enabled"
+                        @update:model-value="togglePlatform(platform.value)"
+                        dense
+                        class="platform-card-checkbox"
+                        @click.stop
+                      />
+                    </div>
+                    <div
+                      v-if="contentPlanForm.platforms[platform.value]?.enabled"
+                      class="platform-card-status"
+                    >
+                      <q-select
+                        v-model="contentPlanForm.platforms[platform.value].status"
+                        :options="statusOptions"
+                        dense
+                        outlined
+                        emit-value
+                        map-options
+                        class="status-select"
+                        popup-content-class="status-popup"
+                      >
+                        <template #selected-item="{ opt }">
+                          <div class="row items-center no-wrap">
+                            <q-badge
+                              :color="STATUS_COLORS[opt.value] || 'grey'"
+                              rounded
+                              class="q-mr-sm"
+                              style="width: 8px; height: 8px; min-width: 8px"
+                            />
+                            <span class="text-caption">{{ opt.label }}</span>
+                          </div>
+                        </template>
+                        <template #option="{ itemProps, opt }">
+                          <q-item v-bind="itemProps" dense>
+                            <q-item-section avatar>
+                              <q-badge
+                                :color="STATUS_COLORS[opt.value] || 'grey'"
+                                rounded
+                                style="width: 10px; height: 10px; min-width: 10px"
+                              />
+                            </q-item-section>
+                            <q-item-section>
+                              <q-item-label>{{ opt.label }}</q-item-label>
+                            </q-item-section>
+                          </q-item>
+                        </template>
+                      </q-select>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div class="form-actions row justify-end q-gutter-sm">
@@ -652,10 +667,20 @@ import { useContentPlanStore } from 'stores/content-plan.js'
 import { api } from 'boot/axios.js'
 import PdfPrinterComponent from 'components/PdfPrinterComponent.vue'
 import draggable from 'vuedraggable'
-import { useStatusFormatting } from '@/composables/useStatusFormatting'
 import { getProjectName } from '@/utils/projectHelpers'
 import { getTodayISO, getWeekRange, getMonthRange } from '@/utils/dateHelpers'
-import { FORMAT_OPTIONS } from '@/constants/status'
+import {
+  FORMAT_OPTIONS,
+  PLATFORM_OPTIONS,
+  PLATFORM,
+  STATUS,
+  STATUS_OPTIONS,
+  PLATFORM_COLORS,
+  PLATFORM_LABELS,
+  PLATFORM_ICONS,
+  STATUS_COLORS,
+  STATUS_LABELS,
+} from '@/constants/status'
 
 const form = ref({ phone: '', name: '' })
 const selectedProjectId = ref(null)
@@ -668,8 +693,6 @@ const q = useQuasar()
 const todaysContentPlans = ref([])
 const weekCount = ref(0)
 const monthCount = ref(0)
-
-const { statusOptions, getStatusLabel, getColorForStatus } = useStatusFormatting()
 
 async function fetchTodaysContentPlans() {
   const today = getTodayISO()
@@ -687,9 +710,6 @@ async function fetchTodaysContentPlans() {
     const { start: monthStart, end: monthEnd } = getMonthRange()
     const monthPlans = await contentPlanStore.fetchContentPlansByDateRange(monthStart, monthEnd)
     monthCount.value = monthPlans.length
-
-    // Published
-    await contentPlanStore.fetchMyPublishedContentPlansCount()
   } catch (e) {
     console.error('Error fetching stats:', e)
   }
@@ -783,39 +803,29 @@ const contentPlanForm = ref({
   idea: '',
   date: '',
   id: null,
-  status: 'NOT_PUBLISHED',
   position: 0,
+  platforms: {}, // { INSTAGRAM: { enabled: true, status: 'NOT_PUBLISHED' }, ... }
 })
 const editingContent = ref(null)
 const showContentDialog = ref(false)
 const options = FORMAT_OPTIONS
+const platformOptions = PLATFORM_OPTIONS
+const statusOptions = STATUS_OPTIONS
 
-async function updateStatus(plan, newStatus) {
-  if (plan.status === newStatus) return
-
-  try {
-    await contentPlanStore.patchContentPlan({ status: newStatus }, plan.id)
-    if (selectedProjectId.value) {
-      await contentPlanStore.fetchContentPlan(selectedProjectId.value)
-    }
-    await fetchTodaysContentPlans()
-    q.notify({
-      message: 'Статус обновлен',
-      type: 'positive',
-      position: 'top',
-      timeout: 1000,
-    })
-  } catch (e) {
-    console.error('Error updating status:', e)
-    q.notify({
-      message: 'Ошибка при обновлении статуса',
-      type: 'negative',
-      position: 'top',
-    })
-  }
+// Initialize empty platforms object
+function getEmptyPlatforms() {
+  const platforms = {}
+  Object.values(PLATFORM).forEach((name) => {
+    platforms[name] = { enabled: false, status: STATUS.NOT_PUBLISHED }
+  })
+  return platforms
 }
 
-
+// Toggle platform selection
+function togglePlatform(platformName) {
+  contentPlanForm.value.platforms[platformName].enabled =
+    !contentPlanForm.value.platforms[platformName].enabled
+}
 
 const contentPlansList = computed({
   get: () => contentPlanStore.getContentPlans,
@@ -874,6 +884,7 @@ async function persistOrder(plans) {
 
 function openContentDialog() {
   cancelContentEdit()
+  contentPlanForm.value.platforms = getEmptyPlatforms()
   showContentDialog.value = true
 }
 
@@ -882,14 +893,21 @@ function addToContentList() {
     q.notify({ message: 'Выберите проект!', type: 'warning', position: 'top' })
     return
   }
+  // Convert platforms object to array for API
+  const platforms = Object.entries(contentPlanForm.value.platforms)
+    .filter(([, data]) => data.enabled)
+    .map(([name, data]) => ({
+      name,
+      status: data.status,
+    }))
   const newRow = {
     project: '/api/projects/' + selectedProjectId.value,
     post: contentPlanForm.value.post,
     format: contentPlanForm.value.format,
     idea: contentPlanForm.value.idea,
     date: contentPlanForm.value.date,
-    status: contentPlanForm.value.status,
     position: contentPlanForm.value.position || contentPlanStore.getContentPlans.length + 1,
+    platforms,
   }
   contentPlanStore.createContentPlan(newRow).then(() => {
     contentPlanStore.fetchContentPlan(selectedProjectId.value)
@@ -907,21 +925,28 @@ function addToContentList() {
     idea: '',
     date: '',
     id: null,
-    status: 'NOT_PUBLISHED',
     position: 0,
+    platforms: {},
   }
 }
 
 function editContentPlan(plan) {
   editingContent.value = plan
+  // Build platforms object from existing data
+  const platforms = getEmptyPlatforms()
+  if (plan.platforms) {
+    plan.platforms.forEach((p) => {
+      platforms[p.name] = { enabled: true, status: p.status || STATUS.NOT_PUBLISHED }
+    })
+  }
   contentPlanForm.value = {
     post: plan.post,
     format: plan.format,
     idea: plan.idea,
     date: plan.date.slice(0, 10),
     id: plan.id,
-    status: plan.status || 'NOT_PUBLISHED',
     position: plan.position || 0,
+    platforms,
   }
   showContentDialog.value = true
 }
@@ -934,13 +959,21 @@ function cancelContentEdit() {
     idea: '',
     date: '',
     id: null,
-    status: 'NOT_PUBLISHED',
     position: 0,
+    platforms: {},
   }
   showContentDialog.value = false
 }
 
 function saveEditedContentPlan() {
+  // Convert platforms object to array for API
+  const platforms = Object.entries(contentPlanForm.value.platforms)
+    .filter(([, data]) => data.enabled)
+    .map(([name, data]) => ({
+      name,
+      status: data.status,
+    }))
+
   contentPlanStore
     .patchContentPlan(
       {
@@ -948,8 +981,8 @@ function saveEditedContentPlan() {
         format: contentPlanForm.value.format,
         date: contentPlanForm.value.date,
         idea: contentPlanForm.value.idea,
-        status: contentPlanForm.value.status,
         position: contentPlanForm.value.position,
+        platforms,
       },
       editingContent.value.id,
     )
@@ -1277,6 +1310,119 @@ onMounted(() => {
   border-radius: var(--radius-md);
 }
 
+.platforms-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+
+  @media (max-width: 599px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.platform-card {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+  overflow: hidden;
+
+  &:hover {
+    border-color: var(--platform-color, var(--border-color));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.platform-card-active {
+  border-color: var(--platform-color);
+  background: linear-gradient(
+    135deg,
+    rgba(var(--platform-color-rgb, 0, 0, 0), 0.05) 0%,
+    transparent 100%
+  );
+
+  .platform-card-icon {
+    background: rgba(var(--platform-color-rgb, 0, 0, 0), 0.1);
+  }
+}
+
+.platform-card-header {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  cursor: pointer;
+  gap: 0.75rem;
+}
+
+.platform-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.platform-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.platform-card-name {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+}
+
+.platform-card-checkbox {
+  flex-shrink: 0;
+}
+
+.platform-card-status {
+  padding: 0 0.75rem 0.75rem;
+  border-top: 1px solid var(--border-light);
+  margin-top: -0.25rem;
+  padding-top: 0.5rem;
+}
+
+.status-select {
+  :deep(.q-field__control) {
+    min-height: 32px;
+    padding: 0 8px;
+  }
+
+  :deep(.q-field__native) {
+    padding: 0;
+  }
+
+  :deep(.q-field__marginal) {
+    height: 32px;
+  }
+}
+
+.platforms-cell {
+  min-width: 0;
+}
+
+.platform-icons-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.platform-icon-item {
+  transition: transform 0.15s ease;
+  cursor: default;
+
+  &:hover {
+    transform: scale(1.15);
+  }
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -1313,7 +1459,7 @@ onMounted(() => {
 
 .grid-header {
   display: grid;
-  grid-template-columns: 50px 1.5fr 2fr 100px 150px 2fr 100px 100px;
+  grid-template-columns: 50px 2fr 100px 120px 100px 100px;
   gap: 1rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border-color);
@@ -1335,7 +1481,7 @@ onMounted(() => {
 
 .grid-row {
   display: grid;
-  grid-template-columns: 50px 1.5fr 2fr 100px 150px 2fr 100px 100px;
+  grid-template-columns: 50px 2fr 100px 120px 100px 100px;
   gap: 1rem;
   padding: 1rem;
   align-items: center;
@@ -1626,19 +1772,6 @@ onMounted(() => {
 
   &:last-child {
     margin-bottom: 0;
-  }
-
-  &.status-border-PUBLISHED {
-    border-left: 4px solid var(--q-positive);
-  }
-  &.status-border-CANCELED {
-    border-left: 4px solid var(--q-negative);
-  }
-  &.status-border-RESCHEDULED {
-    border-left: 4px solid var(--q-orange);
-  }
-  &.status-border-NOT_PUBLISHED {
-    border-left: 4px solid var(--q-grey-7);
   }
 }
 

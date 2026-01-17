@@ -30,15 +30,6 @@
             <span class="stat-label">Планы на месяц</span>
           </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon stat-icon-green">
-            <q-icon name="task_alt" size="1.5rem" />
-          </div>
-          <div class="stat-content">
-            <span class="stat-value">{{ contentPlanStore.getPublishedTotal }}</span>
-            <span class="stat-label">Опубликовано</span>
-          </div>
-        </div>
       </div>
 
       <!-- Today's Content Plan Table -->
@@ -67,17 +58,10 @@
                   v-for="plan in todaysContentPlans"
                   :key="plan.id"
                   class="mobile-card"
-                  :class="`status-border-${plan.status || 'NOT_PUBLISHED'}`"
                 >
                   <div class="mobile-card-header">
                     <span class="mobile-card-title">{{ plan.post }}</span>
-                    <div class="row items-center q-gutter-x-xs">
-                      <span class="format-badge">{{ plan.format }}</span>
-                      <q-badge
-                        :color="getColorForStatus(plan.status)"
-                        :label="getStatusLabel(plan.status)"
-                      />
-                    </div>
+                    <span class="format-badge">{{ plan.format }}</span>
                   </div>
                   <div class="mobile-card-body">
                     <div class="mobile-card-row">
@@ -99,7 +83,6 @@
                     <th>Проект</th>
                     <th>Пост</th>
                     <th>Формат</th>
-                    <th>Статус</th>
                     <th>Идея</th>
                   </tr>
                 </thead>
@@ -109,12 +92,6 @@
                     <td class="post-name-table">{{ plan.post }}</td>
                     <td>
                       <span class="format-badge">{{ plan.format }}</span>
-                    </td>
-                    <td>
-                      <q-badge
-                        :color="getColorForStatus(plan.status)"
-                        :label="getStatusLabel(plan.status)"
-                      />
                     </td>
                     <td class="idea-cell-table">{{ plan.idea }}</td>
                   </tr>
@@ -292,7 +269,6 @@ import { useContentPlanStore } from 'stores/content-plan.js'
 import ProjectsAndContentListComponent from 'components/dashboard/ProjectsAndContentListComponent.vue'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios.js'
-import { useStatusFormatting } from '@/composables/useStatusFormatting'
 import { getProjectName } from '@/utils/projectHelpers'
 import { getTodayISO } from '@/utils/dateHelpers'
 
@@ -311,8 +287,6 @@ const showUserDialog = ref(false)
 const q = useQuasar()
 
 const todaysContentPlans = ref([])
-
-const { getStatusLabel, getColorForStatus } = useStatusFormatting()
 
 async function fetchTodaysContentPlans() {
   const today = getTodayISO()
@@ -424,7 +398,6 @@ onMounted(() => {
   userStore.fetchUsers()
   projectStore.fetchProjectsCount()
   contentPlanStore.fetchMonthlyContentPlansCount()
-  contentPlanStore.fetchPublishedContentPlansCount()
   fetchTodaysContentPlans()
 })
 </script>
@@ -929,19 +902,6 @@ onMounted(() => {
 
   &:last-child {
     margin-bottom: 0;
-  }
-
-  &.status-border-PUBLISHED {
-    border-left: 4px solid var(--q-positive);
-  }
-  &.status-border-CANCELED {
-    border-left: 4px solid var(--q-negative);
-  }
-  &.status-border-RESCHEDULED {
-    border-left: 4px solid var(--q-orange);
-  }
-  &.status-border-NOT_PUBLISHED {
-    border-left: 4px solid var(--q-grey-7);
   }
 }
 

@@ -27,3 +27,38 @@ export const STATUS_LABELS = {
 }
 
 export const FORMAT_OPTIONS = ['Reels', 'Carousel', 'Post', 'Animation', 'Story']
+
+export const PLATFORM = {
+  YOUTUBE: 'YOUTUBE',
+  INSTAGRAM: 'INSTAGRAM',
+  FACEBOOK: 'FACEBOOK',
+  TELEGRAM: 'TELEGRAM',
+}
+
+export const PLATFORM_OPTIONS = [
+  { label: 'YouTube', value: PLATFORM.YOUTUBE, icon: 'fa-brands fa-youtube' },
+  { label: 'Instagram', value: PLATFORM.INSTAGRAM, icon: 'fa-brands fa-instagram' },
+  { label: 'Facebook', value: PLATFORM.FACEBOOK, icon: 'fa-brands fa-facebook' },
+  { label: 'Telegram', value: PLATFORM.TELEGRAM, icon: 'fa-brands fa-telegram' },
+]
+
+export const PLATFORM_LABELS = {
+  [PLATFORM.YOUTUBE]: 'YouTube',
+  [PLATFORM.INSTAGRAM]: 'Instagram',
+  [PLATFORM.FACEBOOK]: 'Facebook',
+  [PLATFORM.TELEGRAM]: 'Telegram',
+}
+
+export const PLATFORM_ICONS = {
+  [PLATFORM.YOUTUBE]: 'fa-brands fa-youtube',
+  [PLATFORM.INSTAGRAM]: 'fa-brands fa-instagram',
+  [PLATFORM.FACEBOOK]: 'fa-brands fa-facebook',
+  [PLATFORM.TELEGRAM]: 'fa-brands fa-telegram',
+}
+
+export const PLATFORM_COLORS = {
+  [PLATFORM.YOUTUBE]: '#FF0000',
+  [PLATFORM.INSTAGRAM]: '#E4405F',
+  [PLATFORM.FACEBOOK]: '#1877F2',
+  [PLATFORM.TELEGRAM]: '#0088CC',
+}
