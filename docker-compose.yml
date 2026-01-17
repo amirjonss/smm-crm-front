@@ -3,7 +3,8 @@ version: '3'
 services:
   node:
     container_name: ${DOCKER_PROJECT_NAME}_node
-    env_file: .env.local
+    environment:
+      NODE_ENV: production
     image: node:20-bullseye
     working_dir: /var/www/html
     volumes:
