@@ -10,6 +10,7 @@ services:
     volumes:
       - ./:/var/www/html
     command: /bin/sh -c "
+      export NODE_ENV=production &&
       npm i -g @quasar/cli &&
       echo 'npm version:' &&
       npm -v &&
@@ -17,4 +18,4 @@ services:
       node -v &&
       echo '--------------' &&
       npm install &&
-      quasar build"
+      quasar build --mode production"
