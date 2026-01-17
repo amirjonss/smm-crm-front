@@ -213,6 +213,7 @@ import { useContentPlanStore } from 'stores/content-plan.js'
 import { useUserStore } from 'stores/user.js'
 import PdfPrinterComponent from 'components/PdfPrinterComponent.vue'
 import draggable from 'vuedraggable'
+import { useStatusFormatting } from '@/composables/useStatusFormatting'
 
 const projectStore = useProjectStore()
 const contentPlanStore = useContentPlanStore()
@@ -226,25 +227,7 @@ const props = defineProps({
   },
 })
 
-function getStatusLabel(status) {
-  const labels = {
-    PUBLISHED: 'Опубликовано',
-    CANCELED: 'Отменено',
-    NOT_PUBLISHED: 'Не опубликовано',
-    RESCHEDULED: 'Перенесено',
-  }
-  return labels[status] || 'Не опубликовано'
-}
-
-function getColorForStatus(status) {
-  const colors = {
-    PUBLISHED: 'positive',
-    CANCELED: 'negative',
-    NOT_PUBLISHED: 'grey-7',
-    RESCHEDULED: 'orange',
-  }
-  return colors[status] || 'grey-7'
-}
+const { getStatusLabel, getColorForStatus } = useStatusFormatting()
 
 const contentPlansList = computed({
   get: () => contentPlanStore.getContentPlans,

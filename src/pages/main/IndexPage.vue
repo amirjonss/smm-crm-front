@@ -652,6 +652,10 @@ import { useContentPlanStore } from 'stores/content-plan.js'
 import { api } from 'boot/axios.js'
 import PdfPrinterComponent from 'components/PdfPrinterComponent.vue'
 import draggable from 'vuedraggable'
+import { useStatusFormatting } from '@/composables/useStatusFormatting'
+import { getProjectName } from '@/utils/projectHelpers'
+import { getTodayISO, getWeekRange, getMonthRange } from '@/utils/dateHelpers'
+import { FORMAT_OPTIONS } from '@/constants/status'
 
 const form = ref({ phone: '', name: '' })
 const selectedProjectId = ref(null)
@@ -665,25 +669,10 @@ const todaysContentPlans = ref([])
 const weekCount = ref(0)
 const monthCount = ref(0)
 
-function getWeekRange() {
-  const now = new Date()
-  const day = now.getDay() || 7
-  if (day !== 1) now.setHours(-24 * (day - 1))
-  const start = now.toISOString().slice(0, 10)
-  now.setHours(24 * 6)
-  const end = now.toISOString().slice(0, 10)
-  return { start, end }
-}
-
-function getMonthRange() {
-  const now = new Date()
-  const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
-  return { start, end }
-}
+const { statusOptions, getStatusLabel, getColorForStatus } = useStatusFormatting()
 
 async function fetchTodaysContentPlans() {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getTodayISO()
   try {
     // Today
     const response = await api.get('/content_plans?date=' + today + '&itemsPerPage=1000')
@@ -704,17 +693,6 @@ async function fetchTodaysContentPlans() {
   } catch (e) {
     console.error('Error fetching stats:', e)
   }
-}
-
-function getProjectName(project) {
-  if (!project) return '---'
-  if (typeof project === 'object' && project.name) return project.name
-  if (typeof project === 'string') {
-    const id = project.split('/').pop()
-    const found = projectStore.getProjects.find((p) => String(p.id) === String(id))
-    return found ? found.name : '---'
-  }
-  return '---'
 }
 
 function openProjectDialog() {
@@ -810,29 +788,7 @@ const contentPlanForm = ref({
 })
 const editingContent = ref(null)
 const showContentDialog = ref(false)
-const options = ref(['Reels', 'Carousel', 'Post', 'Animation', 'Story'])
-
-const statusOptions = [
-  { label: 'Не опубликовано', value: 'NOT_PUBLISHED' },
-  { label: 'Опубликовано', value: 'PUBLISHED' },
-  { label: 'Отменено', value: 'CANCELED' },
-  { label: 'Перенесено', value: 'RESCHEDULED' },
-]
-
-function getStatusLabel(status) {
-  const opt = statusOptions.find((o) => o.value === status)
-  return opt ? opt.label : 'Не опубликовано'
-}
-
-function getColorForStatus(status) {
-  const colors = {
-    PUBLISHED: 'positive',
-    CANCELED: 'negative',
-    NOT_PUBLISHED: 'grey-7',
-    RESCHEDULED: 'orange',
-  }
-  return colors[status] || 'grey-7'
-}
+const options = FORMAT_OPTIONS
 
 async function updateStatus(plan, newStatus) {
   if (plan.status === newStatus) return

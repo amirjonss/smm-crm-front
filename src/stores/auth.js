@@ -24,33 +24,17 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    fetchToken(data) {
-      return new Promise((resolve, reject) => {
-        api
-          .post('/users/auth', data)
-          .then((response) => {
-            this.updateToke(response.data.accessToken, response.data.refreshToken)
-            resolve()
-          })
-          .catch((e) => {
-            reject(e, 'what is it')
-          })
-      })
+    async fetchToken(data) {
+      const response = await api.post('/users/auth', data)
+      this.updateToken(response.data.accessToken, response.data.refreshToken)
     },
-    fetchRefreshToken() {
-      return new Promise((resolve, reject) => {
-        api
-          .post('/users/auth/refreshToken', { refreshToken: localStorage.getItem('refreshToken') })
-          .then((response) => {
-            this.updateToke(response.data.accessToken, response.data.refreshToken)
-            resolve()
-          })
-          .catch((e) => {
-            reject(e)
-          })
+    async fetchRefreshToken() {
+      const response = await api.post('/users/auth/refreshToken', {
+        refreshToken: localStorage.getItem('refreshToken'),
       })
+      this.updateToken(response.data.accessToken, response.data.refreshToken)
     },
-    updateToke(accessToken, refreshToken) {
+    updateToken(accessToken, refreshToken) {
       localStorage.setItem('accessToken', accessToken)
       localStorage.setItem('refreshToken', refreshToken)
       this.accessToken = localStorage.getItem('accessToken') || ''

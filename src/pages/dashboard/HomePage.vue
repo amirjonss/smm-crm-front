@@ -292,6 +292,9 @@ import { useContentPlanStore } from 'stores/content-plan.js'
 import ProjectsAndContentListComponent from 'components/dashboard/ProjectsAndContentListComponent.vue'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios.js'
+import { useStatusFormatting } from '@/composables/useStatusFormatting'
+import { getProjectName } from '@/utils/projectHelpers'
+import { getTodayISO } from '@/utils/dateHelpers'
 
 const userStore = useUserStore()
 const projectStore = useProjectStore()
@@ -309,45 +312,16 @@ const q = useQuasar()
 
 const todaysContentPlans = ref([])
 
+const { getStatusLabel, getColorForStatus } = useStatusFormatting()
+
 async function fetchTodaysContentPlans() {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getTodayISO()
   try {
     const response = await api.get('/content_plans?date=' + today + '&itemsPerPage=1000')
     todaysContentPlans.value = response.data.member
   } catch (e) {
     console.error('Error fetching stats:', e)
   }
-}
-
-function getProjectName(project) {
-  if (!project) return '---'
-  if (typeof project === 'object' && project.name) return project.name
-  if (typeof project === 'string') {
-    const id = project.split('/').pop()
-    const found = projectStore.getProjects.find((p) => String(p.id) === String(id))
-    return found ? found.name : '---'
-  }
-  return '---'
-}
-
-function getStatusLabel(status) {
-  const labels = {
-    PUBLISHED: 'Опубликовано',
-    CANCELED: 'Отменено',
-    NOT_PUBLISHED: 'Не опубликовано',
-    RESCHEDULED: 'Перенесено',
-  }
-  return labels[status] || 'Не опубликовано'
-}
-
-function getColorForStatus(status) {
-  const colors = {
-    PUBLISHED: 'positive',
-    CANCELED: 'negative',
-    NOT_PUBLISHED: 'grey-7',
-    RESCHEDULED: 'orange',
-  }
-  return colors[status] || 'grey-7'
 }
 
 const filteredUsers = computed(() => {
