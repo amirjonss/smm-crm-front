@@ -29,8 +29,6 @@ export function useContentPlanStats() {
       const { start: monthStart, end: monthEnd } = getMonthRange()
       const monthPlans = await contentPlanStore.fetchContentPlansByDateRange(monthStart, monthEnd)
       monthCount.value = monthPlans.length
-
-      await contentPlanStore.fetchMyPublishedContentPlansCount()
     } finally {
       loading.value = false
     }

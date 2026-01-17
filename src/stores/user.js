@@ -18,6 +18,7 @@ export const useUserStore = defineStore('user', {
       totalItems: 0,
       items: [],
     },
+    selectedUserId: null,
   }),
 
   getters: {
@@ -29,6 +30,7 @@ export const useUserStore = defineStore('user', {
     },
     isLoaded: (state) => state.loaded,
     getUsers: (state) => state.users.items,
+    getSelectedUserId: (state) => state.selectedUserId,
   },
 
   actions: {
@@ -95,6 +97,9 @@ export const useUserStore = defineStore('user', {
             reject(e)
           })
       })
+    },
+    setSelectedUserId(id) {
+      this.selectedUserId = id
     },
   },
 })
