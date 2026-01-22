@@ -16,7 +16,7 @@ async function isAdmin() {
     }
   }
   if (!user.isAdmin) {
-    return { path: '/projects' }
+    return { path: '/' }
   }
 }
 
@@ -30,12 +30,18 @@ async function isNotAdmin() {
     }
   }
   if (user.isAdmin) {
-    return { path: '/' }
+    return { path: '/dashboard' }
   }
 }
 const routes = [
   {
     path: '/',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [{ path: '', component: () => import('pages/main/IndexPage.vue') }],
+    beforeEnter: [isAuthorised, isNotAdmin],
+  },
+  {
+    path: '/dashboard',
     component: () => import('layouts/DashboardLayout.vue'),
     children: [{ path: '', component: () => import('pages/dashboard/HomePage.vue') }],
     beforeEnter: [isAuthorised, isAdmin],
