@@ -22,7 +22,6 @@ export const useProjectStore = defineStore('project', {
         api
           .post('/projects', data)
           .then(() => {
-            console.log('project has been created')
             resolve()
           })
           .catch((e) => {
@@ -44,12 +43,10 @@ export const useProjectStore = defineStore('project', {
       })
     },
     patchProject(data, id) {
-      console.log(data, id)
       return new Promise((resolve, reject) => {
         api
           .patch('/projects/' + id, data)
           .then(() => {
-            console.log('project has been edited')
             resolve()
           })
           .catch((e) => {
@@ -90,7 +87,6 @@ export const useProjectStore = defineStore('project', {
         api
           .delete('/projects/' + id)
           .then(() => {
-            console.log('successfully deleted')
             resolve()
           })
           .catch((e) => {

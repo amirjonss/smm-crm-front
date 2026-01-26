@@ -128,10 +128,7 @@
             :disabled="userStore.isAdmin"
           >
             <template #item="{ element: item }">
-              <div
-                class="mobile-card"
-                :class="`status-border-${item.status || 'NOT_PUBLISHED'}`"
-              >
+              <div class="mobile-card">
                 <div class="mobile-card-header">
                   <div v-if="!userStore.isAdmin" class="drag-handle-wrapper q-mr-sm">
                     <q-icon name="drag_handle" size="20px" color="grey-6" style="cursor: grab" />
@@ -139,13 +136,32 @@
                   <span class="mobile-card-title">{{ item.post }}</span>
                   <div class="row items-center q-gutter-x-xs">
                     <span class="format-badge">{{ item.format }}</span>
-                    <q-badge
-                      :color="getColorForStatus(item.status)"
-                      :label="getStatusLabel(item.status)"
-                    />
                   </div>
                 </div>
                 <div class="mobile-card-body">
+                  <div v-if="item.platforms?.length" class="mobile-card-row">
+                    <span class="mobile-card-label">Платформы:</span>
+                    <div class="platform-icons-row">
+                      <div
+                        v-for="p in item.platforms"
+                        :key="p.name"
+                        class="platform-status-wrapper"
+                        :class="`status-${p.status}`"
+                      >
+                        <q-icon
+                          :name="PLATFORM_ICONS[p.name]"
+                          size="14px"
+                          :style="{ color: PLATFORM_COLORS[p.name] }"
+                        />
+                        <div v-if="getStatusIcon(p.status)" class="status-indicator-icon">
+                          <q-icon :name="getStatusIcon(p.status)" size="8px" />
+                        </div>
+                        <q-tooltip class="glass-tooltip" :offset="[0, 8]">
+                          {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
+                        </q-tooltip>
+                      </div>
+                    </div>
+                  </div>
                   <div class="mobile-card-row">
                     <span class="mobile-card-label">Идея:</span>
                     <span class="mobile-card-idea">{{ item.idea }}</span>
@@ -170,7 +186,7 @@
                 <th>#</th>
                 <th>Пост</th>
                 <th>Формат</th>
-                <th>Статус</th>
+                <th>Платформы</th>
                 <th>Идея</th>
                 <th>Дата</th>
               </tr>
@@ -188,11 +204,28 @@
                   <td>
                     <span class="format-badge">{{ item.format }}</span>
                   </td>
-                  <td>
-                    <q-badge
-                      :color="getColorForStatus(item.status)"
-                      :label="getStatusLabel(item.status)"
-                    />
+                  <td class="platforms-cell">
+                    <div class="platform-icons-row">
+                      <div
+                        v-for="p in item.platforms"
+                        :key="p.name"
+                        class="platform-status-wrapper"
+                        :class="`status-${p.status}`"
+                      >
+                        <q-icon
+                          :name="PLATFORM_ICONS[p.name]"
+                          size="16px"
+                          :style="{ color: PLATFORM_COLORS[p.name] }"
+                        />
+                        <div v-if="getStatusIcon(p.status)" class="status-indicator-icon">
+                          <q-icon :name="getStatusIcon(p.status)" size="8px" />
+                        </div>
+                        <q-tooltip class="glass-tooltip" :offset="[0, 8]">
+                          {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
+                        </q-tooltip>
+                      </div>
+                      <span v-if="!item.platforms?.length" class="text-grey-6">—</span>
+                    </div>
                   </td>
                   <td class="idea-cell">{{ item.idea }}</td>
                   <td>{{ item.date?.slice(0, 10) || '-' }}</td>
@@ -213,6 +246,13 @@ import { useContentPlanStore } from 'stores/content-plan.js'
 import { useUserStore } from 'stores/user.js'
 import PdfPrinterComponent from 'components/PdfPrinterComponent.vue'
 import draggable from 'vuedraggable'
+import {
+  PLATFORM_ICONS,
+  PLATFORM_COLORS,
+  PLATFORM_LABELS,
+  STATUS_LABELS,
+  STATUS
+} from '@/constants/status'
 
 const projectStore = useProjectStore()
 const contentPlanStore = useContentPlanStore()
@@ -226,24 +266,17 @@ const props = defineProps({
   },
 })
 
-function getStatusLabel(status) {
-  const labels = {
-    PUBLISHED: 'Опубликовано',
-    CANCELED: 'Отменено',
-    NOT_PUBLISHED: 'Не опубликовано',
-    RESCHEDULED: 'Перенесено',
+function getStatusIcon(status) {
+  switch (status) {
+    case STATUS.PUBLISHED:
+      return 'check'
+    case STATUS.CANCELED:
+      return 'close'
+    case STATUS.RESCHEDULED:
+      return 'schedule'
+    default:
+      return ''
   }
-  return labels[status] || 'Не опубликовано'
-}
-
-function getColorForStatus(status) {
-  const colors = {
-    PUBLISHED: 'positive',
-    CANCELED: 'negative',
-    NOT_PUBLISHED: 'grey-7',
-    RESCHEDULED: 'orange',
-  }
-  return colors[status] || 'grey-7'
 }
 
 const contentPlansList = computed({
@@ -552,18 +585,7 @@ watch(
     margin-bottom: 0;
   }
 
-  &.status-border-PUBLISHED {
-    border-left: 4px solid var(--q-positive);
-  }
-  &.status-border-CANCELED {
-    border-left: 4px solid var(--q-negative);
-  }
-  &.status-border-RESCHEDULED {
-    border-left: 4px solid var(--q-orange);
-  }
-  &.status-border-NOT_PUBLISHED {
-    border-left: 4px solid var(--q-grey-7);
-  }
+
 }
 
 .mobile-card-selected {
@@ -663,5 +685,91 @@ watch(
   border: 1px solid #3b82f6;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   transform: scale(1.02);
+}
+
+.platform-status-wrapper {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 2px solid transparent;
+  transition: all 0.2s ease-out;
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+
+  &.status-PUBLISHED {
+    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+  }
+  &.status-CANCELED {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+  }
+  &.status-NOT_PUBLISHED {
+    border-color: #9ca3af;
+    background: rgba(156, 163, 175, 0.1);
+  }
+  &.status-RESCHEDULED {
+    border-color: #f97316;
+    background: rgba(249, 115, 22, 0.1);
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.status-indicator-icon {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  z-index: 2;
+
+  .status-PUBLISHED & {
+    color: #22c55e;
+    border-color: #22c55e;
+    background: #ecfdf5; 
+  }
+  .status-CANCELED & {
+    color: #ef4444;
+    border-color: #ef4444;
+    background: #fef2f2;
+  }
+  .status-RESCHEDULED & {
+    color: #f97316;
+    border-color: #f97316;
+    background: #fff7ed;
+  }
+}
+
+.platforms-cell {
+  min-width: 0;
+}
+
+.platform-icons-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
 }
 </style>

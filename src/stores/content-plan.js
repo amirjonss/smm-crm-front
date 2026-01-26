@@ -8,8 +8,6 @@ export const useContentPlanStore = defineStore('content-plan', {
       items: [],
     },
     globalTotal: 0,
-    publishedTotal: 0,
-    myPublishedTotal: 0,
     monthlyTotal: 0,
   }),
 
@@ -17,8 +15,6 @@ export const useContentPlanStore = defineStore('content-plan', {
     getContentPlanTotalItems: (state) => state.contentPlans.totalItems,
     getContentPlans: (state) => state.contentPlans.items,
     getGlobalTotal: (state) => state.globalTotal,
-    getPublishedTotal: (state) => state.publishedTotal,
-    getMyPublishedTotal: (state) => state.myPublishedTotal,
     getMonthlyTotal: (state) => state.monthlyTotal,
   },
 
@@ -63,32 +59,6 @@ export const useContentPlanStore = defineStore('content-plan', {
           })
           .catch((e) => {
             reject(e, 'error during the fetching monthly content plan count')
-          })
-      })
-    },
-    fetchPublishedContentPlansCount() {
-      return new Promise((resolve, reject) => {
-        api
-          .get(`/content_plans/count/published`)
-          .then((response) => {
-            this.publishedTotal = response.data.count
-            resolve()
-          })
-          .catch((e) => {
-            reject(e, 'error during the fetching published content plan count')
-          })
-      })
-    },
-    fetchMyPublishedContentPlansCount() {
-      return new Promise((resolve, reject) => {
-        api
-          .get('/content_plans/my-count/published')
-          .then((response) => {
-            this.myPublishedTotal = response.data.count
-            resolve()
-          })
-          .catch((e) => {
-            reject(e, 'error during the fetching my published content plan count')
           })
       })
     },

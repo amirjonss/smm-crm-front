@@ -36,15 +36,6 @@
             <span class="stat-label">На месяц</span>
           </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon stat-icon-orange">
-            <q-icon name="task_alt" size="1.5rem" />
-          </div>
-          <div class="stat-content">
-            <span class="stat-value">{{ contentPlanStore.getMyPublishedTotal }}</span>
-            <span class="stat-label">Выполнено</span>
-          </div>
-        </div>
       </div>
 
       <!-- Today's Content Plan Table -->
@@ -70,43 +61,57 @@
                   v-for="plan in todaysContentPlans"
                   :key="plan.id"
                   class="mobile-card"
-                  :class="`status-border-${plan.status || 'NOT_PUBLISHED'}`"
                 >
                   <div class="mobile-card-header">
                     <span class="mobile-card-title">{{ plan.post }}</span>
-                    <div class="row items-center q-gutter-x-xs">
-                      <span class="format-badge">{{ plan.format }}</span>
-                      <q-badge
-                        :color="getColorForStatus(plan.status)"
-                        :label="getStatusLabel(plan.status)"
-                        class="cursor-pointer"
-                      >
-                        <q-menu auto-close>
-                          <q-list style="min-width: 150px">
-                            <q-item
-                              v-for="opt in statusOptions"
-                              :key="opt.value"
-                              clickable
-                              @click="updateStatus(plan, opt.value)"
-                            >
-                              <q-item-section side>
-                                <q-badge :color="getColorForStatus(opt.value)" rounded />
-                              </q-item-section>
-                              <q-item-section>{{ opt.label }}</q-item-section>
-                            </q-item>
-                          </q-list>
-                        </q-menu>
-                      </q-badge>
-                    </div>
+                    <span class="format-badge">{{ plan.format }}</span>
                   </div>
                   <div class="mobile-card-body">
                     <div class="mobile-card-row">
                       <span class="mobile-card-label">Проект:</span>
                       <span class="project-name">{{ getProjectName(plan.project) }}</span>
                     </div>
-                    <div class="mobile-card-row">
-                      <span class="mobile-card-label">Идея:</span>
-                      <span class="mobile-card-idea">{{ plan.idea }}</span>
+                    <div v-if="plan.platforms?.length" class="mobile-card-row">
+                      <span class="mobile-card-label">Платформы:</span>
+                      <div class="platform-icons-row">
+                        <div
+                          v-for="p in plan.platforms"
+                          :key="p.name"
+                          class="platform-status-wrapper"
+                          :class="`status-${p.status}`"
+                        >
+                          <q-icon
+                            :name="PLATFORM_ICONS[p.name]"
+                            size="14px"
+                            :style="{ color: PLATFORM_COLORS[p.name] }"
+                          />
+                          <div v-if="getStatusIcon(p.status)" class="status-indicator-icon">
+                            <q-icon :name="getStatusIcon(p.status)" size="8px" />
+                          </div>
+                          
+                          <q-menu auto-close anchor="top middle" self="bottom middle" class="glass-menu">
+                            <q-list style="min-width: 150px">
+                              <q-item 
+                                v-for="opt in statusOptions" 
+                                :key="opt.value"
+                                clickable 
+                                v-close-popup
+                                @click="setPlatformStatus(plan, p.name, opt.value)"
+                                :active="p.status === opt.value"
+                                active-class="bg-blue-1 text-primary"
+                              >
+                                <q-item-section avatar style="min-width: 32px; padding-right: 0">
+                                  <q-icon :name="getStatusIcon(opt.value)" size="xs" :color="STATUS_COLORS[opt.value]" />
+                                </q-item-section>
+                                <q-item-section>{{ opt.label }}</q-item-section>
+                              </q-item>
+                            </q-list>
+                          </q-menu>
+
+                                                    <q-tooltip class="glass-tooltip" :offset="[0, 8]">
+                                                      {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
+                                                    </q-tooltip>                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -119,7 +124,7 @@
                     <th>Проект</th>
                     <th>Пост</th>
                     <th>Формат</th>
-                    <th>Статус</th>
+                    <th>Платформы</th>
                     <th>Идея</th>
                   </tr>
                 </thead>
@@ -130,28 +135,47 @@
                     <td>
                       <span class="format-badge">{{ plan.format }}</span>
                     </td>
-                    <td>
-                      <q-badge
-                        :color="getColorForStatus(plan.status)"
-                        :label="getStatusLabel(plan.status)"
-                        class="cursor-pointer"
-                      >
-                        <q-menu auto-close>
-                          <q-list style="min-width: 150px">
-                            <q-item
-                              v-for="opt in statusOptions"
-                              :key="opt.value"
-                              clickable
-                              @click="updateStatus(plan, opt.value)"
-                            >
-                              <q-item-section side>
-                                <q-badge :color="getColorForStatus(opt.value)" rounded />
-                              </q-item-section>
-                              <q-item-section>{{ opt.label }}</q-item-section>
-                            </q-item>
-                          </q-list>
-                        </q-menu>
-                      </q-badge>
+                    <td class="platforms-cell">
+                      <div class="platform-icons-row">
+                        <div
+                          v-for="p in plan.platforms"
+                          :key="p.name"
+                          class="platform-status-wrapper"
+                          :class="`status-${p.status}`"
+                        >
+                          <q-icon
+                            :name="PLATFORM_ICONS[p.name]"
+                            size="16px"
+                            :style="{ color: PLATFORM_COLORS[p.name] }"
+                          />
+                          <div v-if="getStatusIcon(p.status)" class="status-indicator-icon">
+                            <q-icon :name="getStatusIcon(p.status)" size="8px" />
+                          </div>
+                          
+                          <q-menu auto-close anchor="top middle" self="bottom middle" class="glass-menu">
+                            <q-list style="min-width: 150px">
+                              <q-item 
+                                v-for="opt in statusOptions" 
+                                :key="opt.value"
+                                clickable 
+                                v-close-popup
+                                @click="setPlatformStatus(plan, p.name, opt.value)"
+                                :active="p.status === opt.value"
+                                active-class="bg-blue-1 text-primary"
+                              >
+                                <q-item-section avatar style="min-width: 32px; padding-right: 0">
+                                  <q-icon :name="getStatusIcon(opt.value)" size="xs" :color="STATUS_COLORS[opt.value]" />
+                                </q-item-section>
+                                <q-item-section>{{ opt.label }}</q-item-section>
+                              </q-item>
+                            </q-list>
+                          </q-menu>
+
+                                                    <q-tooltip class="glass-tooltip" :offset="[0, 8]">
+                                                      {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
+                                                    </q-tooltip>                        </div>
+                        <span v-if="!plan.platforms?.length" class="text-grey-6">—</span>
+                      </div>
                     </td>
                     <td class="idea-cell">{{ plan.idea }}</td>
                   </tr>
@@ -308,10 +332,7 @@
                 <template #item="{ element: row }">
                   <div
                     class="mobile-card"
-                    :class="[
-                      { 'mobile-card-selected': row.id === contentPlanForm.id },
-                      `status-border-${row.status || 'NOT_PUBLISHED'}`,
-                    ]"
+                    :class="{ 'mobile-card-selected': row.id === contentPlanForm.id }"
                   >
                     <div class="mobile-card-header">
                       <div class="drag-handle-wrapper q-mr-sm">
@@ -323,32 +344,51 @@
                         />
                       </div>
                       <span class="mobile-card-title">{{ row.post }}</span>
-                      <div class="row items-center q-gutter-x-xs">
-                        <span class="format-badge">{{ row.format }}</span>
-                        <q-badge
-                          :color="getColorForStatus(row.status)"
-                          :label="getStatusLabel(row.status)"
-                          class="cursor-pointer"
-                        >
-                          <q-menu auto-close>
-                            <q-list style="min-width: 150px">
-                              <q-item
-                                v-for="opt in statusOptions"
-                                :key="opt.value"
-                                clickable
-                                @click="updateStatus(row, opt.value)"
-                              >
-                                <q-item-section side>
-                                  <q-badge :color="getColorForStatus(opt.value)" rounded />
-                                </q-item-section>
-                                <q-item-section>{{ opt.label }}</q-item-section>
-                              </q-item>
-                            </q-list>
-                          </q-menu>
-                        </q-badge>
-                      </div>
+                      <span class="format-badge">{{ row.format }}</span>
                     </div>
                     <div class="mobile-card-body">
+                      <div v-if="row.platforms?.length" class="mobile-card-row">
+                        <span class="mobile-card-label">Платформы:</span>
+                        <div class="platform-icons-row">
+                          <div
+                            v-for="p in row.platforms"
+                            :key="p.name"
+                            class="platform-status-wrapper"
+                            :class="`status-${p.status}`"
+                          >
+                            <q-icon
+                              :name="PLATFORM_ICONS[p.name]"
+                              size="14px"
+                              :style="{ color: PLATFORM_COLORS[p.name] }"
+                            />
+                            <div v-if="getStatusIcon(p.status)" class="status-indicator-icon">
+                              <q-icon :name="getStatusIcon(p.status)" size="8px" />
+                            </div>
+
+                            <q-menu auto-close anchor="top middle" self="bottom middle" class="glass-menu">
+                              <q-list style="min-width: 150px">
+                                <q-item 
+                                  v-for="opt in statusOptions" 
+                                  :key="opt.value"
+                                  clickable 
+                                  v-close-popup
+                                  @click="setPlatformStatus(row, p.name, opt.value)"
+                                  :active="p.status === opt.value"
+                                  active-class="bg-blue-1 text-primary"
+                                >
+                                  <q-item-section avatar style="min-width: 32px; padding-right: 0">
+                                    <q-icon :name="getStatusIcon(opt.value)" size="xs" :color="STATUS_COLORS[opt.value]" />
+                                  </q-item-section>
+                                  <q-item-section>{{ opt.label }}</q-item-section>
+                                </q-item>
+                              </q-list>
+                            </q-menu>
+
+                                                      <q-tooltip class="glass-tooltip" :offset="[0, 8]">
+                                                        {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
+                                                      </q-tooltip>                          </div>
+                        </div>
+                      </div>
                       <div class="mobile-card-row">
                         <span class="mobile-card-label">Идея:</span>
                         <span class="mobile-card-idea">{{ row.idea }}</span>
@@ -390,10 +430,9 @@
               >
                 <div class="grid-header">
                   <div class="header-cell">#</div>
-                  <div class="header-cell">Проект</div>
                   <div class="header-cell">Пост</div>
                   <div class="header-cell">Формат</div>
-                  <div class="header-cell">Статус</div>
+                  <div class="header-cell">Платформы</div>
                   <div class="header-cell">Идея</div>
                   <div class="header-cell">Дата</div>
                   <div class="header-cell text-right">Действия</div>
@@ -423,35 +462,51 @@
                       class="grid-row draggable-row"
                     >
                       <div class="grid-cell text-muted">{{ index + 1 }}</div>
-                      <div class="grid-cell project-name">
-                        {{ getProjectName(row.project) }}
-                      </div>
                       <div class="grid-cell post-name">{{ row.post }}</div>
                       <div class="grid-cell">
                         <span class="format-badge">{{ row.format }}</span>
                       </div>
-                      <div class="grid-cell">
-                        <q-badge
-                          :color="getColorForStatus(row.status)"
-                          :label="getStatusLabel(row.status)"
-                          class="cursor-pointer"
-                        >
-                          <q-menu auto-close>
-                            <q-list style="min-width: 150px">
-                              <q-item
-                                v-for="opt in statusOptions"
-                                :key="opt.value"
-                                clickable
-                                @click="updateStatus(row, opt.value)"
-                              >
-                                <q-item-section side>
-                                  <q-badge :color="getColorForStatus(opt.value)" rounded />
-                                </q-item-section>
-                                <q-item-section>{{ opt.label }}</q-item-section>
-                              </q-item>
-                            </q-list>
-                          </q-menu>
-                        </q-badge>
+                      <div class="grid-cell platforms-cell">
+                        <div class="platform-icons-row">
+                          <div
+                            v-for="p in row.platforms"
+                            :key="p.name"
+                            class="platform-status-wrapper"
+                            :class="`status-${p.status}`"
+                          >
+                            <q-icon
+                              :name="PLATFORM_ICONS[p.name]"
+                              size="16px"
+                              :style="{ color: PLATFORM_COLORS[p.name] }"
+                            />
+                            <div v-if="getStatusIcon(p.status)" class="status-indicator-icon">
+                              <q-icon :name="getStatusIcon(p.status)" size="8px" />
+                            </div>
+
+                            <q-menu auto-close anchor="top middle" self="bottom middle" class="glass-menu">
+                              <q-list style="min-width: 150px">
+                                <q-item 
+                                  v-for="opt in statusOptions" 
+                                  :key="opt.value"
+                                  clickable 
+                                  v-close-popup
+                                  @click="setPlatformStatus(row, p.name, opt.value)"
+                                  :active="p.status === opt.value"
+                                  active-class="bg-blue-1 text-primary"
+                                >
+                                  <q-item-section avatar style="min-width: 32px; padding-right: 0">
+                                    <q-icon :name="getStatusIcon(opt.value)" size="xs" :color="STATUS_COLORS[opt.value]" />
+                                  </q-item-section>
+                                  <q-item-section>{{ opt.label }}</q-item-section>
+                                </q-item>
+                              </q-list>
+                            </q-menu>
+
+                                                      <q-tooltip class="glass-tooltip" :offset="[0, 8]">
+                                                        {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
+                                                      </q-tooltip>                          </div>
+                          <span v-if="!row.platforms?.length" class="text-grey-6">—</span>
+                        </div>
                       </div>
                       <div class="grid-cell idea-cell">{{ row.idea }}</div>
                       <div class="grid-cell">{{ row.date.slice(0, 10) }}</div>
@@ -549,7 +604,7 @@
       </q-dialog>
       <!-- Content Dialog -->
       <q-dialog v-model="showContentDialog" persistent>
-        <q-card class="dialog-card">
+        <q-card class="dialog-card content-dialog-card">
           <q-card-section class="row items-center q-pb-none">
             <div class="text-h6">
               {{ editingContent ? 'Редактировать контент' : 'Добавить контент' }}
@@ -560,57 +615,69 @@
 
           <q-card-section class="q-pt-md">
             <q-form @submit.prevent="editingContent ? saveEditedContentPlan() : addToContentList()">
-              <div class="form-group q-mb-md">
-                <label class="form-label">Пост</label>
-                <q-input
-                  v-model="contentPlanForm.post"
-                  outlined
-                  placeholder="Название поста"
-                  lazy-rules
-                  :rules="[(val) => val.length > 0 || 'Заполните поле']"
-                  class="modern-input"
-                />
-              </div>
-              <div class="form-group q-mb-md">
-                <label class="form-label">Формат</label>
+              <div class="form-group q-mb-sm">
+                <label class="form-label">Проект</label>
                 <q-select
-                  v-model="contentPlanForm.format"
-                  :options="options"
-                  outlined
-                  placeholder="Выберите формат"
-                  lazy-rules
-                  :rules="[(val) => !!val || 'Выберите формат']"
-                  class="modern-input"
-                />
-              </div>
-              <div class="form-group q-mb-md">
-                <label class="form-label">Статус</label>
-                <q-select
-                  v-model="contentPlanForm.status"
-                  :options="statusOptions"
+                  v-model="contentPlanForm.projectId"
+                  :options="projectOptions"
+                  dense
                   outlined
                   emit-value
                   map-options
-                  placeholder="Выберите статус"
+                  placeholder="Выберите проект"
                   class="modern-input"
+                  lazy-rules
+                  :rules="[(val) => !!val || 'Выберите проект']"
                 />
               </div>
-              <div class="form-group q-mb-md">
+
+              <div class="form-row-grid">
+                <div class="form-group">
+                  <label class="form-label">Пост</label>
+                  <q-input
+                    v-model="contentPlanForm.post"
+                    outlined
+                    dense
+                    placeholder="Название поста"
+                    lazy-rules
+                    :rules="[(val) => val.length > 0 || 'Заполните поле']"
+                    class="modern-input"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Формат</label>
+                  <q-select
+                    v-model="contentPlanForm.format"
+                    :options="options"
+                    outlined
+                    dense
+                    placeholder="Выберите формат"
+                    lazy-rules
+                    :rules="[(val) => !!val || 'Выберите формат']"
+                    class="modern-input"
+                  />
+                </div>
+              </div>
+
+              <div class="form-group q-mb-sm">
                 <label class="form-label">Дата</label>
                 <q-input
                   v-model="contentPlanForm.date"
                   type="date"
                   outlined
+                  dense
                   lazy-rules
                   :rules="[(val) => val.length > 0 || 'Выберите дату']"
                   class="modern-input"
                 />
               </div>
-              <div class="form-group q-mb-lg">
+
+              <div class="form-group q-mb-sm">
                 <label class="form-label">Идея</label>
                 <q-input
                   v-model="contentPlanForm.idea"
                   outlined
+                  dense
                   autogrow
                   placeholder="Опишите идею контента"
                   lazy-rules
@@ -619,11 +686,90 @@
                 />
               </div>
 
-              <div class="form-actions row justify-end q-gutter-sm">
+              <div class="form-group q-mb-md">
+                <label class="form-label">Платформы</label>
+                <div class="platforms-compact-grid q-mt-xs">
+                  <div
+                    v-for="platform in platformOptions"
+                    :key="platform.value"
+                    class="platform-card-mini"
+                    :class="{
+                      'platform-card-mini-active': contentPlanForm.platforms[platform.value]?.enabled,
+                    }"
+                    :style="{
+                      '--platform-color': PLATFORM_COLORS[platform.value],
+                    }"
+                    @click="togglePlatform(platform.value)"
+                  >
+                    <div class="platform-mini-main">
+                      <q-icon
+                        :name="platform.icon"
+                        size="18px"
+                        :style="{ color: PLATFORM_COLORS[platform.value] }"
+                      />
+                      <span class="platform-mini-name">{{ platform.label }}</span>
+                      <q-checkbox
+                        :model-value="contentPlanForm.platforms[platform.value]?.enabled"
+                        @update:model-value="togglePlatform(platform.value)"
+                        dense
+                        size="xs"
+                        class="platform-mini-checkbox"
+                        @click.stop
+                      />
+                    </div>
+                    
+                    <div
+                      v-if="contentPlanForm.platforms[platform.value]?.enabled"
+                      class="platform-mini-status"
+                      @click.stop
+                    >
+                      <q-select
+                        v-model="contentPlanForm.platforms[platform.value].status"
+                        :options="statusOptions"
+                        dense
+                        outlined
+                        emit-value
+                        map-options
+                        class="status-select-mini"
+                        popup-content-class="status-popup-mini"
+                      >
+                        <template #selected-item="{ opt }">
+                          <div class="row items-center no-wrap">
+                            <q-badge
+                              :color="STATUS_COLORS[opt.value] || 'grey'"
+                              rounded
+                              class="q-mr-xs"
+                              style="width: 6px; height: 6px; min-width: 6px"
+                            />
+                            <span style="font-size: 10px">{{ opt.label }}</span>
+                          </div>
+                        </template>
+                        <template #option="{ itemProps, opt }">
+                          <q-item v-bind="itemProps" dense style="min-height: 28px; padding: 4px 8px">
+                            <q-item-section avatar style="min-width: 20px">
+                              <q-badge
+                                :color="STATUS_COLORS[opt.value] || 'grey'"
+                                rounded
+                                style="width: 8px; height: 8px; min-width: 8px"
+                              />
+                            </q-item-section>
+                            <q-item-section>
+                              <q-item-label style="font-size: 11px">{{ opt.label }}</q-item-label>
+                            </q-item-section>
+                          </q-item>
+                        </template>
+                      </q-select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-actions row justify-end q-gutter-sm q-mt-md">
                 <q-btn
                   flat
                   label="Отмена"
                   color="grey-7"
+                  dense
                   v-close-popup
                   @click="cancelContentEdit"
                   class="btn-cancel"
@@ -632,8 +778,10 @@
                   type="submit"
                   :label="editingContent ? 'Сохранить' : 'Добавить'"
                   unelevated
+                  dense
                   color="primary"
                   class="btn-primary-action"
+                  style="padding: 4px 20px"
                 />
               </div>
             </q-form>
@@ -652,6 +800,20 @@ import { useContentPlanStore } from 'stores/content-plan.js'
 import { api } from 'boot/axios.js'
 import PdfPrinterComponent from 'components/PdfPrinterComponent.vue'
 import draggable from 'vuedraggable'
+import { getProjectName } from '@/utils/projectHelpers'
+import { getTodayISO, getWeekRange, getMonthRange } from '@/utils/dateHelpers'
+import {
+  FORMAT_OPTIONS,
+  PLATFORM_OPTIONS,
+  PLATFORM,
+  STATUS,
+  STATUS_OPTIONS,
+  PLATFORM_COLORS,
+  PLATFORM_LABELS,
+  PLATFORM_ICONS,
+  STATUS_COLORS,
+  STATUS_LABELS,
+} from '@/constants/status'
 
 const form = ref({ phone: '', name: '' })
 const selectedProjectId = ref(null)
@@ -665,25 +827,15 @@ const todaysContentPlans = ref([])
 const weekCount = ref(0)
 const monthCount = ref(0)
 
-function getWeekRange() {
-  const now = new Date()
-  const day = now.getDay() || 7
-  if (day !== 1) now.setHours(-24 * (day - 1))
-  const start = now.toISOString().slice(0, 10)
-  now.setHours(24 * 6)
-  const end = now.toISOString().slice(0, 10)
-  return { start, end }
-}
-
-function getMonthRange() {
-  const now = new Date()
-  const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
-  return { start, end }
-}
+const projectOptions = computed(() => {
+  return projectStore.getProjects.map((p) => ({
+    label: p.name,
+    value: p.id,
+  }))
+})
 
 async function fetchTodaysContentPlans() {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getTodayISO()
   try {
     // Today
     const response = await api.get('/content_plans?date=' + today + '&itemsPerPage=1000')
@@ -698,23 +850,9 @@ async function fetchTodaysContentPlans() {
     const { start: monthStart, end: monthEnd } = getMonthRange()
     const monthPlans = await contentPlanStore.fetchContentPlansByDateRange(monthStart, monthEnd)
     monthCount.value = monthPlans.length
-
-    // Published
-    await contentPlanStore.fetchMyPublishedContentPlansCount()
   } catch (e) {
     console.error('Error fetching stats:', e)
   }
-}
-
-function getProjectName(project) {
-  if (!project) return '---'
-  if (typeof project === 'object' && project.name) return project.name
-  if (typeof project === 'string') {
-    const id = project.split('/').pop()
-    const found = projectStore.getProjects.find((p) => String(p.id) === String(id))
-    return found ? found.name : '---'
-  }
-  return '---'
 }
 
 function openProjectDialog() {
@@ -805,61 +943,30 @@ const contentPlanForm = ref({
   idea: '',
   date: '',
   id: null,
-  status: 'NOT_PUBLISHED',
   position: 0,
+  projectId: null,
+  platforms: {}, // { INSTAGRAM: { enabled: true, status: 'NOT_PUBLISHED' }, ... }
 })
 const editingContent = ref(null)
 const showContentDialog = ref(false)
-const options = ref(['Reels', 'Carousel', 'Post', 'Animation', 'Story'])
+const options = FORMAT_OPTIONS
+const platformOptions = PLATFORM_OPTIONS
+const statusOptions = STATUS_OPTIONS
 
-const statusOptions = [
-  { label: 'Не опубликовано', value: 'NOT_PUBLISHED' },
-  { label: 'Опубликовано', value: 'PUBLISHED' },
-  { label: 'Отменено', value: 'CANCELED' },
-  { label: 'Перенесено', value: 'RESCHEDULED' },
-]
-
-function getStatusLabel(status) {
-  const opt = statusOptions.find((o) => o.value === status)
-  return opt ? opt.label : 'Не опубликовано'
+// Initialize empty platforms object
+function getEmptyPlatforms() {
+  const platforms = {}
+  Object.values(PLATFORM).forEach((name) => {
+    platforms[name] = { enabled: false, status: STATUS.NOT_PUBLISHED }
+  })
+  return platforms
 }
 
-function getColorForStatus(status) {
-  const colors = {
-    PUBLISHED: 'positive',
-    CANCELED: 'negative',
-    NOT_PUBLISHED: 'grey-7',
-    RESCHEDULED: 'orange',
-  }
-  return colors[status] || 'grey-7'
+// Toggle platform selection
+function togglePlatform(platformName) {
+  contentPlanForm.value.platforms[platformName].enabled =
+    !contentPlanForm.value.platforms[platformName].enabled
 }
-
-async function updateStatus(plan, newStatus) {
-  if (plan.status === newStatus) return
-
-  try {
-    await contentPlanStore.patchContentPlan({ status: newStatus }, plan.id)
-    if (selectedProjectId.value) {
-      await contentPlanStore.fetchContentPlan(selectedProjectId.value)
-    }
-    await fetchTodaysContentPlans()
-    q.notify({
-      message: 'Статус обновлен',
-      type: 'positive',
-      position: 'top',
-      timeout: 1000,
-    })
-  } catch (e) {
-    console.error('Error updating status:', e)
-    q.notify({
-      message: 'Ошибка при обновлении статуса',
-      type: 'negative',
-      position: 'top',
-    })
-  }
-}
-
-
 
 const contentPlansList = computed({
   get: () => contentPlanStore.getContentPlans,
@@ -918,25 +1025,40 @@ async function persistOrder(plans) {
 
 function openContentDialog() {
   cancelContentEdit()
+  contentPlanForm.value.platforms = getEmptyPlatforms()
+  contentPlanForm.value.projectId = selectedProjectId.value
   showContentDialog.value = true
 }
 
 function addToContentList() {
-  if (!selectedProjectId.value) {
+  const targetProjectId = contentPlanForm.value.projectId || selectedProjectId.value
+  if (!targetProjectId) {
     q.notify({ message: 'Выберите проект!', type: 'warning', position: 'top' })
     return
   }
-  const newRow = {
-    project: '/api/projects/' + selectedProjectId.value,
+  // Convert platforms object to array for API
+  const platforms = Object.entries(contentPlanForm.value.platforms)
+    .filter(([, data]) => data.enabled)
+    .map(([name, data]) => ({
+      name,
+      status: data.status,
+    }))
+  
+  const payload = {
+    project: '/api/projects/' + targetProjectId,
     post: contentPlanForm.value.post,
     format: contentPlanForm.value.format,
     idea: contentPlanForm.value.idea,
     date: contentPlanForm.value.date,
-    status: contentPlanForm.value.status,
     position: contentPlanForm.value.position || contentPlanStore.getContentPlans.length + 1,
+    platforms,
   }
-  contentPlanStore.createContentPlan(newRow).then(() => {
-    contentPlanStore.fetchContentPlan(selectedProjectId.value)
+
+  contentPlanStore.createContentPlan(payload).then(() => {
+    // Only refresh list if we added to the currently selected project
+    if (targetProjectId === selectedProjectId.value) {
+      contentPlanStore.fetchContentPlan(selectedProjectId.value)
+    }
     fetchTodaysContentPlans()
     showContentDialog.value = false
     q.notify({
@@ -945,58 +1067,71 @@ function addToContentList() {
       position: 'top',
     })
   })
-  contentPlanForm.value = {
-    post: '',
-    format: 'Post',
-    idea: '',
-    date: '',
-    id: null,
-    status: 'NOT_PUBLISHED',
-    position: 0,
-  }
+  resetContentForm()
 }
 
 function editContentPlan(plan) {
   editingContent.value = plan
+  // Build platforms object from existing data
+  const platforms = getEmptyPlatforms()
+  if (plan.platforms) {
+    plan.platforms.forEach((p) => {
+      platforms[p.name] = { enabled: true, status: p.status || STATUS.NOT_PUBLISHED }
+    })
+  }
   contentPlanForm.value = {
     post: plan.post,
     format: plan.format,
     idea: plan.idea,
     date: plan.date.slice(0, 10),
     id: plan.id,
-    status: plan.status || 'NOT_PUBLISHED',
     position: plan.position || 0,
+    projectId: plan.project?.id || selectedProjectId.value,
+    platforms,
   }
   showContentDialog.value = true
 }
 
-function cancelContentEdit() {
-  editingContent.value = null
+function resetContentForm() {
   contentPlanForm.value = {
     post: '',
     format: 'Post',
     idea: '',
     date: '',
     id: null,
-    status: 'NOT_PUBLISHED',
     position: 0,
+    projectId: null,
+    platforms: {},
   }
+}
+
+function cancelContentEdit() {
+  editingContent.value = null
+  resetContentForm()
   showContentDialog.value = false
 }
 
 function saveEditedContentPlan() {
+  // Convert platforms object to array for API
+  const platforms = Object.entries(contentPlanForm.value.platforms)
+    .filter(([, data]) => data.enabled)
+    .map(([name, data]) => ({
+      name,
+      status: data.status,
+    }))
+
+  const payload = {
+    post: contentPlanForm.value.post,
+    format: contentPlanForm.value.format,
+    date: contentPlanForm.value.date,
+    idea: contentPlanForm.value.idea,
+    position: contentPlanForm.value.position,
+    project: contentPlanForm.value.projectId ? `/api/projects/${contentPlanForm.value.projectId}` : undefined,
+    platforms,
+  }
+
   contentPlanStore
-    .patchContentPlan(
-      {
-        post: contentPlanForm.value.post,
-        format: contentPlanForm.value.format,
-        date: contentPlanForm.value.date,
-        idea: contentPlanForm.value.idea,
-        status: contentPlanForm.value.status,
-        position: contentPlanForm.value.position,
-      },
-      editingContent.value.id,
-    )
+    .patchContentPlan(payload, editingContent.value.id)
     .then(() => {
       contentPlanStore.fetchContentPlan(selectedProjectId.value)
       fetchTodaysContentPlans()
@@ -1032,6 +1167,63 @@ function confirmContentPlanDeletion(contentPlanId) {
   }).onOk(() => deleteContentPlan(contentPlanId))
 }
 
+function getStatusIcon(status) {
+  switch (status) {
+    case STATUS.PUBLISHED:
+      return 'check'
+    case STATUS.CANCELED:
+      return 'close'
+    case STATUS.RESCHEDULED:
+      return 'schedule'
+    default:
+      return '' // No icon for NOT_PUBLISHED
+  }
+}
+
+async function setPlatformStatus(plan, platformName, newStatus) {
+  const platform = plan.platforms.find((p) => p.name === platformName)
+  if (!platform || platform.status === newStatus) return
+
+  // Optimistic update
+  const originalStatus = platform.status
+  platform.status = newStatus
+
+  // Prepare payload
+  const updatedPlatforms = plan.platforms.map((p) => ({
+    name: p.name,
+    status: p.name === platformName ? newStatus : p.status,
+  }))
+
+  try {
+    await contentPlanStore.patchContentPlan(
+      { platforms: updatedPlatforms },
+      plan.id
+    )
+    q.notify({
+      message: `${PLATFORM_LABELS[platformName]}: ${STATUS_LABELS[newStatus]}`,
+      type: STATUS_COLORS[newStatus] || 'info',
+      position: 'top',
+      timeout: 1000,
+      icon: getStatusIcon(newStatus)
+    })
+    
+    // Refresh today's list if the plan is in it
+    if (todaysContentPlans.value.some(p => p.id === plan.id)) {
+        fetchTodaysContentPlans()
+    }
+
+  } catch (e) {
+    // Revert on error
+    platform.status = originalStatus
+    console.error('Error updating status:', e)
+    q.notify({
+      message: 'Ошибка обновления статуса',
+      type: 'negative',
+      position: 'top',
+    })
+  }
+}
+
 onMounted(() => {
   projectStore.fetchProjects()
   fetchTodaysContentPlans()
@@ -1054,15 +1246,109 @@ onMounted(() => {
 .dialog-card {
   width: 450px;
   max-width: 95vw;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+  .body--dark & {
+    background: rgba(25, 25, 25, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
 
   @media (max-width: 599px) {
-    width: 90vw;
+    width: 92vw;
+  }
+}
+
+.content-dialog-card {
+  width: 420px;
+}
+
+.form-row-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.platforms-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.platform-card-mini {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  &:hover {
+    border-color: var(--platform-color);
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+}
+
+.platform-card-mini-active {
+  border-color: var(--platform-color);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px var(--platform-color);
+}
+
+.platform-mini-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.platform-mini-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.platform-mini-status {
+  width: 100%;
+  animation: slideInDown 0.2s ease;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.status-select-mini {
+  :deep(.q-field__control) {
+    min-height: 28px;
+    height: 28px;
+    padding: 0 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+  }
+  :deep(.q-field__native) {
+    min-height: 28px;
+    padding: 0;
+    font-size: 11px;
+  }
+  :deep(.q-field__marginal) {
+    height: 28px;
   }
 }
 
@@ -1321,6 +1607,119 @@ onMounted(() => {
   border-radius: var(--radius-md);
 }
 
+.platforms-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+
+  @media (max-width: 599px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.platform-card {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+  overflow: hidden;
+
+  &:hover {
+    border-color: var(--platform-color, var(--border-color));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.platform-card-active {
+  border-color: var(--platform-color);
+  background: linear-gradient(
+    135deg,
+    rgba(var(--platform-color-rgb, 0, 0, 0), 0.05) 0%,
+    transparent 100%
+  );
+
+  .platform-card-icon {
+    background: rgba(var(--platform-color-rgb, 0, 0, 0), 0.1);
+  }
+}
+
+.platform-card-header {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  cursor: pointer;
+  gap: 0.75rem;
+}
+
+.platform-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.platform-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.platform-card-name {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+}
+
+.platform-card-checkbox {
+  flex-shrink: 0;
+}
+
+.platform-card-status {
+  padding: 0 0.75rem 0.75rem;
+  border-top: 1px solid var(--border-light);
+  margin-top: -0.25rem;
+  padding-top: 0.5rem;
+}
+
+.status-select {
+  :deep(.q-field__control) {
+    min-height: 32px;
+    padding: 0 8px;
+  }
+
+  :deep(.q-field__native) {
+    padding: 0;
+  }
+
+  :deep(.q-field__marginal) {
+    height: 32px;
+  }
+}
+
+.platforms-cell {
+  min-width: 0;
+}
+
+.platform-icons-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.platform-icon-item {
+  transition: transform 0.15s ease;
+  cursor: default;
+
+  &:hover {
+    transform: scale(1.15);
+  }
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -1357,7 +1756,7 @@ onMounted(() => {
 
 .grid-header {
   display: grid;
-  grid-template-columns: 50px 1.5fr 2fr 100px 150px 2fr 100px 100px;
+  grid-template-columns: 50px 1.5fr 100px 120px 1.5fr 100px 100px;
   gap: 1rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border-color);
@@ -1379,7 +1778,7 @@ onMounted(() => {
 
 .grid-row {
   display: grid;
-  grid-template-columns: 50px 1.5fr 2fr 100px 150px 2fr 100px 100px;
+  grid-template-columns: 50px 1.5fr 100px 120px 1.5fr 100px 100px;
   gap: 1rem;
   padding: 1rem;
   align-items: center;
@@ -1671,19 +2070,6 @@ onMounted(() => {
   &:last-child {
     margin-bottom: 0;
   }
-
-  &.status-border-PUBLISHED {
-    border-left: 4px solid var(--q-positive);
-  }
-  &.status-border-CANCELED {
-    border-left: 4px solid var(--q-negative);
-  }
-  &.status-border-RESCHEDULED {
-    border-left: 4px solid var(--q-orange);
-  }
-  &.status-border-NOT_PUBLISHED {
-    border-left: 4px solid var(--q-grey-7);
-  }
 }
 
 .mobile-card-selected {
@@ -1785,5 +2171,158 @@ onMounted(() => {
   z-index: 9999 !important;
   cursor: grabbing !important;
   display: grid !important; /* Ensure it stays a grid item */
+}
+
+.platform-status-wrapper {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 2px solid transparent;
+  transition: all 0.2s ease-out;
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+
+  &.status-PUBLISHED {
+    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+  }
+  &.status-CANCELED {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+  }
+  &.status-NOT_PUBLISHED {
+    border-color: #9ca3af;
+    background: rgba(156, 163, 175, 0.1);
+  }
+  &.status-RESCHEDULED {
+    border-color: #f97316;
+    background: rgba(249, 115, 22, 0.1);
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.status-indicator-icon {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  z-index: 2;
+
+  .status-PUBLISHED & {
+    color: #22c55e;
+    border-color: #22c55e;
+    background: #ecfdf5; 
+  }
+  .status-CANCELED & {
+    color: #ef4444;
+    border-color: #ef4444;
+    background: #fef2f2;
+  }
+  .status-RESCHEDULED & {
+    color: #f97316;
+    border-color: #f97316;
+    background: #fff7ed;
+  }
+}
+</style>
+
+<style lang="scss">
+.glass-tooltip {
+  background: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+  color: #000 !important;
+  border-radius: 8px !important;
+  font-size: 10px !important;
+  padding: 4px 8px !important;
+  letter-spacing: 0.3px;
+  
+  .body--dark & {
+    background: rgba(20, 20, 20, 0.65) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+  }
+}
+
+.glass-menu {
+  background: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(15px) !important;
+  -webkit-backdrop-filter: blur(15px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+
+  .body--dark & {
+    background: rgba(20, 20, 20, 0.65) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  .q-list {
+    min-width: 130px !important;
+    background: transparent !important;
+    padding: 4px !important;
+  }
+
+  .q-item {
+    min-height: 32px !important;
+    padding: 4px 8px !important;
+    border-radius: 8px !important;
+    margin-bottom: 2px;
+    font-size: 11px !important;
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3) !important;
+      .body--dark & {
+        background: rgba(255, 255, 255, 0.05) !important;
+      }
+    }
+
+    &.bg-blue-1 {
+      background: rgba(59, 130, 246, 0.15) !important;
+      font-weight: 600;
+    }
+  }
+
+  .q-item__section--main {
+    font-size: 11px !important;
+  }
+
+  .q-icon {
+    font-size: 14px !important;
+  }
 }
 </style>

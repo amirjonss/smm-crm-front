@@ -21,7 +21,7 @@ export default defineConfig((ctx) => {
     extras: [
       // 'ionicons-v4',
       // 'mdi-v7',
-      // 'fontawesome-v6',
+      'fontawesome-v6',
       // 'eva-icons',
       // 'themify',
       // 'line-awesome',
@@ -47,14 +47,18 @@ export default defineConfig((ctx) => {
 
       // publicPath: '/',
       // analyze: true,
-      env: {},
+      // env: {},
       // rawDefine: {}
       // ignorePublicFolder: true,
       // minify: false,
       // polyfillModulePreload: true,
       // distDir
 
-      // extendViteConf (viteConf) {},
+      extendViteConf(viteConf) {
+        viteConf.resolve = viteConf.resolve || {}
+        viteConf.resolve.alias = viteConf.resolve.alias || {}
+        viteConf.resolve.alias['@'] = fileURLToPath(new URL('./src', import.meta.url))
+      },
       // viteVuePluginOptions: {},
 
       vitePlugins: [

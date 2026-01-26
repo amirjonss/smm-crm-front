@@ -62,7 +62,6 @@
                     v-for="event in getEventsForDate(day.date).slice(0, 2)"
                     :key="event.id"
                     class="event-chip"
-                    :class="`status-${event.status}`"
                     @click.stop="openEventDialog(event)"
                   >
                     <div class="row no-wrap items-center q-gutter-x-xs">
@@ -87,7 +86,6 @@
                       v-for="event in getEventsForDate(day.date)"
                       :key="event.id"
                       class="day-dot"
-                      :class="'status-' + event.status"
                     ></div>
                   </div>
                 </template>
@@ -117,7 +115,6 @@
                       v-for="event in getEventsForDate(day.date)"
                       :key="event.id"
                       class="event-chip glass-chip cursor-pointer"
-                      :class="`status-${event.status}`"
                       @click="openEventDialog(event)"
                     >
                       <div class="row no-wrap items-center q-gutter-x-xs">
@@ -146,7 +143,7 @@
 
     <!-- Mobile/Busy Day Events List Dialog (Centered) -->
     <q-dialog v-model="showDayList">
-      <q-card class="calendar-dialog-card" style="width: 100%; min-width: 320px; max-width: 450px">
+      <q-card class="dialog-card" style="width: 100%; min-width: 320px; max-width: 450px">
         <q-card-section class="row items-center justify-between">
           <div class="text-h6">{{ selectedDateLabel }}</div>
           <div class="row q-gutter-xs">
@@ -158,7 +155,9 @@
               icon="add"
               color="primary"
               @click="openCreateDialog(selectedDateForMobileList)"
-            />
+            >
+              <q-tooltip class="glass-tooltip">Добавить контент</q-tooltip>
+            </q-btn>
             <q-btn icon="close" flat round dense v-close-popup />
           </div>
         </q-card-section>
@@ -174,24 +173,36 @@
               clickable
               v-ripple
               @click="openEventDialog(event)"
+              class="q-py-md"
             >
               <q-item-section avatar>
                 <q-icon
                   :name="getIconForFormat(event.format)"
-                  :color="getColorForStatus(event.status)"
+                  color="primary"
+                  size="sm"
                 />
               </q-item-section>
               <q-item-section>
                 <q-item-label class="text-weight-bold text-primary">{{
                   event.projectName
                 }}</q-item-label>
-                <q-item-label caption lines="1">{{ event.title }}</q-item-label>
-                <q-item-label caption
-                  >{{ event.format }} • {{ getStatusLabel(event.status) }}</q-item-label
-                >
+                <q-item-label class="text-body2" lines="1">{{ event.title }}</q-item-label>
+                <q-item-label caption>
+                  <span class="format-badge" style="font-size: 10px">{{ event.format }}</span>
+                </q-item-label>
               </q-item-section>
               <q-item-section side>
-                <q-icon name="chevron_right" color="grey" />
+                <div class="row q-gutter-x-xs">
+                  <div 
+                    v-for="p in event.platforms" 
+                    :key="p.name"
+                    class="platform-status-wrapper"
+                    :class="`status-${p.status}`"
+                    style="width: 20px; height: 20px"
+                  >
+                    <q-icon :name="PLATFORM_ICONS[p.name]" size="10px" :style="{ color: PLATFORM_COLORS[p.name] }" />
+                  </div>
+                </div>
               </q-item-section>
             </q-item>
           </q-list>
@@ -201,7 +212,7 @@
 
     <!-- Global Event Detail/Edit Dialog -->
     <q-dialog v-model="isEventDialogOpen">
-      <q-card class="calendar-dialog-card q-pa-none" style="min-width: 320px; max-width: 400px; overflow: hidden">
+      <q-card class="dialog-card content-dialog-card q-pa-none" style="overflow: hidden">
         <!-- VIEW MODE -->
         <div v-if="!isEditing && tempEvent.id">
           <q-card-section class="row items-center justify-between q-pb-sm">
@@ -217,55 +228,37 @@
                 color="primary"
                 @click="isEditing = true"
               >
-                <q-tooltip>Редактировать</q-tooltip>
+                <q-tooltip class="glass-tooltip">Редактировать</q-tooltip>
               </q-btn>
               <q-btn flat round dense icon="close" size="sm" v-close-popup />
             </div>
           </q-card-section>
 
           <q-card-section class="q-pt-none q-gutter-y-sm">
-            <div>
-              <div class="text-caption text-grey-7">Проект</div>
-              <div class="text-body2 text-weight-medium text-primary">
-                {{ tempEvent.projectName || 'Без проекта' }}
-              </div>
-            </div>
-
-            <div v-if="userStore.isAdmin">
-              <div class="text-caption text-grey-7">Исполнитель</div>
-              <div class="text-body2 text-weight-medium text-secondary">
-                {{ tempEvent.responsibleName || 'Не назначен' }}
-              </div>
-            </div>
-
-            <div>
-              <div class="text-caption text-grey-7">Post (Заголовок)</div>
-              <div class="text-body2">{{ tempEvent.title }}</div>
-            </div>
-
             <div class="row q-col-gutter-sm">
-              <div class="col-6">
-                <div class="text-caption text-grey-7">Format (Тип)</div>
-                <q-chip
-                  dense
-                  square
-                  outline
-                  color="primary"
-                  :label="tempEvent.format"
-                  :icon="getIconForFormat(tempEvent.format)"
-                  class="q-ma-none q-mt-xs"
-                />
+              <div class="col-12 col-sm-6">
+                <div class="text-caption text-grey-7">Проект</div>
+                <div class="text-body2 text-weight-medium text-primary">
+                  {{ tempEvent.projectName || 'Без проекта' }}
+                </div>
               </div>
-              <div class="col-6">
-                <div class="text-caption text-grey-7">Status</div>
-                <q-chip
-                  dense
-                  square
-                  :label="getStatusLabel(tempEvent.status)"
-                  :color="getColorForStatus(tempEvent.status)"
-                  text-color="white"
-                  class="q-ma-none q-mt-xs"
-                />
+
+              <div v-if="userStore.isAdmin" class="col-12 col-sm-6">
+                <div class="text-caption text-grey-7">Исполнитель</div>
+                <div class="text-body2 text-weight-medium text-secondary">
+                  {{ tempEvent.responsibleName || 'Не назначен' }}
+                </div>
+              </div>
+            </div>
+
+            <div class="row q-col-gutter-sm items-center">
+              <div class="col-12 col-sm-8">
+                <div class="text-caption text-grey-7">Post (Заголовок)</div>
+                <div class="text-body2 text-weight-medium">{{ tempEvent.title }}</div>
+              </div>
+              <div class="col-12 col-sm-4">
+                <div class="text-caption text-grey-7">Format</div>
+                <span class="format-badge">{{ tempEvent.format }}</span>
               </div>
             </div>
 
@@ -273,7 +266,7 @@
               <div class="text-caption text-grey-7">Idea (Идея)</div>
               <div
                 class="text-body2 popup-idea-box q-pa-sm rounded-borders"
-                style="white-space: pre-wrap"
+                style="white-space: pre-wrap; font-size: 13px"
               >
                 {{ tempEvent.idea || 'Нет описания идеи...' }}
               </div>
@@ -281,7 +274,31 @@
 
             <div>
               <div class="text-caption text-grey-7">Дата</div>
-              <div class="text-body2">{{ date.formatDate(tempEvent.date, 'D MMMM YYYY') }}</div>
+              <div class="text-body2 text-weight-medium">{{ date.formatDate(tempEvent.date, 'D MMMM YYYY') }}</div>
+            </div>
+
+            <div v-if="getEnabledPlatforms(tempEvent.platforms).length > 0">
+              <div class="text-caption text-grey-7 q-mb-xs">Платформы</div>
+              <div class="platform-icons-row">
+                <div
+                  v-for="platform in getEnabledPlatforms(tempEvent.platforms)"
+                  :key="platform.name"
+                  class="platform-status-wrapper"
+                  :class="`status-${platform.status}`"
+                >
+                  <q-icon
+                    :name="PLATFORM_ICONS[platform.name]"
+                    size="16px"
+                    :style="{ color: PLATFORM_COLORS[platform.name] }"
+                  />
+                  <div v-if="getStatusIcon(platform.status)" class="status-indicator-icon">
+                    <q-icon :name="getStatusIcon(platform.status)" size="8px" />
+                  </div>
+                  <q-tooltip class="glass-tooltip">
+                    {{ PLATFORM_LABELS[platform.name] }}: {{ STATUS_LABELS[platform.status] }}
+                  </q-tooltip>
+                </div>
+              </div>
             </div>
           </q-card-section>
         </div>
@@ -289,8 +306,8 @@
         <!-- EDIT/CREATE MODE -->
         <div v-else>
           <q-card-section class="row items-center q-pb-none">
-            <div class="text-subtitle1">
-              {{ tempEvent.id ? 'Редактирование' : 'Создание контента' }}
+            <div class="text-h6">
+              {{ tempEvent.id ? 'Редактировать контент' : 'Добавить контент' }}
             </div>
             <q-space />
             <q-btn
@@ -302,80 +319,195 @@
               size="sm"
               @click="isEditing = false"
             />
-            <q-btn v-else icon="close" flat round dense size="sm" v-close-popup />
+            <q-btn v-else icon="close" flat round dense v-close-popup />
           </q-card-section>
 
-          <q-card-section>
-            <q-form @submit.prevent="saveEvent" class="q-gutter-md">
-              <q-select
-                v-model="tempEvent.projectId"
-                :options="projectOptions"
-                label="Проект"
-                dense
-                outlined
-                emit-value
-                map-options
-                :rules="[(val) => !!val || 'Выберите проект']"
-              />
+          <q-card-section class="q-pt-md">
+            <q-form @submit.prevent="saveEvent">
+              <div class="form-group q-mb-sm">
+                <label class="form-label">Проект</label>
+                <q-select
+                  v-model="tempEvent.projectId"
+                  :options="projectOptions"
+                  dense
+                  outlined
+                  emit-value
+                  map-options
+                  placeholder="Выберите проект"
+                  class="modern-input"
+                  lazy-rules
+                  :rules="[(val) => !!val || 'Выберите проект']"
+                />
+              </div>
 
-              <q-select
-                v-if="userStore.isAdmin"
-                v-model="tempEvent.responsibleId"
-                :options="userOptions"
-                label="Исполнитель"
-                dense
-                outlined
-                emit-value
-                map-options
-              />
+              <div v-if="userStore.isAdmin" class="form-group q-mb-sm">
+                <label class="form-label">Исполнитель</label>
+                <q-select
+                  v-model="tempEvent.responsibleId"
+                  :options="userOptions"
+                  dense
+                  outlined
+                  emit-value
+                  map-options
+                  placeholder="Выберите исполнителя"
+                  class="modern-input"
+                />
+              </div>
 
-              <q-input
-                v-model="tempEvent.title"
-                label="Post (Заголовок)"
-                dense
-                outlined
-                autofocus
-                :rules="[(val) => !!val || 'Обязательное поле']"
-              />
-
-              <div class="row q-col-gutter-sm">
-                <div class="col-6">
+              <div class="form-row-grid">
+                <div class="form-group">
+                  <label class="form-label">Пост</label>
+                  <q-input
+                    v-model="tempEvent.title"
+                    outlined
+                    dense
+                    placeholder="Название поста"
+                    autofocus
+                    lazy-rules
+                    :rules="[(val) => !!val || 'Заполните поле']"
+                    class="modern-input"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Формат</label>
                   <q-select
                     v-model="tempEvent.format"
                     :options="typeOptions"
-                    label="Format (Тип)"
-                    dense
                     outlined
+                    dense
                     emit-value
                     map-options
-                  />
-                </div>
-                <div class="col-6">
-                  <q-select
-                    v-model="tempEvent.status"
-                    :options="statusOptions"
-                    label="Status"
-                    dense
-                    outlined
-                    emit-value
-                    map-options
+                    placeholder="Выберите формат"
+                    lazy-rules
+                    :rules="[(val) => !!val || 'Выберите формат']"
+                    class="modern-input"
                   />
                 </div>
               </div>
 
-              <q-input
-                v-model="tempEvent.idea"
-                label="Idea (Идея)"
-                dense
-                outlined
-                type="textarea"
-                rows="3"
-              />
+              <div class="form-group q-mb-sm">
+                <label class="form-label">Дата</label>
+                <q-input
+                  v-model="tempEvent.dateString"
+                  type="date"
+                  outlined
+                  dense
+                  lazy-rules
+                  :rules="[(val) => !!val || 'Выберите дату']"
+                  class="modern-input"
+                />
+              </div>
 
-              <q-input v-model="tempEvent.dateString" label="Дата" dense outlined type="date" />
+              <div class="form-group q-mb-sm">
+                <label class="form-label">Идея</label>
+                <q-input
+                  v-model="tempEvent.idea"
+                  outlined
+                  dense
+                  autogrow
+                  placeholder="Опишите идею"
+                  lazy-rules
+                  :rules="[(val) => !!val || 'Заполните поле']"
+                  class="modern-input"
+                />
+              </div>
 
-              <div class="row justify-end q-mt-md">
-                <q-btn label="Сохранить" color="primary" unelevated size="sm" @click="saveEvent" />
+              <div class="form-group q-mb-md">
+                <label class="form-label">Платформы</label>
+                <div class="platforms-compact-grid q-mt-xs">
+                  <div
+                    v-for="platform in platformOptions"
+                    :key="platform.value"
+                    class="platform-card-mini"
+                    :class="{
+                      'platform-card-mini-active': tempEvent.platforms[platform.value]?.enabled,
+                    }"
+                    :style="{
+                      '--platform-color': PLATFORM_COLORS[platform.value],
+                    }"
+                    @click="togglePlatform(platform.value)"
+                  >
+                    <div class="platform-mini-main">
+                      <q-icon
+                        :name="platform.icon"
+                        size="18px"
+                        :style="{ color: PLATFORM_COLORS[platform.value] }"
+                      />
+                      <span class="platform-mini-name">{{ platform.label }}</span>
+                      <q-checkbox
+                        :model-value="tempEvent.platforms[platform.value]?.enabled"
+                        @update:model-value="togglePlatform(platform.value)"
+                        dense
+                        size="xs"
+                        class="platform-mini-checkbox"
+                        @click.stop
+                      />
+                    </div>
+                    
+                    <div
+                      v-if="tempEvent.platforms[platform.value]?.enabled"
+                      class="platform-mini-status"
+                      @click.stop
+                    >
+                      <q-select
+                        v-model="tempEvent.platforms[platform.value].status"
+                        :options="statusOptions"
+                        dense
+                        outlined
+                        emit-value
+                        map-options
+                        class="status-select-mini"
+                        popup-content-class="status-popup-mini"
+                      >
+                        <template #selected-item="{ opt }">
+                          <div class="row items-center no-wrap">
+                            <q-badge
+                              :color="STATUS_COLORS[opt.value] || 'grey'"
+                              rounded
+                              class="q-mr-xs"
+                              style="width: 6px; height: 6px; min-width: 6px"
+                            />
+                            <span style="font-size: 10px">{{ opt.label }}</span>
+                          </div>
+                        </template>
+                        <template #option="{ itemProps, opt }">
+                          <q-item v-bind="itemProps" dense style="min-height: 28px; padding: 4px 8px">
+                            <q-item-section avatar style="min-width: 20px">
+                              <q-badge
+                                :color="STATUS_COLORS[opt.value] || 'grey'"
+                                rounded
+                                style="width: 10px; height: 10px; min-width: 10px"
+                              />
+                            </q-item-section>
+                            <q-item-section>
+                              <q-item-label style="font-size: 11px">{{ opt.label }}</q-item-label>
+                            </q-item-section>
+                          </q-item>
+                        </template>
+                      </q-select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-actions row justify-end q-gutter-sm q-mt-md">
+                <q-btn
+                  flat
+                  label="Отмена"
+                  color="grey-7"
+                  dense
+                  v-close-popup
+                  class="btn-cancel"
+                />
+                <q-btn
+                  type="submit"
+                  :label="tempEvent.id ? 'Сохранить' : 'Добавить'"
+                  unelevated
+                  dense
+                  color="primary"
+                  class="btn-primary-action"
+                  style="padding: 4px 24px"
+                />
               </div>
             </q-form>
           </q-card-section>
@@ -391,6 +523,17 @@ import { date, useQuasar } from 'quasar'
 import { useProjectStore } from 'stores/project.js'
 import { useUserStore } from 'stores/user.js'
 import { useContentPlanStore } from 'stores/content-plan.js'
+import {
+  PLATFORM_OPTIONS,
+  PLATFORM,
+  STATUS,
+  STATUS_OPTIONS,
+  PLATFORM_COLORS,
+  PLATFORM_ICONS,
+  PLATFORM_LABELS,
+  STATUS_COLORS,
+  STATUS_LABELS,
+} from '@/constants/status'
 
 // 1. Store Hooks
 const $q = useQuasar()
@@ -414,7 +557,6 @@ const tempEvent = ref({
   id: null,
   title: '',
   format: 'Post', // Default Format
-  status: 'NOT_PUBLISHED', // Default Status
   dateString: '',
   idea: '',
   date: new Date(),
@@ -422,7 +564,34 @@ const tempEvent = ref({
   projectName: '',
   responsibleId: null,
   responsibleName: '',
+  platforms: {}, // { INSTAGRAM: { enabled: true, status: 'NOT_PUBLISHED' }, ... }
 })
+
+const platformOptions = PLATFORM_OPTIONS
+const statusOptions = STATUS_OPTIONS
+
+// Initialize empty platforms object
+function getEmptyPlatforms() {
+  const platforms = {}
+  Object.values(PLATFORM).forEach((name) => {
+    platforms[name] = { enabled: false, status: STATUS.NOT_PUBLISHED }
+  })
+  return platforms
+}
+
+// Toggle platform selection
+function togglePlatform(platformName) {
+  tempEvent.value.platforms[platformName].enabled =
+    !tempEvent.value.platforms[platformName].enabled
+}
+
+// Get enabled platforms as array for display
+function getEnabledPlatforms(platforms) {
+  if (!platforms) return []
+  return Object.entries(platforms)
+    .filter(([, data]) => data.enabled)
+    .map(([name, data]) => ({ name, status: data.status }))
+}
 
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const monthNames = [
@@ -447,14 +616,6 @@ const typeOptions = [
   { label: 'Reels', value: 'Reels' },
   { label: 'Carousel', value: 'Carousel' },
   { label: 'Animation', value: 'Animation' },
-]
-
-// API Strict Values: PUBLISHED, CANCELED, NOT_PUBLISHED, RESCHEDULED
-const statusOptions = [
-  { label: 'Не опубликовано', value: 'NOT_PUBLISHED', color: 'grey' },
-  { label: 'Опубликовано', value: 'PUBLISHED', color: 'positive' },
-  { label: 'Отменено', value: 'CANCELED', color: 'negative' },
-  { label: 'Перенесено', value: 'RESCHEDULED', color: 'orange' },
 ]
 
 // 3. Computed Properties
@@ -572,28 +733,22 @@ function getIconForFormat(format) {
   }
 }
 
-function getColorForStatus(status) {
-  switch (status) {
-    case 'PUBLISHED':
-      return 'positive' // Green
-    case 'CANCELED':
-      return 'negative' // Red
-    case 'RESCHEDULED':
-      return 'orange' // Orange
-    case 'NOT_PUBLISHED':
-    default:
-      return 'grey-7' // Gray
-  }
-}
-
-function getStatusLabel(status) {
-  const opt = statusOptions.find((o) => o.value === status)
-  return opt ? opt.label : status
-}
-
 function truncateText(text, length) {
   if (!text) return ''
   return text.length > length ? text.substring(0, length) + '...' : text
+}
+
+function getStatusIcon(status) {
+  switch (status) {
+    case STATUS.PUBLISHED:
+      return 'check'
+    case STATUS.CANCELED:
+      return 'close'
+    case STATUS.RESCHEDULED:
+      return 'schedule'
+    default:
+      return ''
+  }
 }
 
 // 5. Async Functions
@@ -617,7 +772,6 @@ async function fetchEvents() {
         title: item.post,
         date: new Date(item.date),
         format: item.format || 'Post', // API Field
-        status: item.status || 'NOT_PUBLISHED', // API Field
         idea: item.idea,
         projectId: item.project?.id,
         projectName: item.project?.name,
@@ -625,6 +779,7 @@ async function fetchEvents() {
         responsibleName: executor
           ? `${executor.givenName || ''} ${executor.familyName || ''}`.trim()
           : null,
+        platforms: item.platforms || [],
       }
     })
   } catch (e) {
@@ -634,13 +789,21 @@ async function fetchEvents() {
 }
 
 async function saveEvent() {
+  // Convert platforms object to array for API
+  const platforms = Object.entries(tempEvent.value.platforms)
+    .filter(([, data]) => data.enabled)
+    .map(([name, data]) => ({
+      name,
+      status: data.status,
+    }))
+
   const payload = {
     post: tempEvent.value.title,
     format: tempEvent.value.format, // strict value
-    status: tempEvent.value.status, // strict value
     idea: tempEvent.value.idea,
     date: new Date(tempEvent.value.dateString).toISOString(),
     project: tempEvent.value.projectId ? `/api/projects/${tempEvent.value.projectId}` : null,
+    platforms,
     // executor: tempEvent.value.responsibleId ? `/api/users/${tempEvent.value.responsibleId}` : null
   }
 
@@ -711,9 +874,19 @@ function goToToday() {
 
 function openEventDialog(event) {
   isEditing.value = false
+  // Build platforms object from existing data
+  const platforms = getEmptyPlatforms()
+  if (event.platforms && Array.isArray(event.platforms)) {
+    event.platforms.forEach((p) => {
+      if (p.name && platforms[p.name]) {
+        platforms[p.name] = { enabled: true, status: p.status || STATUS.NOT_PUBLISHED }
+      }
+    })
+  }
   tempEvent.value = {
     ...event,
     dateString: date.formatDate(event.date, 'YYYY-MM-DD'),
+    platforms,
   }
   isEventDialogOpen.value = true
   showDayList.value = false
@@ -725,7 +898,6 @@ function openCreateDialog(dateObj) {
     id: null,
     title: '',
     format: 'Post',
-    status: 'NOT_PUBLISHED',
     idea: '',
     date: dateObj,
     dateString: date.formatDate(dateObj, 'YYYY-MM-DD'),
@@ -733,6 +905,7 @@ function openCreateDialog(dateObj) {
     projectName: '',
     responsibleId: null,
     responsibleName: '',
+    platforms: getEmptyPlatforms(),
   }
   isEventDialogOpen.value = true
   showDayList.value = false
@@ -809,13 +982,147 @@ onMounted(() => {
   padding: 0;
 }
 
-.calendar-dialog-card {
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+.dialog-card {
+  width: 450px;
+  max-width: 95vw;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+  .body--dark & {
+    background: rgba(25, 25, 25, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  @media (max-width: 599px) {
+    width: 92vw;
+  }
+}
+
+.modern-input {
+  :deep(.q-field__control) {
+    background: rgba(0, 0, 0, 0.03) !important;
+    .body--dark & {
+      background: rgba(255, 255, 255, 0.05) !important;
+    }
+  }
+}
+
+.status-select-mini {
+  :deep(.q-field__control) {
+    min-height: 28px;
+    height: 28px;
+    padding: 0 8px;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+
+    .body--dark & {
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+  :deep(.q-field__native) {
+    min-height: 28px;
+    padding: 0;
+    font-size: 11px;
+  }
+  :deep(.q-field__marginal) {
+    height: 28px;
+  }
+}
+
+.platform-status-wrapper {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 2px solid transparent;
+  transition: all 0.2s ease-out;
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+
+  &.status-PUBLISHED {
+    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+  }
+  &.status-CANCELED {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+  }
+  &.status-NOT_PUBLISHED {
+    border-color: #9ca3af;
+    background: rgba(156, 163, 175, 0.1);
+  }
+  &.status-RESCHEDULED {
+    border-color: #f97316;
+    background: rgba(249, 115, 22, 0.1);
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.status-indicator-icon {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  z-index: 2;
+
+  .status-PUBLISHED & {
+    color: #22c55e;
+    border-color: #22c55e;
+    background: #ecfdf5; 
+  }
+  .status-CANCELED & {
+    color: #ef4444;
+    border-color: #ef4444;
+    background: #fef2f2;
+  }
+  .status-RESCHEDULED & {
+    color: #f97316;
+    border-color: #f97316;
+    background: #fff7ed;
+  }
+}
+
+.format-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 0.25rem 0.5rem;
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+  border-radius: 4px;
+}
+
+.platform-icons-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-wrap: wrap;
 }
 
 .page-container {
@@ -1078,7 +1385,9 @@ onMounted(() => {
   border-radius: 8px;
   font-size: 0.75rem;
   cursor: pointer;
-  border-left: 3px solid transparent;
+  border-left: 3px solid #8b5cf6;
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--text-primary);
   transition: all 0.2s ease;
   max-width: 100%;
   overflow: hidden;
@@ -1129,65 +1438,12 @@ onMounted(() => {
   }
 }
 
-/* Status Color Coding */
-.status-PUBLISHED {
-  background: rgba(33, 186, 69, 0.15);
-  border-left-color: #21ba45;
-  color: #1b5e20;
-  .body--dark & {
-    background: rgba(33, 186, 69, 0.25);
-    color: #a5d6a7;
-  }
-}
-
-.status-CANCELED {
-  background: rgba(193, 0, 21, 0.15);
-  border-left-color: #c10015;
-  color: #b71c1c;
-  .body--dark & {
-    background: rgba(193, 0, 21, 0.25);
-    color: #ef9a9a;
-  }
-}
-
-.status-RESCHEDULED {
-  background: rgba(242, 192, 55, 0.15);
-  border-left-color: #f2c037;
-  color: #e65100;
-  .body--dark & {
-    background: rgba(242, 192, 55, 0.25);
-    color: #ffe0b2;
-  }
-}
-
-.status-NOT_PUBLISHED {
-  background: rgba(158, 158, 158, 0.15);
-  border-left-color: #9e9e9e;
-  color: #424242;
-  .body--dark & {
-    background: rgba(158, 158, 158, 0.25);
-    color: #eeeeee;
-  }
-}
-
 /* Mobile Dots */
 .day-dot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-
-  &.status-PUBLISHED {
-    background-color: #21ba45;
-  }
-  &.status-CANCELED {
-    background-color: #c10015;
-  }
-  &.status-RESCHEDULED {
-    background-color: #f2c037;
-  }
-  &.status-NOT_PUBLISHED {
-    background-color: #9e9e9e;
-  }
+  background-color: #8b5cf6;
 }
 
 .event-title {
@@ -1209,52 +1465,44 @@ onMounted(() => {
   border: 1px solid var(--border-color);
 }
 
-.popup-chip {
-  font-weight: 600;
+.platform-section {
+  margin-top: 0.5rem;
+}
 
-  &.chip-post {
-    background: #e3f2fd;
-    color: #0d47a1;
-    .body--dark & {
-      background: #1e3a8a;
-      color: #bfdbfe;
-    }
-  }
+.platforms-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
 
-  &.chip-story {
-    background: #fff3e0;
-    color: #e65100;
-    .body--dark & {
-      background: #7c2d12;
-      color: #fed7aa;
-    }
-  }
+.platform-card-mini {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 
-  &.chip-video {
-    background: #fce4ec;
-    color: #880e4f;
-    .body--dark & {
-      background: #831843;
-      color: #fbcfe8;
-    }
+  &:hover {
+    border-color: var(--platform-color);
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   }
+}
 
-  &.chip-carousel {
-    background: #f0fdf4;
-    color: #166534;
-    .body--dark & {
-      background: #14532d;
-      color: #bbf7d0;
-    }
-  }
+.platform-card-mini-active {
+  border-color: var(--platform-color);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px var(--platform-color);
+}
 
-  &.chip-animation {
-    background: #f5f3ff;
-    color: #5b21b6;
-    .body--dark & {
-      background: #4c1d95;
-      color: #ddd6fe;
-    }
-  }
+.platform-mini-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 </style>

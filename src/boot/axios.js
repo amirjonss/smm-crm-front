@@ -2,7 +2,7 @@ import { defineBoot } from '#q-app/wrappers'
 import axios from 'axios'
 import { useAuthStore } from 'stores/auth.js'
 
-const baseUrl = process.env.VUE_APP_BASE_URL
+const baseUrl = import.meta.env.VITE_BASE_URL
 const api = axios.create({ baseURL: baseUrl })
 api.defaults.headers.common['Content-Type'] = 'application/ld+json'
 api.defaults.headers.patch['Content-Type'] = 'application/merge-patch+json'
@@ -15,7 +15,6 @@ api.interceptors.request.use(
     return config
   },
   function (error) {
-    console.log('interceptor', error)
     return Promise.reject(error)
   },
 )
@@ -28,22 +27,15 @@ api.interceptors.response.use(
     if (error.response === undefined) {
       return Promise.reject('connection refused')
     }
-    console.log(error.response.status)
-    console.log(error.config.url)
-    console.log(error.response.data)
     if (
       error.response.status === 401 &&
-      (error.config.url !== '/api/users/auth' ||
-        error.config.url !== '/api/users/auth/refreshToken')
+      error.config.url !== '/api/users/auth' &&
+      error.config.url !== '/api/users/auth/refreshToken'
     ) {
-      console.log('need to clean token')
-
       useAuthStore()
         .fetchRefreshToken()
         .then(() => {
-          api(error.config).then(() => {
-            console.log('done')
-          })
+          api(error.config)
         })
         .catch(() => {
           useAuthStore().clearTokens()

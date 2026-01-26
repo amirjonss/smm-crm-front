@@ -19,6 +19,18 @@ before_script:
 #      git pull origin dev &&
 #      docker-compose up"
 
+deploy-dev-job:
+  stage: deploy
+  only:
+    - dev
+  script:
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - echo "Deploying dev project..."
+    - ssh -tt -o StrictHostKeyChecking=no $SSH_HOST "cd /root/sites/static/kh-agency-crm-front-dev &&
+      git reset --hard &&
+      git pull origin dev &&
+      docker compose --env-file=.env.local up --build"
+
 deploy-prod-job:
   stage: deploy
   only:
