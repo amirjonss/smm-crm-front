@@ -11,6 +11,7 @@
         <!-- Header Navigation (Desktop) -->
         <div class="header-nav q-ml-md gt-sm">
           <q-btn flat no-caps label="Календарь" to="/calendar" class="nav-btn" />
+          <q-btn flat no-caps label="Список проектов" to="/dashboard/projects-list" class="nav-btn" />
         </div>
 
         <q-space />
@@ -38,13 +39,19 @@
 
               <q-separator />
 
-              <!-- Mobile Calendar Link -->
+              <!-- Mobile Navigation Links -->
               <template v-if="$q.screen.lt.md">
                 <q-item clickable to="/calendar" class="menu-item">
                   <q-item-section avatar>
                     <q-icon name="calendar_month" size="20px" />
                   </q-item-section>
                   <q-item-section> Календарь </q-item-section>
+                </q-item>
+                <q-item clickable to="/dashboard/projects-list" class="menu-item">
+                  <q-item-section avatar>
+                    <q-icon name="list_alt" size="20px" />
+                  </q-item-section>
+                  <q-item-section> Список проектов </q-item-section>
                 </q-item>
                 <q-separator />
               </template>
@@ -163,7 +170,11 @@ function logout() {
   height: 32px;
   width: auto;
   display: block;
-  filter: brightness(0) invert(1);
+  filter: brightness(0);
+
+  .body--dark & {
+    filter: brightness(0) invert(1);
+  }
 
   @media (max-width: 599px) {
     height: 28px;

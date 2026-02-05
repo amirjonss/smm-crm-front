@@ -47,6 +47,12 @@ const routes = [
     beforeEnter: [isAuthorised, isAdmin],
   },
   {
+    path: '/dashboard/projects-list',
+    component: () => import('layouts/DashboardLayout.vue'),
+    children: [{ path: '', component: () => import('pages/dashboard/ProjectsListPage.vue') }],
+    beforeEnter: [isAuthorised, isAdmin],
+  },
+  {
     path: '/projects',
     component: () => import('layouts/MainLayout.vue'),
     children: [{ path: '', component: () => import('pages/main/IndexPage.vue') }],
