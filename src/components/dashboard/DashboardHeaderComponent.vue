@@ -10,8 +10,22 @@
 
         <!-- Header Navigation (Desktop) -->
         <div class="header-nav q-ml-md gt-sm">
-          <q-btn flat no-caps label="Календарь" to="/calendar" class="nav-btn" />
-          <q-btn flat no-caps label="Список проектов" to="/dashboard/projects-list" class="nav-btn" />
+          <q-btn
+            flat
+            no-caps
+            label="Календарь"
+            to="/calendar"
+            class="nav-btn"
+            :class="{ 'nav-btn-active': $route.path === '/calendar' }"
+          />
+          <q-btn
+            flat
+            no-caps
+            label="Список проектов"
+            to="/dashboard/projects-list"
+            class="nav-btn"
+            :class="{ 'nav-btn-active': $route.path === '/dashboard/projects-list' }"
+          />
         </div>
 
         <q-space />
@@ -41,13 +55,23 @@
 
               <!-- Mobile Navigation Links -->
               <template v-if="$q.screen.lt.md">
-                <q-item clickable to="/calendar" class="menu-item">
+                <q-item
+                  clickable
+                  to="/calendar"
+                  class="menu-item"
+                  :class="{ 'menu-item-active': $route.path === '/calendar' }"
+                >
                   <q-item-section avatar>
                     <q-icon name="calendar_month" size="20px" />
                   </q-item-section>
                   <q-item-section> Календарь </q-item-section>
                 </q-item>
-                <q-item clickable to="/dashboard/projects-list" class="menu-item">
+                <q-item
+                  clickable
+                  to="/dashboard/projects-list"
+                  class="menu-item"
+                  :class="{ 'menu-item-active': $route.path === '/dashboard/projects-list' }"
+                >
                   <q-item-section avatar>
                     <q-icon name="list_alt" size="20px" />
                   </q-item-section>
@@ -86,12 +110,13 @@
 import { useUserStore } from 'stores/user.js'
 import { useAuthStore } from 'stores/auth.js'
 import { useThemeStore } from 'stores/theme.js'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { computed } from 'vue'
 import { useQuasar } from 'quasar'
 
 const authStore = useAuthStore()
 const router = useRouter()
+const $route = useRoute()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
 const $q = useQuasar()
@@ -199,15 +224,35 @@ function logout() {
 
 .nav-btn {
   color: var(--text-secondary);
+  font-weight: 500;
+  position: relative;
+  transition: color 0.3s ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%) scaleX(0);
+    width: 80%;
+    height: 2px;
+    background: #8b5cf6;
+    transition: transform 0.3s ease;
+  }
 
   &:hover {
     color: var(--text-primary);
-    background: var(--bg-hover);
   }
 
-  &.q-router-link-active {
-    color: #8b5cf6;
-    background: rgba(139, 92, 246, 0.1);
+  &.q-router-link-active,
+  &.q-router-link-exact-active,
+  &.nav-btn-active {
+    color: #8b5cf6 !important;
+    font-weight: 600;
+
+    &::after {
+      transform: translateX(-50%) scaleX(1);
+    }
   }
 }
 
@@ -257,12 +302,46 @@ function logout() {
 }
 
 .menu-item {
+  position: relative;
+  transition: color 0.3s ease;
+
   @media (max-width: 599px) {
     min-height: 40px;
     font-size: 13px;
 
     :deep(.q-item__section--avatar) {
       min-width: 40px;
+    }
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 3px;
+    height: 0;
+    background: #8b5cf6 !important;
+    transition: height 0.3s ease;
+  }
+
+  &.q-router-link-active,
+  &.q-router-link-exact-active,
+  &.menu-item-active {
+    color: #8b5cf6 !important;
+    font-weight: 600;
+
+    &::after {
+      height: 100%;
+      background: #8b5cf6 !important;
+    }
+
+    :deep(.q-icon) {
+      color: #8b5cf6 !important;
+    }
+
+    :deep(.q-item__section) {
+      color: #8b5cf6 !important;
     }
   }
 }

@@ -330,6 +330,7 @@ watch(
       await projectStore.fetchProjectsByUser(newId)
     }
   },
+  { immediate: true }
 )
 </script>
 
