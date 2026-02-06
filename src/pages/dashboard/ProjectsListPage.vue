@@ -77,7 +77,94 @@
                 </div>
                 <div class="mobile-row mobile-row--details">
                   <span class="mobile-meta">
-                    <span class="mobile-meta-label">Постов:</span> {{ project.contentPlansCount || 0 }}
+                    <span class="mobile-meta-label">Граф:</span>
+                    <template v-if="editingGraphicPostId === project.id">
+                      <div class="count-edit count-edit--mobile">
+                        <q-input
+                          v-model="editGraphicPostValue"
+                          dense
+                          outlined
+                          type="number"
+                          class="count-input count-input--mobile"
+                          @keyup.enter="saveGraphicPost(project)"
+                          @keyup.escape="cancelEditingGraphicPost"
+                          autofocus
+                        />
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          size="xs"
+                          icon="check"
+                          color="positive"
+                          @click="saveGraphicPost(project)"
+                        />
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          size="xs"
+                          icon="close"
+                          color="negative"
+                          @click="cancelEditingGraphicPost"
+                        />
+                      </div>
+                    </template>
+                    <template v-else>
+                      <q-btn
+                        flat
+                        dense
+                        no-caps
+                        class="count-btn count-btn--mobile"
+                        :label="String(project.graphicPostCount || 0)"
+                        @click="startEditingGraphicPost(project)"
+                      />
+                    </template>
+                  </span>
+                  <span class="mobile-meta">
+                    <span class="mobile-meta-label">Видео:</span>
+                    <template v-if="editingVideoPostId === project.id">
+                      <div class="count-edit count-edit--mobile">
+                        <q-input
+                          v-model="editVideoPostValue"
+                          dense
+                          outlined
+                          type="number"
+                          class="count-input count-input--mobile"
+                          @keyup.enter="saveVideoPost(project)"
+                          @keyup.escape="cancelEditingVideoPost"
+                          autofocus
+                        />
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          size="xs"
+                          icon="check"
+                          color="positive"
+                          @click="saveVideoPost(project)"
+                        />
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          size="xs"
+                          icon="close"
+                          color="negative"
+                          @click="cancelEditingVideoPost"
+                        />
+                      </div>
+                    </template>
+                    <template v-else>
+                      <q-btn
+                        flat
+                        dense
+                        no-caps
+                        class="count-btn count-btn--mobile"
+                        :label="String(project.videoPostCount || 0)"
+                        @click="startEditingVideoPost(project)"
+                      />
+                    </template>
                   </span>
                   <span class="mobile-meta">
                     <span class="mobile-meta-label">День:</span>
@@ -88,35 +175,35 @@
                       class="day-picker-btn day-picker-btn--mobile"
                       :label="project.chargeDay || '-'"
                     >
-                    <q-popup-proxy transition-show="scale" transition-hide="scale">
-                      <q-card class="day-picker-popup">
-                        <div class="day-picker-header">День расчета</div>
-                        <div class="day-picker-grid">
+                      <q-popup-proxy transition-show="scale" transition-hide="scale">
+                        <q-card class="day-picker-popup">
+                          <div class="day-picker-header">День расчета</div>
+                          <div class="day-picker-grid">
+                            <q-btn
+                              v-for="day in 31"
+                              :key="day"
+                              flat
+                              dense
+                              no-caps
+                              class="day-picker-day"
+                              :class="{ 'is-selected': project.chargeDay === day }"
+                              :label="String(day)"
+                              v-close-popup
+                              @click="selectChargeDay(project, day)"
+                            />
+                          </div>
                           <q-btn
-                            v-for="day in 31"
-                            :key="day"
                             flat
                             dense
                             no-caps
-                            class="day-picker-day"
-                            :class="{ 'is-selected': project.chargeDay === day }"
-                            :label="String(day)"
+                            class="day-picker-clear"
+                            label="Сбросить"
                             v-close-popup
-                            @click="selectChargeDay(project, day)"
+                            @click="selectChargeDay(project, null)"
                           />
-                        </div>
-                        <q-btn
-                          flat
-                          dense
-                          no-caps
-                          class="day-picker-clear"
-                          label="Сбросить"
-                          v-close-popup
-                          @click="selectChargeDay(project, null)"
-                        />
-                      </q-card>
-                    </q-popup-proxy>
-                  </q-btn>
+                        </q-card>
+                      </q-popup-proxy>
+                    </q-btn>
                   </span>
                   <span class="mobile-meta">
                     <span class="mobile-meta-label">Цена:</span>
@@ -132,8 +219,24 @@
                           @keyup.escape="cancelEditingPrice"
                           autofocus
                         />
-                        <q-btn flat dense round size="xs" icon="check" color="positive" @click="savePrice(project)" />
-                        <q-btn flat dense round size="xs" icon="close" color="negative" @click="cancelEditingPrice" />
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          size="xs"
+                          icon="check"
+                          color="positive"
+                          @click="savePrice(project)"
+                        />
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          size="xs"
+                          icon="close"
+                          color="negative"
+                          @click="cancelEditingPrice"
+                        />
                       </div>
                     </template>
                     <template v-else>
@@ -145,7 +248,9 @@
                         :class="{ 'price-hidden': !isPriceVisible(project.id) }"
                         @click="handlePriceClick(project)"
                       >
-                        <span v-if="isPriceVisible(project.id)">{{ project.price != null ? project.price : '-' }}</span>
+                        <span v-if="isPriceVisible(project.id)">{{
+                          project.price != null ? project.price : '-'
+                        }}</span>
                         <span v-else class="price-mask">****</span>
                       </q-btn>
                     </template>
@@ -161,7 +266,8 @@
               <tr>
                 <th class="th-executor">Исполнитель</th>
                 <th class="th-project">Проект</th>
-                <th class="th-posts">Постов</th>
+                <th class="th-graphic">Кол. граф. постов</th>
+                <th class="th-video">Кол. видео постов:</th>
                 <th class="th-charge">День расчета</th>
                 <th class="th-price">Цена</th>
                 <th class="th-status">Статус</th>
@@ -174,17 +280,104 @@
                   :key="project.id"
                   :class="{ 'row-inactive': !project.isActive }"
                 >
-                  <td
-                    v-if="projIdx === 0"
-                    class="td-executor"
-                    :rowspan="executor.projects.length"
-                  >
+                  <td v-if="projIdx === 0" class="td-executor" :rowspan="executor.projects.length">
                     <span class="executor-name">
                       {{ executor.givenName }} {{ executor.familyName || '' }}
                     </span>
                   </td>
                   <td class="td-project">{{ project.name }}</td>
-                  <td class="td-posts">{{ project.contentPlansCount || 0 }}</td>
+                  <td class="td-graphic">
+                    <template v-if="editingGraphicPostId === project.id">
+                      <div class="count-edit">
+                        <q-input
+                          v-model="editGraphicPostValue"
+                          dense
+                          outlined
+                          type="number"
+                          class="count-input"
+                          @keyup.enter="saveGraphicPost(project)"
+                          @keyup.escape="cancelEditingGraphicPost"
+                          autofocus
+                        />
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          size="sm"
+                          icon="check"
+                          color="positive"
+                          @click="saveGraphicPost(project)"
+                        />
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          size="sm"
+                          icon="close"
+                          color="negative"
+                          @click="cancelEditingGraphicPost"
+                        />
+                      </div>
+                    </template>
+                    <template v-else>
+                      <q-btn
+                        flat
+                        dense
+                        no-caps
+                        class="count-btn"
+                        :label="String(project.graphicPostCount || 0)"
+                        @click="startEditingGraphicPost(project)"
+                      >
+                        <q-tooltip>Клик для редактирования</q-tooltip>
+                      </q-btn>
+                    </template>
+                  </td>
+                  <td class="td-video">
+                    <template v-if="editingVideoPostId === project.id">
+                      <div class="count-edit">
+                        <q-input
+                          v-model="editVideoPostValue"
+                          dense
+                          outlined
+                          type="number"
+                          class="count-input"
+                          @keyup.enter="saveVideoPost(project)"
+                          @keyup.escape="cancelEditingVideoPost"
+                          autofocus
+                        />
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          size="sm"
+                          icon="check"
+                          color="positive"
+                          @click="saveVideoPost(project)"
+                        />
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          size="sm"
+                          icon="close"
+                          color="negative"
+                          @click="cancelEditingVideoPost"
+                        />
+                      </div>
+                    </template>
+                    <template v-else>
+                      <q-btn
+                        flat
+                        dense
+                        no-caps
+                        class="count-btn"
+                        :label="String(project.videoPostCount || 0)"
+                        @click="startEditingVideoPost(project)"
+                      >
+                        <q-tooltip>Клик для редактирования</q-tooltip>
+                      </q-btn>
+                    </template>
+                  </td>
                   <td class="td-charge">
                     <q-btn
                       flat
@@ -236,8 +429,24 @@
                           @keyup.escape="cancelEditingPrice"
                           autofocus
                         />
-                        <q-btn flat dense round size="sm" icon="check" color="positive" @click="savePrice(project)" />
-                        <q-btn flat dense round size="sm" icon="close" color="negative" @click="cancelEditingPrice" />
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          size="sm"
+                          icon="check"
+                          color="positive"
+                          @click="savePrice(project)"
+                        />
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          size="sm"
+                          icon="close"
+                          color="negative"
+                          @click="cancelEditingPrice"
+                        />
                       </div>
                     </template>
                     <template v-else>
@@ -249,7 +458,9 @@
                         :class="{ 'price-hidden': !isPriceVisible(project.id) }"
                         @click="handlePriceClick(project)"
                       >
-                        <span v-if="isPriceVisible(project.id)">{{ project.price != null ? project.price : '-' }}</span>
+                        <span v-if="isPriceVisible(project.id)">{{
+                          project.price != null ? project.price : '-'
+                        }}</span>
                         <span v-else class="price-mask">****</span>
                         <q-tooltip>Клик - показать/скрыть, двойной клик - редактировать</q-tooltip>
                       </q-btn>
@@ -266,7 +477,7 @@
                   </td>
                 </tr>
                 <tr class="row-divider" v-if="execIdx < executorsWithProjects.length - 1">
-                  <td colspan="6"></td>
+                  <td colspan="7"></td>
                 </tr>
               </template>
             </tbody>
@@ -298,27 +509,32 @@ const editPriceValue = ref('')
 const clickTimer = ref(null)
 const isTotalSumVisible = ref(false)
 
+// Editing state for graphic and video post counts
+const editingGraphicPostId = ref(null)
+const editGraphicPostValue = ref('')
+const editingVideoPostId = ref(null)
+const editVideoPostValue = ref('')
+
 // Computed stats
 const allProjects = computed(() => {
-  return executorsWithProjects.value.flatMap(e => e.projects)
+  return executorsWithProjects.value.flatMap((e) => e.projects)
 })
 
 const totalProjects = computed(() => allProjects.value.length)
 
 const activeProjects = computed(() => {
-  return allProjects.value.filter(p => p.isActive).length
+  return allProjects.value.filter((p) => p.isActive).length
 })
 
 const inactiveProjects = computed(() => {
-  return allProjects.value.filter(p => !p.isActive).length
+  return allProjects.value.filter((p) => !p.isActive).length
 })
 
 const totalActiveSum = computed(() => {
   return allProjects.value
-    .filter(p => p.isActive && p.price != null)
+    .filter((p) => p.isActive && p.price != null)
     .reduce((sum, p) => sum + Number(p.price), 0)
 })
-
 
 async function fetchAllData() {
   isLoading.value = true
@@ -342,7 +558,7 @@ async function toggleProjectStatus(project, newStatus) {
       message: newStatus ? 'Проект активирован' : 'Проект деактивирован',
       type: 'positive',
       position: 'top',
-      timeout: 2000
+      timeout: 2000,
     })
   } catch {
     project.isActive = originalStatus
@@ -360,7 +576,7 @@ async function selectChargeDay(project, day) {
       message: day ? `День расчета: ${day}` : 'День расчета сброшен',
       type: 'positive',
       position: 'top',
-      timeout: 2000
+      timeout: 2000,
     })
   } catch {
     project.chargeDay = originalDay
@@ -417,11 +633,78 @@ async function savePrice(project) {
       message: newPrice != null ? `Цена обновлена: ${newPrice}` : 'Цена сброшена',
       type: 'positive',
       position: 'top',
-      timeout: 2000
+      timeout: 2000,
     })
   } catch {
     project.price = originalPrice
     q.notify({ message: 'Ошибка обновления цены', type: 'negative', position: 'top' })
+  }
+}
+
+// Graphic post count editing
+function startEditingGraphicPost(project) {
+  editingGraphicPostId.value = project.id
+  editGraphicPostValue.value =
+    project.graphicPostCount != null ? String(project.graphicPostCount) : '0'
+}
+
+function cancelEditingGraphicPost() {
+  editingGraphicPostId.value = null
+  editGraphicPostValue.value = ''
+}
+
+async function saveGraphicPost(project) {
+  const newCount = editGraphicPostValue.value === '' ? 0 : Number(editGraphicPostValue.value)
+  const originalCount = project.graphicPostCount
+
+  project.graphicPostCount = newCount
+  editingGraphicPostId.value = null
+  editGraphicPostValue.value = ''
+
+  try {
+    await api.patch(`/projects/${project.id}/admin`, { graphicPostCount: newCount })
+    q.notify({
+      message: `Графических постов: ${newCount}`,
+      type: 'positive',
+      position: 'top',
+      timeout: 2000,
+    })
+  } catch {
+    project.graphicPostCount = originalCount
+    q.notify({ message: 'Ошибка обновления', type: 'negative', position: 'top' })
+  }
+}
+
+// Video post count editing
+function startEditingVideoPost(project) {
+  editingVideoPostId.value = project.id
+  editVideoPostValue.value = project.videoPostCount != null ? String(project.videoPostCount) : '0'
+}
+
+function cancelEditingVideoPost() {
+  editingVideoPostId.value = null
+  editVideoPostValue.value = ''
+}
+
+async function saveVideoPost(project) {
+  const newCount = editVideoPostValue.value === '' ? 0 : Number(editVideoPostValue.value)
+  const originalCount = project.videoPostCount
+
+  project.videoPostCount = newCount
+  editingVideoPostId.value = null
+  editVideoPostValue.value = ''
+
+  try {
+    await api.patch(`/projects/${project.id}/admin`, { videoPostCount: newCount })
+    q.notify({
+      message: `Видео постов: ${newCount}`,
+      type: 'positive',
+      position: 'top',
+      timeout: 2000,
+    })
+  } catch {
+    project.videoPostCount = originalCount
+    q.notify({ message: 'Ошибка обновления', type: 'negative', position: 'top' })
   }
 }
 
@@ -459,13 +742,13 @@ async function exportToPDF() {
   doc.setFontSize(16)
   doc.setFont(FONT_BOLD, 'normal')
   doc.setTextColor(NAVY.r, NAVY.g, NAVY.b)
-  doc.text('PROYEKTLAR RO\'YXATI', W / 2, 13, { align: 'center' })
+  doc.text("PROYEKTLAR RO'YXATI", W / 2, 13, { align: 'center' })
 
   // Current date and count on the right
   const currentDate = new Date().toLocaleDateString('ru-RU', {
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit'
+    day: '2-digit',
   })
 
   doc.setFontSize(8)
@@ -473,8 +756,16 @@ async function exportToPDF() {
   doc.setTextColor(0, 0, 0)
   doc.text(currentDate, W - 10, 11, { align: 'right' })
 
-  // Prepare table data with executor grouping info
-  const head = [['Ijrochi', 'Proyekt', 'Postlar', 'Hisob kuni']]
+  // Prepare table data with two-row header
+  const head = [
+    [
+      { content: 'Ijrochi', rowSpan: 2 },
+      { content: 'Proyekt', rowSpan: 2 },
+      { content: 'Postlar soni', colSpan: 2 },
+      { content: 'Hisob kuni', rowSpan: 2 }
+    ],
+    ['Grafika', 'Video']
+  ]
   const body = []
   const rowColors = [] // Track inactive rows
   const executorSpans = [] // Track which rows should show executor and rowspan
@@ -484,25 +775,32 @@ async function exportToPDF() {
 
   executorsWithProjects.value.forEach((executor) => {
     const name = `${executor.givenName} ${executor.familyName || ''}`.trim()
-    const projectCount = executor.projects.length
 
-    executor.projects.forEach((project, index) => {
+    // Filter only active projects
+    const activeProjects = executor.projects.filter(p => p.isActive)
+    const activeProjectCount = activeProjects.length
+
+    // Skip executor if no active projects
+    if (activeProjectCount === 0) return
+
+    activeProjects.forEach((project, index) => {
       body.push([
         index === 0 ? name : '', // Only show executor name on first row
         project.name,
-        String(project.contentPlansCount || 0),
-        project.chargeDay ? String(project.chargeDay) : '-'
+        String(project.graphicPostCount || 0),
+        String(project.videoPostCount || 0),
+        project.chargeDay ? String(project.chargeDay) : '-',
       ])
-      rowColors.push(project.isActive)
+      rowColors.push(true) // All are active now
 
       // Mark the first row of each executor with rowspan info
       executorSpans.push({
         isFirst: index === 0,
-        rowSpan: projectCount,
-        executorName: name
+        rowSpan: activeProjectCount,
+        executorName: name,
       })
 
-      // Count total projects
+      // Count total active projects
       totalProjectsCount++
     })
   })
@@ -524,7 +822,7 @@ async function exportToPDF() {
     margin: { left, right: left },
     theme: 'grid',
     styles: {
-      fontSize: 6,
+      fontSize: 7,
       cellPadding: 1,
       lineWidth: 0.15,
       lineColor: [NAVY.r, NAVY.g, NAVY.b],
@@ -537,7 +835,7 @@ async function exportToPDF() {
     headStyles: {
       font: FONT_BOLD,
       fontStyle: 'normal',
-      fontSize: 7,
+      fontSize: 8,
       fillColor: [NAVY.r, NAVY.g, NAVY.b],
       textColor: [255, 255, 255],
       lineColor: [NAVY.r, NAVY.g, NAVY.b],
@@ -545,10 +843,11 @@ async function exportToPDF() {
       cellPadding: 1.5,
     },
     columnStyles: {
-      0: { cellWidth: tableWidth * 0.28, halign: 'center' }, // Executor - centered
-      1: { cellWidth: tableWidth * 0.42, halign: 'left' },   // Project
-      2: { cellWidth: tableWidth * 0.15, halign: 'center' }, // Posts
-      3: { cellWidth: tableWidth * 0.15, halign: 'center' }, // Charge Day
+      0: { cellWidth: tableWidth * 0.25, halign: 'center' }, // Executor - centered
+      1: { cellWidth: tableWidth * 0.47, halign: 'left' }, // Project (slightly reduced)
+      2: { cellWidth: tableWidth * 0.10, halign: 'center', fontSize: 6.5 }, // Graf
+      3: { cellWidth: tableWidth * 0.10, halign: 'center', fontSize: 6.5 }, // Vid
+      4: { cellWidth: tableWidth * 0.08, halign: 'center', fontSize: 6.5 }, // Charge Day (wider)
     },
     didParseCell: (data) => {
       if (data.section === 'body') {
@@ -737,7 +1036,9 @@ onMounted(fetchAllData)
 
 .stat-card--clickable {
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 
   &:hover {
     transform: translateY(-2px);
@@ -798,12 +1099,33 @@ onMounted(fetchAllData)
   }
 }
 
-.th-executor { width: 180px; text-align: center !important; }
-.th-project { text-align: center !important; }
-.th-posts { width: 80px; text-align: center !important; }
-.th-charge { width: 100px; text-align: center !important; }
-.th-price { width: 100px; text-align: center !important; }
-.th-status { width: 80px; text-align: center !important; }
+.th-executor {
+  width: 180px;
+  text-align: center !important;
+}
+.th-project {
+  text-align: center !important;
+}
+.th-graphic {
+  width: 80px;
+  text-align: center !important;
+}
+.th-video {
+  width: 80px;
+  text-align: center !important;
+}
+.th-charge {
+  width: 100px;
+  text-align: center !important;
+}
+.th-price {
+  width: 100px;
+  text-align: center !important;
+}
+.th-status {
+  width: 80px;
+  text-align: center !important;
+}
 
 .td-executor {
   vertical-align: middle;
@@ -827,9 +1149,12 @@ onMounted(fetchAllData)
   text-align: center;
 }
 
-.td-posts {
+.td-graphic {
   text-align: center;
-  color: var(--text-secondary);
+}
+
+.td-video {
+  text-align: center;
 }
 
 .td-charge {
@@ -866,6 +1191,20 @@ onMounted(fetchAllData)
     height: 24px;
     font-size: 0.75rem;
     padding: 0 8px;
+
+    @media (max-width: 400px) {
+      min-width: 32px;
+      height: 22px;
+      font-size: 0.6875rem;
+      padding: 0 6px;
+    }
+
+    @media (max-width: 360px) {
+      min-width: 28px;
+      height: 20px;
+      font-size: 0.625rem;
+      padding: 0 4px;
+    }
   }
 }
 
@@ -947,6 +1286,20 @@ onMounted(fetchAllData)
     height: 24px;
     font-size: 0.75rem;
     padding: 0 8px;
+
+    @media (max-width: 400px) {
+      min-width: 44px;
+      height: 22px;
+      font-size: 0.6875rem;
+      padding: 0 6px;
+    }
+
+    @media (max-width: 360px) {
+      min-width: 40px;
+      height: 20px;
+      font-size: 0.625rem;
+      padding: 0 4px;
+    }
   }
 
   &.price-hidden {
@@ -965,6 +1318,10 @@ onMounted(fetchAllData)
 
   &--mobile {
     gap: 2px;
+
+    @media (max-width: 400px) {
+      gap: 1px;
+    }
   }
 }
 
@@ -999,6 +1356,152 @@ onMounted(fetchAllData)
     :deep(.q-field__native) {
       font-size: 0.75rem;
       padding: 0 6px;
+    }
+
+    @media (max-width: 400px) {
+      width: 52px;
+
+      :deep(.q-field__control) {
+        height: 22px;
+        min-height: 22px;
+      }
+
+      :deep(.q-field__native) {
+        font-size: 0.6875rem;
+        padding: 0 4px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      width: 48px;
+
+      :deep(.q-field__control) {
+        height: 20px;
+        min-height: 20px;
+      }
+
+      :deep(.q-field__native) {
+        font-size: 0.625rem;
+        padding: 0 4px;
+      }
+    }
+  }
+}
+
+// Count columns (graphic/video posts)
+.count-btn {
+  min-width: 50px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-hover);
+    border-color: var(--text-muted);
+  }
+
+  &--mobile {
+    min-width: 40px;
+    height: 24px;
+    font-size: 0.75rem;
+    padding: 0 8px;
+
+    @media (max-width: 400px) {
+      min-width: 36px;
+      height: 22px;
+      font-size: 0.6875rem;
+      padding: 0 6px;
+    }
+
+    @media (max-width: 360px) {
+      min-width: 32px;
+      height: 20px;
+      font-size: 0.625rem;
+      padding: 0 4px;
+    }
+  }
+}
+
+.count-edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+
+  &--mobile {
+    gap: 2px;
+
+    @media (max-width: 400px) {
+      gap: 1px;
+    }
+  }
+}
+
+.count-input {
+  width: 70px;
+
+  :deep(.q-field__control) {
+    height: 28px;
+    min-height: 28px;
+  }
+
+  :deep(.q-field__native) {
+    padding: 0 8px;
+    font-size: 0.8125rem;
+    -moz-appearance: textfield;
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  }
+
+  &--mobile {
+    width: 50px;
+
+    :deep(.q-field__control) {
+      height: 24px;
+      min-height: 24px;
+    }
+
+    :deep(.q-field__native) {
+      font-size: 0.75rem;
+      padding: 0 6px;
+    }
+
+    @media (max-width: 400px) {
+      width: 44px;
+
+      :deep(.q-field__control) {
+        height: 22px;
+        min-height: 22px;
+      }
+
+      :deep(.q-field__native) {
+        font-size: 0.6875rem;
+        padding: 0 4px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      width: 40px;
+
+      :deep(.q-field__control) {
+        height: 20px;
+        min-height: 20px;
+      }
+
+      :deep(.q-field__native) {
+        font-size: 0.625rem;
+        padding: 0 4px;
+      }
     }
   }
 }
@@ -1039,6 +1542,14 @@ onMounted(fetchAllData)
 // Mobile View
 .mobile-view {
   padding: 0.5rem;
+
+  @media (max-width: 400px) {
+    padding: 0.375rem;
+  }
+
+  @media (max-width: 360px) {
+    padding: 0.25rem;
+  }
 }
 
 .mobile-group {
@@ -1047,6 +1558,15 @@ onMounted(fetchAllData)
   border: 1px solid var(--border-color);
   border-radius: 8px;
   overflow: hidden;
+
+  @media (max-width: 400px) {
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+  }
+
+  @media (max-width: 360px) {
+    margin-bottom: 0.375rem;
+  }
 
   &:last-child {
     margin-bottom: 0;
@@ -1060,11 +1580,29 @@ onMounted(fetchAllData)
   padding: 0.625rem 0.75rem;
   background: rgba(139, 92, 246, 0.1);
   border-bottom: 1px solid var(--border-color);
+
+  @media (max-width: 400px) {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.625rem;
+  }
+
+  @media (max-width: 360px) {
+    font-size: 0.6875rem;
+    padding: 0.5rem 0.5rem;
+  }
 }
 
 .mobile-project {
   padding: 0.625rem 0.75rem;
   border-bottom: 1px solid var(--border-light);
+
+  @media (max-width: 400px) {
+    padding: 0.5rem 0.625rem;
+  }
+
+  @media (max-width: 360px) {
+    padding: 0.5rem 0.5rem;
+  }
 
   &:last-child {
     border-bottom: none;
@@ -1089,6 +1627,16 @@ onMounted(fetchAllData)
 
   &--details {
     gap: 1rem;
+    flex-wrap: wrap;
+
+    @media (max-width: 400px) {
+      gap: 0.5rem;
+    }
+
+    @media (max-width: 360px) {
+      gap: 0.375rem;
+      font-size: 0.6875rem;
+    }
   }
 }
 
@@ -1098,6 +1646,16 @@ onMounted(fetchAllData)
   color: var(--text-primary);
   flex: 1;
   margin-right: 0.5rem;
+
+  @media (max-width: 400px) {
+    font-size: 0.75rem;
+    margin-right: 0.375rem;
+  }
+
+  @media (max-width: 360px) {
+    font-size: 0.6875rem;
+    margin-right: 0.25rem;
+  }
 }
 
 .mobile-meta {
@@ -1106,10 +1664,20 @@ onMounted(fetchAllData)
   display: flex;
   align-items: center;
   gap: 0.25rem;
+  white-space: nowrap;
+
+  @media (max-width: 400px) {
+    font-size: 0.6875rem;
+    gap: 0.2rem;
+  }
+
+  @media (max-width: 360px) {
+    font-size: 0.625rem;
+  }
 }
 
 .mobile-meta-label {
   color: var(--text-muted);
+  flex-shrink: 0;
 }
-
 </style>
