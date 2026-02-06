@@ -451,24 +451,27 @@ async function exportToPDF() {
   const H = doc.internal.pageSize.getHeight()
 
   await doc.svg(svgFromRaw(bgSvgRaw), { x: 0, y: 0, width: W, height: H })
-  await doc.svg(svgFromRaw(logoSvgRaw), { x: W / 2 - 40, y: 5, width: 80, height: 11 })
 
-  // Current date
+  // Logo on the left
+  await doc.svg(svgFromRaw(logoSvgRaw), { x: 10, y: 8, width: 50, height: 7 })
+
+  // Title centered
+  doc.setFontSize(16)
+  doc.setFont(FONT_BOLD, 'normal')
+  doc.setTextColor(NAVY.r, NAVY.g, NAVY.b)
+  doc.text('PROYEKTLAR RO\'YXATI', W / 2, 13, { align: 'center' })
+
+  // Current date and count on the right
   const currentDate = new Date().toLocaleDateString('ru-RU', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
   })
 
-  doc.setFontSize(10)
+  doc.setFontSize(8)
   doc.setFont(FONT, 'normal')
   doc.setTextColor(0, 0, 0)
-  doc.text(currentDate, W - 18, 20, { align: 'right' })
-
-  doc.setFontSize(18)
-  doc.setFont(FONT_BOLD, 'normal')
-  doc.setTextColor(NAVY.r, NAVY.g, NAVY.b)
-  doc.text('PROYEKTLAR RO\'YXATI', W / 2, 25, { align: 'center' })
+  doc.text(currentDate, W - 10, 11, { align: 'right' })
 
   // Prepare table data with executor grouping info
   const head = [['Ijrochi', 'Proyekt', 'Postlar', 'Hisob kuni']]
@@ -504,11 +507,11 @@ async function exportToPDF() {
     })
   })
 
-  // Display total projects count at the top
-  doc.setFontSize(10)
+  // Display total projects count on the right below date
+  doc.setFontSize(8)
   doc.setFont(FONT, 'normal')
   doc.setTextColor(0, 0, 0)
-  doc.text(`Jami proyektlar: ${totalProjectsCount}`, W - 18, 25, { align: 'right' })
+  doc.text(`Jami proyektlar: ${totalProjectsCount}`, W - 10, 15, { align: 'right' })
 
   const tableWidth = W - 20
   const left = 10
@@ -516,28 +519,30 @@ async function exportToPDF() {
   autoTable(doc, {
     head,
     body,
-    startY: 32,
+    startY: 20,
     tableWidth,
     margin: { left, right: left },
     theme: 'grid',
     styles: {
-      fontSize: 8,
-      cellPadding: 2.5,
-      lineWidth: 0.28,
+      fontSize: 6,
+      cellPadding: 1,
+      lineWidth: 0.15,
       lineColor: [NAVY.r, NAVY.g, NAVY.b],
       textColor: [0, 0, 0],
       overflow: 'linebreak',
       valign: 'middle',
       font: FONT,
+      minCellHeight: 4,
     },
     headStyles: {
       font: FONT_BOLD,
       fontStyle: 'normal',
-      fontSize: 9,
+      fontSize: 7,
       fillColor: [NAVY.r, NAVY.g, NAVY.b],
       textColor: [255, 255, 255],
       lineColor: [NAVY.r, NAVY.g, NAVY.b],
       halign: 'center',
+      cellPadding: 1.5,
     },
     columnStyles: {
       0: { cellWidth: tableWidth * 0.28, halign: 'center' }, // Executor - centered
