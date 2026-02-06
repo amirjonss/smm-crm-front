@@ -67,6 +67,58 @@
               >
                 <div class="mobile-row mobile-row--main">
                   <span class="mobile-label">{{ project.name }}</span>
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    size="sm"
+                    icon="swap_horiz"
+                    class="reassign-trigger reassign-trigger--mobile"
+                  >
+                    <q-popup-proxy transition-show="scale" transition-hide="scale">
+                      <q-card class="reassign-popup">
+                        <div class="reassign-popup__header">Сменить исполнителя</div>
+                        <q-input
+                          v-model="executorSearch"
+                          dense
+                          outlined
+                          placeholder="Поиск..."
+                          class="reassign-popup__search"
+                          autofocus
+                          @keyup.escape="executorSearch = ''"
+                        >
+                          <template #prepend>
+                            <q-icon name="search" size="16px" />
+                          </template>
+                          <template v-if="executorSearch" #append>
+                            <q-icon name="close" size="14px" class="cursor-pointer" @click="executorSearch = ''" />
+                          </template>
+                        </q-input>
+                        <div class="reassign-popup__list">
+                          <div
+                            v-for="user in filteredUsers"
+                            :key="user.id"
+                            class="reassign-popup__item"
+                            :class="{ 'is-current': isCurrentExecutor(project.id, user.id) }"
+                            v-close-popup
+                            @click="changeExecutor(project, user.id)"
+                          >
+                            <div class="reassign-popup__avatar">{{ getInitials(user.label) }}</div>
+                            <span class="reassign-popup__name">{{ user.label }}</span>
+                            <q-icon
+                              v-if="isCurrentExecutor(project.id, user.id)"
+                              name="check"
+                              size="14px"
+                              class="reassign-popup__check"
+                            />
+                          </div>
+                          <div v-if="filteredUsers.length === 0" class="reassign-popup__empty">
+                            Не найдено
+                          </div>
+                        </div>
+                      </q-card>
+                    </q-popup-proxy>
+                  </q-btn>
                   <q-toggle
                     :model-value="project.isActive"
                     dense
@@ -285,7 +337,63 @@
                       {{ executor.givenName }} {{ executor.familyName || '' }}
                     </span>
                   </td>
-                  <td class="td-project">{{ project.name }}</td>
+                  <td class="td-project">
+                    <div class="project-cell">
+                      <span class="project-name">{{ project.name }}</span>
+                      <q-btn
+                        flat
+                        dense
+                        round
+                        size="xs"
+                        icon="person"
+                        class="reassign-trigger"
+                      >
+                        <q-popup-proxy transition-show="scale" transition-hide="scale">
+                          <q-card class="reassign-popup">
+                            <div class="reassign-popup__header">Сменить исполнителя</div>
+                            <q-input
+                              v-model="executorSearch"
+                              dense
+                              outlined
+                              placeholder="Поиск..."
+                              class="reassign-popup__search"
+                              autofocus
+                              @keyup.escape="executorSearch = ''"
+                            >
+                              <template #prepend>
+                                <q-icon name="search" size="16px" />
+                              </template>
+                              <template v-if="executorSearch" #append>
+                                <q-icon name="close" size="14px" class="cursor-pointer" @click="executorSearch = ''" />
+                              </template>
+                            </q-input>
+                            <div class="reassign-popup__list">
+                              <div
+                                v-for="user in filteredUsers"
+                                :key="user.id"
+                                class="reassign-popup__item"
+                                :class="{ 'is-current': isCurrentExecutor(project.id, user.id) }"
+                                v-close-popup
+                                @click="changeExecutor(project, user.id)"
+                              >
+                                <div class="reassign-popup__avatar">{{ getInitials(user.label) }}</div>
+                                <span class="reassign-popup__name">{{ user.label }}</span>
+                                <q-icon
+                                  v-if="isCurrentExecutor(project.id, user.id)"
+                                  name="check"
+                                  size="14px"
+                                  class="reassign-popup__check"
+                                />
+                              </div>
+                              <div v-if="filteredUsers.length === 0" class="reassign-popup__empty">
+                                Не найдено
+                              </div>
+                            </div>
+                          </q-card>
+                        </q-popup-proxy>
+                      </q-btn>
+                    </div>
+                  </td>
                   <td class="td-graphic">
                     <template v-if="editingGraphicPostId === project.id">
                       <div class="count-edit">
@@ -503,6 +611,7 @@ import '../../components/Roboto-Bold-normal.js'
 const q = useQuasar()
 const isLoading = ref(true)
 const executorsWithProjects = ref([])
+const allUsers = ref([])
 const visiblePrices = ref(new Set())
 const editingPriceId = ref(null)
 const editPriceValue = ref('')
@@ -514,6 +623,9 @@ const editingGraphicPostId = ref(null)
 const editGraphicPostValue = ref('')
 const editingVideoPostId = ref(null)
 const editVideoPostValue = ref('')
+
+// Executor reassign
+const executorSearch = ref('')
 
 // Computed stats
 const allProjects = computed(() => {
@@ -539,13 +651,70 @@ const totalActiveSum = computed(() => {
 async function fetchAllData() {
   isLoading.value = true
   try {
-    const response = await api.post('/users/projects')
-    executorsWithProjects.value = response.data || []
+    const [projectsRes, usersRes] = await Promise.all([
+      api.post('/users/projects'),
+      api.get('/users'),
+    ])
+    executorsWithProjects.value = projectsRes.data || []
+    allUsers.value = (usersRes.data?.member || usersRes.data || []).map((u) => ({
+      id: u.id,
+      label: `${u.givenName || ''} ${u.familyName || ''}`.trim(),
+    }))
   } catch (error) {
     console.error('Error fetching data:', error)
     q.notify({ message: 'Ошибка загрузки данных', type: 'negative', position: 'top' })
   } finally {
     isLoading.value = false
+  }
+}
+
+const filteredUsers = computed(() => {
+  const term = executorSearch.value.toLowerCase().trim()
+  if (!term) return allUsers.value
+  return allUsers.value.filter((u) => u.label.toLowerCase().includes(term))
+})
+
+function isCurrentExecutor(projectId, userId) {
+  const executor = executorsWithProjects.value.find((e) =>
+    e.projects.some((p) => p.id === projectId),
+  )
+  if (!executor) return false
+  const user = allUsers.value.find((u) => u.id === userId)
+  if (!user) return false
+  const executorName = `${executor.givenName || ''} ${executor.familyName || ''}`.trim()
+  return executorName === user.label
+}
+
+function getInitials(name) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
+
+async function changeExecutor(project, newUserId) {
+  executorSearch.value = ''
+  if (!newUserId) return
+
+  if (isCurrentExecutor(project.id, newUserId)) return
+
+  const newUser = allUsers.value.find((u) => u.id === newUserId)
+  if (!newUser) return
+
+  try {
+    await api.patch(`/projects/${project.id}/admin`, { executor: `/api/users/${newUserId}` })
+    q.notify({
+      message: `Исполнитель изменен: ${newUser.label}`,
+      type: 'positive',
+      position: 'top',
+      timeout: 2000,
+    })
+    await fetchAllData()
+  } catch {
+    q.notify({ message: 'Ошибка смены исполнителя', type: 'negative', position: 'top' })
   }
 }
 
@@ -1679,5 +1848,165 @@ onMounted(fetchAllData)
 .mobile-meta-label {
   color: var(--text-muted);
   flex-shrink: 0;
+}
+
+// Project cell with reassign trigger
+.project-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.project-name {
+  flex: 1;
+}
+
+.reassign-trigger {
+  opacity: 0;
+  transition: all 0.15s ease;
+  color: rgba(139, 92, 246, 0.6);
+
+  &:hover {
+    color: #8b5cf6;
+  }
+
+  tr:hover & {
+    opacity: 0.7;
+  }
+
+  tr:hover &:hover {
+    opacity: 1;
+  }
+
+  &--mobile {
+    opacity: 0.5;
+    flex-shrink: 0;
+    margin-right: 4px;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+
+</style>
+
+<style lang="scss">
+// Reassign popup — unscoped because q-popup-proxy teleports outside component
+.reassign-popup {
+  min-width: 240px;
+  max-width: 300px;
+  padding: 0;
+  border-radius: 10px;
+  overflow: hidden;
+
+  &.q-card {
+    background: var(--bg-card);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  }
+
+  &__header {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 10px 12px 6px;
+  }
+
+  &__search {
+    padding: 0 10px 8px;
+
+    .q-field__control {
+      height: 32px;
+      min-height: 32px;
+      border-radius: 8px;
+    }
+
+    .q-field__native {
+      font-size: 0.75rem;
+      padding: 0 4px;
+    }
+
+    .q-field__prepend,
+    .q-field__append {
+      padding: 0;
+      color: var(--text-muted);
+    }
+  }
+
+  &__list {
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 0 4px 4px;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+
+    &:hover {
+      background: var(--bg-hover, rgba(255, 255, 255, 0.06));
+    }
+
+    &.is-current {
+      background: rgba(139, 92, 246, 0.12);
+
+      .reassign-popup__name {
+        font-weight: 600;
+        color: #8b5cf6;
+      }
+
+      .reassign-popup__avatar {
+        background: #8b5cf6;
+        color: #fff;
+        border-color: #8b5cf6;
+      }
+    }
+  }
+
+  &__avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    background: var(--bg-tertiary, #2a2a3e);
+    color: var(--text-muted, #888);
+    flex-shrink: 0;
+    border: 1px solid var(--border-color, #333);
+  }
+
+  &__name {
+    font-size: 0.8125rem;
+    color: var(--text-primary, #e0e0e0);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__check {
+    color: #8b5cf6;
+    flex-shrink: 0;
+  }
+
+  &__empty {
+    padding: 16px 12px;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-muted, #888);
+  }
 }
 </style>
