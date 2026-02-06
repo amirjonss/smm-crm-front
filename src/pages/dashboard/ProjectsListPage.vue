@@ -8,10 +8,10 @@
           flat
           dense
           no-caps
-          icon="download"
-          label="Экспорт CSV"
+          icon="picture_as_pdf"
+          label="Экспорт PDF"
           class="btn-export"
-          @click="exportToCSV"
+          @click="exportToPDF"
           :disable="isLoading"
         />
       </div>
@@ -281,6 +281,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { api } from 'boot/axios.js'
 import { useQuasar } from 'quasar'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import bgSvgRaw from 'assets/asset7.svg?raw'
+import logoSvgRaw from 'assets/logo.svg?raw'
+import 'svg2pdf.js'
+import '../../components/Roboto-Regular-normal.js'
+import '../../components/Roboto-Bold-normal.js'
 
 const q = useQuasar()
 const isLoading = ref(true)
@@ -418,31 +425,179 @@ async function savePrice(project) {
   }
 }
 
-function exportToCSV() {
-  const rows = [['Исполнитель', 'Проект', 'Постов', 'День расчета', 'Статус']]
+function svgFromRaw(raw) {
+  const div = document.createElement('div')
+  div.innerHTML = raw.trim()
+  const svg = div.querySelector('svg')
+  if (!svg) throw new Error('SVG not found')
+  if (!svg.getAttribute('viewBox')) {
+    const w = parseFloat(svg.getAttribute('width')) || 1000
+    const h = parseFloat(svg.getAttribute('height')) || 1414
+    svg.setAttribute('viewBox', `0 0 ${w} ${h}`)
+  }
+  return svg
+}
+
+async function exportToPDF() {
+  const NAVY = { r: 31, g: 42, b: 90 } // #1F2A5A
+  const GRAY = { r: 160, g: 160, b: 160 } // Gray for inactive projects
+
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+  const FONT = 'Roboto-Regular'
+  const FONT_BOLD = 'Roboto-Bold'
+  doc.setFont(FONT, 'normal')
+
+  const W = doc.internal.pageSize.getWidth()
+  const H = doc.internal.pageSize.getHeight()
+
+  await doc.svg(svgFromRaw(bgSvgRaw), { x: 0, y: 0, width: W, height: H })
+  await doc.svg(svgFromRaw(logoSvgRaw), { x: W / 2 - 40, y: 5, width: 80, height: 11 })
+
+  // Current date
+  const currentDate = new Date().toLocaleDateString('ru-RU', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+
+  doc.setFontSize(10)
+  doc.setFont(FONT, 'normal')
+  doc.setTextColor(0, 0, 0)
+  doc.text(currentDate, W - 18, 20, { align: 'right' })
+
+  doc.setFontSize(18)
+  doc.setFont(FONT_BOLD, 'normal')
+  doc.setTextColor(NAVY.r, NAVY.g, NAVY.b)
+  doc.text('PROYEKTLAR RO\'YXATI', W / 2, 25, { align: 'center' })
+
+  // Prepare table data with executor grouping info
+  const head = [['Ijrochi', 'Proyekt', 'Postlar', 'Hisob kuni']]
+  const body = []
+  const rowColors = [] // Track inactive rows
+  const executorSpans = [] // Track which rows should show executor and rowspan
+
+  // Calculate statistics
+  let totalProjectsCount = 0
+
   executorsWithProjects.value.forEach((executor) => {
     const name = `${executor.givenName} ${executor.familyName || ''}`.trim()
-    executor.projects.forEach((project) => {
-      rows.push([
-        name,
+    const projectCount = executor.projects.length
+
+    executor.projects.forEach((project, index) => {
+      body.push([
+        index === 0 ? name : '', // Only show executor name on first row
         project.name,
-        project.contentPlansCount || 0,
-        project.chargeDay || '-',
-        project.isActive ? 'Активен' : 'Неактивен',
+        String(project.contentPlansCount || 0),
+        project.chargeDay ? String(project.chargeDay) : '-'
       ])
+      rowColors.push(project.isActive)
+
+      // Mark the first row of each executor with rowspan info
+      executorSpans.push({
+        isFirst: index === 0,
+        rowSpan: projectCount,
+        executorName: name
+      })
+
+      // Count total projects
+      totalProjectsCount++
     })
   })
-  const BOM = '\uFEFF'
-  const csv = BOM + rows.map(r => r.map(c => {
-    const s = String(c)
-    return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s
-  }).join(',')).join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = `projects_${new Date().toISOString().split('T')[0]}.csv`
-  link.click()
-  URL.revokeObjectURL(link.href)
+
+  // Display total projects count at the top
+  doc.setFontSize(10)
+  doc.setFont(FONT, 'normal')
+  doc.setTextColor(0, 0, 0)
+  doc.text(`Jami proyektlar: ${totalProjectsCount}`, W - 18, 25, { align: 'right' })
+
+  const tableWidth = W - 20
+  const left = 10
+
+  autoTable(doc, {
+    head,
+    body,
+    startY: 32,
+    tableWidth,
+    margin: { left, right: left },
+    theme: 'grid',
+    styles: {
+      fontSize: 8,
+      cellPadding: 2.5,
+      lineWidth: 0.28,
+      lineColor: [NAVY.r, NAVY.g, NAVY.b],
+      textColor: [0, 0, 0],
+      overflow: 'linebreak',
+      valign: 'middle',
+      font: FONT,
+    },
+    headStyles: {
+      font: FONT_BOLD,
+      fontStyle: 'normal',
+      fontSize: 9,
+      fillColor: [NAVY.r, NAVY.g, NAVY.b],
+      textColor: [255, 255, 255],
+      lineColor: [NAVY.r, NAVY.g, NAVY.b],
+      halign: 'center',
+    },
+    columnStyles: {
+      0: { cellWidth: tableWidth * 0.28, halign: 'center' }, // Executor - centered
+      1: { cellWidth: tableWidth * 0.42, halign: 'left' },   // Project
+      2: { cellWidth: tableWidth * 0.15, halign: 'center' }, // Posts
+      3: { cellWidth: tableWidth * 0.15, halign: 'center' }, // Charge Day
+    },
+    didParseCell: (data) => {
+      if (data.section === 'body') {
+        const rowIndex = data.row.index
+        const isActive = rowColors[rowIndex]
+        const spanInfo = executorSpans[rowIndex]
+
+        // Apply gray color to inactive projects
+        if (!isActive) {
+          data.cell.styles.textColor = [GRAY.r, GRAY.g, GRAY.b]
+        }
+
+        // Handle executor column rowspan
+        if (data.column.index === 0) {
+          if (spanInfo.isFirst && spanInfo.rowSpan > 1) {
+            // First row of executor group - set rowspan
+            data.cell.rowSpan = spanInfo.rowSpan
+            data.cell.styles.valign = 'middle'
+          } else if (!spanInfo.isFirst) {
+            // Hide subsequent executor cells (they're merged)
+            data.cell.text = []
+          }
+        }
+      }
+    },
+    didDrawCell: (data) => {
+      // Add strikethrough for inactive project names (column 1)
+      if (data.section === 'body' && data.column.index === 1) {
+        const rowIndex = data.row.index
+        const isActive = rowColors[rowIndex]
+
+        if (!isActive && data.cell.text.length > 0) {
+          // Draw strikethrough line
+          doc.setDrawColor(GRAY.r, GRAY.g, GRAY.b)
+          doc.setLineWidth(0.2)
+          const textWidth = doc.getTextWidth(data.cell.text[0])
+          const y = data.cell.y + data.cell.height / 2
+          const x = data.cell.x + data.cell.padding('left')
+          doc.line(x, y, x + textWidth, y)
+        }
+      }
+    },
+    didDrawPage: () => {
+      doc.setTextColor(0, 0, 0)
+      doc.setFontSize(11)
+      doc.setFont(FONT, 'normal')
+      doc.text('@kh.agency', 18, H - 12)
+      doc.text('+998 20 010 20 20', W - 18, H - 12, { align: 'right' })
+    },
+    pageBreak: 'auto',
+    rowPageBreak: 'auto',
+  })
+
+  doc.save(`projects_list_${new Date().toISOString().split('T')[0]}.pdf`)
 }
 
 onMounted(fetchAllData)
