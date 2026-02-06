@@ -193,8 +193,8 @@
               </q-item-section>
               <q-item-section side>
                 <div class="row q-gutter-x-xs">
-                  <div 
-                    v-for="p in event.platforms" 
+                  <div
+                    v-for="p in event.platforms"
                     :key="p.name"
                     class="platform-status-wrapper"
                     :class="`status-${p.status}`"
@@ -443,7 +443,7 @@
                         @click.stop
                       />
                     </div>
-                    
+
                     <div
                       v-if="tempEvent.platforms[platform.value]?.enabled"
                       class="platform-mini-status"
@@ -1069,7 +1069,7 @@ onMounted(() => {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     z-index: 10;
   }
-  
+
   &:active {
     transform: scale(0.95);
   }
@@ -1094,7 +1094,7 @@ onMounted(() => {
   .status-PUBLISHED & {
     color: #22c55e;
     border-color: #22c55e;
-    background: #ecfdf5; 
+    background: #ecfdf5;
   }
   .status-CANCELED & {
     color: #ef4444;
