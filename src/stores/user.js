@@ -60,10 +60,10 @@ export const useUserStore = defineStore('user', {
           })
       })
     },
-    fetchUsers() {
+    fetchUsers(params = {}) {
       return new Promise((resolve, reject) => {
         api
-          .get('/users')
+          .get('/users', { params })
           .then((response) => {
             this.users.totalItems = response.data.totalItems
             this.users.items = response.data.member
