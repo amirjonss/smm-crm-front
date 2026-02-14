@@ -176,11 +176,7 @@
               class="q-py-md"
             >
               <q-item-section avatar>
-                <q-icon
-                  :name="getIconForFormat(event.format)"
-                  color="primary"
-                  size="sm"
-                />
+                <q-icon :name="getIconForFormat(event.format)" color="primary" size="sm" />
               </q-item-section>
               <q-item-section>
                 <q-item-label class="text-weight-bold text-primary">{{
@@ -200,7 +196,11 @@
                     :class="`status-${p.status}`"
                     style="width: 20px; height: 20px"
                   >
-                    <q-icon :name="PLATFORM_ICONS[p.name]" size="10px" :style="{ color: PLATFORM_COLORS[p.name] }" />
+                    <q-icon
+                      :name="PLATFORM_ICONS[p.name]"
+                      size="10px"
+                      :style="{ color: PLATFORM_COLORS[p.name] }"
+                    />
                   </div>
                 </div>
               </q-item-section>
@@ -274,7 +274,9 @@
 
             <div>
               <div class="text-caption text-grey-7">Дата</div>
-              <div class="text-body2 text-weight-medium">{{ date.formatDate(tempEvent.date, 'D MMMM YYYY') }}</div>
+              <div class="text-body2 text-weight-medium">
+                {{ date.formatDate(tempEvent.date, 'D MMMM YYYY') }}
+              </div>
             </div>
 
             <div v-if="getEnabledPlatforms(tempEvent.platforms).length > 0">
@@ -471,7 +473,11 @@
                           </div>
                         </template>
                         <template #option="{ itemProps, opt }">
-                          <q-item v-bind="itemProps" dense style="min-height: 28px; padding: 4px 8px">
+                          <q-item
+                            v-bind="itemProps"
+                            dense
+                            style="min-height: 28px; padding: 4px 8px"
+                          >
                             <q-item-section avatar style="min-width: 20px">
                               <q-badge
                                 :color="STATUS_COLORS[opt.value] || 'grey'"
@@ -491,14 +497,7 @@
               </div>
 
               <div class="form-actions row justify-end q-gutter-sm q-mt-md">
-                <q-btn
-                  flat
-                  label="Отмена"
-                  color="grey-7"
-                  dense
-                  v-close-popup
-                  class="btn-cancel"
-                />
+                <q-btn flat label="Отмена" color="grey-7" dense v-close-popup class="btn-cancel" />
                 <q-btn
                   type="submit"
                   :label="tempEvent.id ? 'Сохранить' : 'Добавить'"
@@ -581,8 +580,7 @@ function getEmptyPlatforms() {
 
 // Toggle platform selection
 function togglePlatform(platformName) {
-  tempEvent.value.platforms[platformName].enabled =
-    !tempEvent.value.platforms[platformName].enabled
+  tempEvent.value.platforms[platformName].enabled = !tempEvent.value.platforms[platformName].enabled
 }
 
 // Get enabled platforms as array for display
@@ -1088,7 +1086,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   z-index: 2;
 
   .status-PUBLISHED & {

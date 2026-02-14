@@ -28,6 +28,18 @@ export const useUserStore = defineStore('user', {
     isAdmin(state) {
       return state.user.roles.includes('ROLE_ADMIN')
     },
+    isSMM(state) {
+      return state.user.roles.includes('ROLE_SMM')
+    },
+    canCreateBoard() {
+      return this.isAdmin
+    },
+    canDeleteBoard() {
+      return this.isAdmin
+    },
+    canManageList() {
+      return this.isAdmin || this.isSMM
+    },
     isLoaded: (state) => state.loaded,
     getUsers: (state) => state.users.items,
     getSelectedUserId: (state) => state.selectedUserId,
@@ -60,10 +72,10 @@ export const useUserStore = defineStore('user', {
           })
       })
     },
-    fetchUsers() {
+    fetchUsers(params = {}) {
       return new Promise((resolve, reject) => {
         api
-          .get('/users')
+          .get('/users', { params })
           .then((response) => {
             this.users.totalItems = response.data.totalItems
             this.users.items = response.data.member

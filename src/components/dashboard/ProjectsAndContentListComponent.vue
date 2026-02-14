@@ -251,7 +251,7 @@ import {
   PLATFORM_COLORS,
   PLATFORM_LABELS,
   STATUS_LABELS,
-  STATUS
+  STATUS,
 } from '@/constants/status'
 
 const projectStore = useProjectStore()
@@ -330,7 +330,7 @@ watch(
       await projectStore.fetchProjectsByUser(newId)
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 </script>
 
@@ -585,8 +585,6 @@ watch(
   &:last-child {
     margin-bottom: 0;
   }
-
-
 }
 
 .mobile-card-selected {
@@ -724,7 +722,7 @@ watch(
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     z-index: 10;
   }
-  
+
   &:active {
     transform: scale(0.95);
   }
@@ -743,13 +741,13 @@ watch(
   align-items: center;
   justify-content: center;
   font-size: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   z-index: 2;
 
   .status-PUBLISHED & {
     color: #22c55e;
     border-color: #22c55e;
-    background: #ecfdf5; 
+    background: #ecfdf5;
   }
   .status-CANCELED & {
     color: #ef4444;

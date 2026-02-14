@@ -185,6 +185,31 @@ h6 {
   border-left: 3px solid $primary;
 }
 
+// Dropdown menu styling
+.settings-menu {
+  background: var(--bg-card, #ffffff) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  border-radius: var(--radius-lg, 12px) !important;
+
+  .q-item {
+    color: var(--text-primary);
+  }
+
+  .q-item__label--caption {
+    color: var(--text-secondary);
+  }
+
+  .q-separator {
+    background: var(--border-color, rgba(0, 0, 0, 0.08));
+  }
+}
+
+.body--dark .settings-menu {
+  background: var(--bg-card, #1e293b) !important;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
 // Dialog styling
 .q-dialog__inner--minimized > div {
   border-radius: var(--radius-lg);

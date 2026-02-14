@@ -91,7 +91,12 @@
                             <q-icon name="search" size="16px" />
                           </template>
                           <template v-if="executorSearch" #append>
-                            <q-icon name="close" size="14px" class="cursor-pointer" @click="executorSearch = ''" />
+                            <q-icon
+                              name="close"
+                              size="14px"
+                              class="cursor-pointer"
+                              @click="executorSearch = ''"
+                            />
                           </template>
                         </q-input>
                         <div class="reassign-popup__list">
@@ -340,14 +345,7 @@
                   <td class="td-project">
                     <div class="project-cell">
                       <span class="project-name">{{ project.name }}</span>
-                      <q-btn
-                        flat
-                        dense
-                        round
-                        size="xs"
-                        icon="person"
-                        class="reassign-trigger"
-                      >
+                      <q-btn flat dense round size="xs" icon="person" class="reassign-trigger">
                         <q-popup-proxy transition-show="scale" transition-hide="scale">
                           <q-card class="reassign-popup">
                             <div class="reassign-popup__header">Сменить исполнителя</div>
@@ -364,7 +362,12 @@
                                 <q-icon name="search" size="16px" />
                               </template>
                               <template v-if="executorSearch" #append>
-                                <q-icon name="close" size="14px" class="cursor-pointer" @click="executorSearch = ''" />
+                                <q-icon
+                                  name="close"
+                                  size="14px"
+                                  class="cursor-pointer"
+                                  @click="executorSearch = ''"
+                                />
                               </template>
                             </q-input>
                             <div class="reassign-popup__list">
@@ -376,7 +379,9 @@
                                 v-close-popup
                                 @click="changeExecutor(project, user.id)"
                               >
-                                <div class="reassign-popup__avatar">{{ getInitials(user.label) }}</div>
+                                <div class="reassign-popup__avatar">
+                                  {{ getInitials(user.label) }}
+                                </div>
                                 <span class="reassign-popup__name">{{ user.label }}</span>
                                 <q-icon
                                   v-if="isCurrentExecutor(project.id, user.id)"
@@ -931,9 +936,9 @@ async function exportToPDF() {
       { content: 'Ijrochi', rowSpan: 2 },
       { content: 'Proyekt', rowSpan: 2 },
       { content: 'Postlar soni', colSpan: 2 },
-      { content: 'Hisob kuni', rowSpan: 2 }
+      { content: 'Hisob kuni', rowSpan: 2 },
     ],
-    ['Grafika', 'Video']
+    ['Grafika', 'Video'],
   ]
   const body = []
   const rowColors = [] // Track inactive rows
@@ -946,7 +951,7 @@ async function exportToPDF() {
     const name = `${executor.givenName} ${executor.familyName || ''}`.trim()
 
     // Filter only active projects
-    const activeProjects = executor.projects.filter(p => p.isActive)
+    const activeProjects = executor.projects.filter((p) => p.isActive)
     const activeProjectCount = activeProjects.length
 
     // Skip executor if no active projects
@@ -1014,8 +1019,8 @@ async function exportToPDF() {
     columnStyles: {
       0: { cellWidth: tableWidth * 0.25, halign: 'center' }, // Executor - centered
       1: { cellWidth: tableWidth * 0.47, halign: 'left' }, // Project (slightly reduced)
-      2: { cellWidth: tableWidth * 0.10, halign: 'center', fontSize: 6.5 }, // Graf
-      3: { cellWidth: tableWidth * 0.10, halign: 'center', fontSize: 6.5 }, // Vid
+      2: { cellWidth: tableWidth * 0.1, halign: 'center', fontSize: 6.5 }, // Graf
+      3: { cellWidth: tableWidth * 0.1, halign: 'center', fontSize: 6.5 }, // Vid
       4: { cellWidth: tableWidth * 0.08, halign: 'center', fontSize: 6.5 }, // Charge Day (wider)
     },
     didParseCell: (data) => {
@@ -1889,8 +1894,6 @@ onMounted(fetchAllData)
     }
   }
 }
-
-
 </style>
 
 <style lang="scss">

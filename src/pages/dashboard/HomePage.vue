@@ -54,11 +54,7 @@
             <template v-else>
               <!-- Mobile Cards View -->
               <div class="mobile-cards show-mobile-only">
-                <div
-                  v-for="plan in todaysContentPlans"
-                  :key="plan.id"
-                  class="mobile-card"
-                >
+                <div v-for="plan in todaysContentPlans" :key="plan.id" class="mobile-card">
                   <div class="mobile-card-header">
                     <span class="mobile-card-title">{{ plan.post }}</span>
                     <span class="format-badge">{{ plan.format }}</span>
@@ -68,7 +64,7 @@
                       <span class="mobile-card-label">Проект:</span>
                       <span class="project-name-table">{{ getProjectName(plan.project) }}</span>
                     </div>
-                    
+
                     <div v-if="plan.platforms?.length" class="mobile-card-row">
                       <span class="mobile-card-label">Платформы:</span>
                       <div class="platform-icons-row">
@@ -86,20 +82,30 @@
                           <div v-if="getStatusIcon(p.status)" class="status-indicator-icon">
                             <q-icon :name="getStatusIcon(p.status)" size="8px" />
                           </div>
-                          
-                          <q-menu v-if="!userStore.isAdmin" auto-close anchor="top middle" self="bottom middle" class="glass-menu">
+
+                          <q-menu
+                            v-if="!userStore.isAdmin"
+                            auto-close
+                            anchor="top middle"
+                            self="bottom middle"
+                            class="glass-menu"
+                          >
                             <q-list style="min-width: 150px">
-                              <q-item 
-                                v-for="opt in statusOptions" 
+                              <q-item
+                                v-for="opt in statusOptions"
                                 :key="opt.value"
-                                clickable 
+                                clickable
                                 v-close-popup
                                 @click="setPlatformStatus(plan, p.name, opt.value)"
                                 :active="p.status === opt.value"
                                 active-class="bg-blue-1 text-primary"
                               >
                                 <q-item-section avatar style="min-width: 32px; padding-right: 0">
-                                  <q-icon :name="getStatusIcon(opt.value)" size="xs" :color="STATUS_COLORS[opt.value]" />
+                                  <q-icon
+                                    :name="getStatusIcon(opt.value)"
+                                    size="xs"
+                                    :color="STATUS_COLORS[opt.value]"
+                                  />
                                 </q-item-section>
                                 <q-item-section>{{ opt.label }}</q-item-section>
                               </q-item>
@@ -155,20 +161,30 @@
                           <div v-if="getStatusIcon(p.status)" class="status-indicator-icon">
                             <q-icon :name="getStatusIcon(p.status)" size="8px" />
                           </div>
-                          
-                          <q-menu v-if="!userStore.isAdmin" auto-close anchor="top middle" self="bottom middle" class="glass-menu">
+
+                          <q-menu
+                            v-if="!userStore.isAdmin"
+                            auto-close
+                            anchor="top middle"
+                            self="bottom middle"
+                            class="glass-menu"
+                          >
                             <q-list style="min-width: 150px">
-                              <q-item 
-                                v-for="opt in statusOptions" 
+                              <q-item
+                                v-for="opt in statusOptions"
                                 :key="opt.value"
-                                clickable 
+                                clickable
                                 v-close-popup
                                 @click="setPlatformStatus(plan, p.name, opt.value)"
                                 :active="p.status === opt.value"
                                 active-class="bg-blue-1 text-primary"
                               >
                                 <q-item-section avatar style="min-width: 32px; padding-right: 0">
-                                  <q-icon :name="getStatusIcon(opt.value)" size="xs" :color="STATUS_COLORS[opt.value]" />
+                                  <q-icon
+                                    :name="getStatusIcon(opt.value)"
+                                    size="xs"
+                                    :color="STATUS_COLORS[opt.value]"
+                                  />
                                 </q-item-section>
                                 <q-item-section>{{ opt.label }}</q-item-section>
                               </q-item>
@@ -206,12 +222,34 @@
         <!-- Users List Card -->
         <div class="grid-item user-list-section">
           <div class="card">
-            <div class="card-header">
-              <h2 class="card-title">
-                <q-icon name="group" class="card-icon" />
-                Список персонала
-              </h2>
-              <span class="card-count">{{ filteredUsers.length }}</span>
+            <div class="card-header card-header-col">
+              <div class="card-header-top">
+                <h2 class="card-title">
+                  <q-icon name="group" class="card-icon" />
+                  Список персонала
+                </h2>
+                <span class="card-count">{{ filteredUsers.length }}</span>
+              </div>
+              <div class="role-chips">
+                <button
+                  class="role-chip"
+                  :class="{ 'role-chip-active': !selectedRoleFilter }"
+                  @click="selectedRoleFilter = null"
+                >
+                  Все
+                </button>
+                <button
+                  v-for="role in ROLE_OPTIONS"
+                  :key="role.value"
+                  class="role-chip"
+                  :class="{ 'role-chip-active': selectedRoleFilter === role.value }"
+                  @click="
+                    selectedRoleFilter = selectedRoleFilter === role.value ? null : role.value
+                  "
+                >
+                  {{ role.label }}
+                </button>
+              </div>
             </div>
             <div class="card-body no-padding">
               <div v-if="filteredUsers.length === 0" class="empty-state">
@@ -323,6 +361,20 @@
                   class="modern-input"
                 />
               </div>
+              <div class="form-group">
+                <label class="form-label">Роль</label>
+                <q-select
+                  v-model="userForm.roles"
+                  :options="ROLE_OPTIONS"
+                  outlined
+                  emit-value
+                  map-options
+                  placeholder="Выберите роль"
+                  lazy-rules
+                  :rules="[(val) => !!val || 'Выберите роль']"
+                  class="modern-input"
+                />
+              </div>
 
               <div class="form-actions-row">
                 <q-btn
@@ -351,7 +403,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { useUserStore } from 'stores/user.js'
 import { useProjectStore } from 'stores/project.js'
 import { useContentPlanStore } from 'stores/content-plan.js'
@@ -373,10 +425,19 @@ import {
 const userStore = useUserStore()
 const projectStore = useProjectStore()
 const contentPlanStore = useContentPlanStore()
+const ROLE_OPTIONS = [
+  { label: 'SMM', value: 'ROLE_SMM' },
+  { label: 'Монтажер', value: 'ROLE_EDITOR' },
+  { label: 'Дизайнер', value: 'ROLE_DESIGNER' },
+  { label: 'Оператор', value: 'ROLE_OPERATOR' },
+  { label: 'Админ', value: 'ROLE_ADMIN' },
+]
+
 const userForm = ref({
   givenName: '',
   familyName: '',
   email: '',
+  roles: null,
 })
 const isLoading = ref(false)
 const editingUserId = ref(null)
@@ -384,6 +445,7 @@ const showUserDialog = ref(false)
 const q = useQuasar()
 
 const selectedUserId = computed(() => userStore.getSelectedUserId)
+const selectedRoleFilter = ref(null)
 
 const statusOptions = STATUS_OPTIONS
 
@@ -417,23 +479,19 @@ async function setPlatformStatus(plan, platformName, newStatus) {
   }))
 
   try {
-    await contentPlanStore.patchContentPlan(
-      { platforms: updatedPlatforms },
-      plan.id
-    )
+    await contentPlanStore.patchContentPlan({ platforms: updatedPlatforms }, plan.id)
     q.notify({
       message: `${PLATFORM_LABELS[platformName]}: ${STATUS_LABELS[newStatus]}`,
       type: STATUS_COLORS[newStatus] || 'info',
       position: 'top',
       timeout: 1000,
-      icon: getStatusIcon(newStatus)
+      icon: getStatusIcon(newStatus),
     })
-    
-    // Refresh today's list if the plan is in it
-    if (todaysContentPlans.value.some(p => p.id === plan.id)) {
-        fetchTodaysContentPlans()
-    }
 
+    // Refresh today's list if the plan is in it
+    if (todaysContentPlans.value.some((p) => p.id === plan.id)) {
+      fetchTodaysContentPlans()
+    }
   } catch (e) {
     // Revert on error
     platform.status = originalStatus
@@ -462,6 +520,18 @@ const filteredUsers = computed(() => {
   return userStore.getUsers
 })
 
+function fetchFilteredUsers() {
+  const params = {}
+  if (selectedRoleFilter.value) {
+    params.roles = selectedRoleFilter.value
+  }
+  return userStore.fetchUsers(params)
+}
+
+watch(selectedRoleFilter, () => {
+  fetchFilteredUsers()
+})
+
 function openCreateDialog() {
   clearForm()
   showUserDialog.value = true
@@ -472,11 +542,12 @@ function createUser() {
   if (editingUserId.value) {
     saveEditedUser()
   } else {
+    const payload = { ...userForm.value, roles: userForm.value.roles ? [userForm.value.roles] : [] }
     userStore
-      .createUser(userForm.value)
+      .createUser(payload)
       .then(() => {
         isLoading.value = false
-        userStore.fetchUsers()
+        fetchFilteredUsers()
         showUserDialog.value = false
         clearForm()
         q.notify({
@@ -502,6 +573,7 @@ function editUser(row) {
   userForm.value.email = row.email
   userForm.value.givenName = row.givenName
   userForm.value.familyName = row.familyName
+  userForm.value.roles = row.roles?.[0] || null
   showUserDialog.value = true
 }
 
@@ -514,8 +586,9 @@ function selectUser(user) {
 }
 
 function saveEditedUser() {
-  userStore.patchUser(userForm.value, editingUserId.value).then(() => {
-    userStore.fetchUsers().then(() => {
+  const payload = { ...userForm.value, roles: userForm.value.roles ? [userForm.value.roles] : [] }
+  userStore.patchUser(payload, editingUserId.value).then(() => {
+    fetchFilteredUsers().then(() => {
       isLoading.value = false
       showUserDialog.value = false
       q.notify({
@@ -530,12 +603,12 @@ function saveEditedUser() {
 
 function clearForm() {
   editingUserId.value = null
-  userForm.value = { email: '', familyName: '', givenName: '' }
+  userForm.value = { email: '', familyName: '', givenName: '', roles: null }
 }
 
 function deleteUser(id) {
   userStore.deleteUser(id).then(() => {
-    userStore.fetchUsers()
+    fetchFilteredUsers()
     q.notify({
       message: 'Пользователь удалён',
       type: 'positive',
@@ -1281,7 +1354,7 @@ onMounted(() => {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     z-index: 10;
   }
-  
+
   &:active {
     transform: scale(0.95);
   }
@@ -1300,13 +1373,13 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   z-index: 2;
 
   .status-PUBLISHED & {
     color: #22c55e;
     border-color: #22c55e;
-    background: #ecfdf5; 
+    background: #ecfdf5;
   }
   .status-CANCELED & {
     color: #ef4444;
@@ -1330,6 +1403,52 @@ onMounted(() => {
   gap: 0.375rem;
   flex-wrap: wrap;
 }
+
+.card-header-col {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.card-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.role-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.role-chip {
+  all: unset;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  background: transparent;
+  transition: all 0.2s ease;
+  user-select: none;
+  white-space: nowrap;
+
+  &:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.04);
+  }
+}
+
+.role-chip-active {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+  border-color: rgba(139, 92, 246, 0.4);
+  font-weight: 600;
+}
 </style>
 
 <style lang="scss">
@@ -1344,7 +1463,7 @@ onMounted(() => {
   font-size: 10px !important;
   padding: 4px 8px !important;
   letter-spacing: 0.3px;
-  
+
   .body--dark & {
     background: rgba(20, 20, 20, 0.65) !important;
     border-color: rgba(255, 255, 255, 0.1) !important;

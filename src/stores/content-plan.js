@@ -48,11 +48,15 @@ export const useContentPlanStore = defineStore('content-plan', {
     fetchMonthlyContentPlansCount() {
       const now = new Date()
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        .toISOString()
+        .slice(0, 10)
 
       return new Promise((resolve, reject) => {
         api
-          .get(`/content_plans?date[after]=${startOfMonth}&date[before]=${endOfMonth}&itemsPerPage=1`)
+          .get(
+            `/content_plans?date[after]=${startOfMonth}&date[before]=${endOfMonth}&itemsPerPage=1`,
+          )
           .then((response) => {
             this.monthlyTotal = response.data.totalItems
             resolve()
