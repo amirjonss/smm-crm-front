@@ -205,7 +205,7 @@ function saveCard(data) {
   const patchData = {
     name: data.name,
     status: data.status,
-    deadline: data.deadline,
+    deadline: data.deadline || null,
     description: data.description,
   }
 
@@ -213,13 +213,20 @@ function saveCard(data) {
     const toList = boardStore.currentBoard?.lists.find((l) => l.id === newListId)
     const newIndex = toList ? toList.cards.length : 0
     boardStore.moveCard(editingCard.value.id, oldListId, newListId, newIndex)
+    // Persist list move via dedicated endpoint
+    const lastCard = toList && toList.cards.length > 1 ? toList.cards[toList.cards.length - 2] : null
+    boardStore.moveCardPosition(editingCard.value.id, {
+      targetListId: newListId,
+      prevCardId: lastCard?.id !== editingCard.value.id ? lastCard?.id : null,
+      nextCardId: null,
+    })
   }
 
-  boardStore.patchCard(editingCard.value.id, patchData).then(() => {
+  const cardId = editingCard.value.id
+  boardStore.patchCard(cardId, patchData).then(() => {
+    boardStore.fetchCardLogs(cardId)
     q.notify({ message: 'Карточка обновлена', type: 'positive', position: 'top', timeout: 1000 })
   })
-
-  editingCard.value = null
 }
 
 function addList(data) {

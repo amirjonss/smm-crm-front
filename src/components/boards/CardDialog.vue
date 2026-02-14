@@ -212,17 +212,21 @@
               </div>
 
               <div v-if="isEditingDescription" class="description-editor-wrap">
-                <q-editor
-                  ref="descEditorRef"
-                  v-model="form.description"
-                  :toolbar="descToolbar"
-                  flat
-                  min-height="120px"
-                  content-class="desc-editor-content"
-                  toolbar-bg="transparent"
-                  class="description-editor"
-                  placeholder="Добавьте форматирование, пока пишете, используя символы разметки..."
-                />
+                <div class="desc-editor-toolbar-row">
+                  <heading-dropdown :editor-ref="descEditorRef" />
+                  <div class="desc-toolbar-sep" />
+                  <q-editor
+                    ref="descEditorRef"
+                    v-model="form.description"
+                    :toolbar="descToolbar"
+                    flat
+                    min-height="120px"
+                    content-class="desc-editor-content"
+                    toolbar-bg="transparent"
+                    class="description-editor"
+                    placeholder="Добавьте форматирование, пока пишете, используя символы разметки..."
+                  />
+                </div>
                 <div class="desc-editor-actions">
                   <q-btn
                     unelevated
@@ -276,11 +280,8 @@
                   {{ (log.createdBy?.givenName?.[0] || '?').toUpperCase() }}
                 </q-avatar>
                 <div class="log-content">
-                  <div class="log-user">
-                    {{ log.createdBy?.givenName }} {{ log.createdBy?.familyName }}
-                  </div>
                   <div class="log-description">{{ log.description }}</div>
-                  <div class="log-date">{{ formatRelativeDate(log.createdAt) }}</div>
+                  <div class="log-date">{{ formatLogDate(log.createdAt) }}</div>
                 </div>
               </div>
 
@@ -304,9 +305,11 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, nextTick } from 'vue'
 import { CARD_STATUS, CARD_STATUS_OPTIONS, CARD_STATUS_COLORS } from '@/constants/cardStatus'
 import { useUserStore } from 'stores/user.js'
+import { useBoardStore } from 'stores/board.js'
+import HeadingDropdown from 'components/boards/HeadingDropdown.vue'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -317,6 +320,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'save'])
 
 const userStore = useUserStore()
+const boardStore = useBoardStore()
 
 const statusOptions = computed(() => {
   if (userStore.isAdmin || userStore.isSMM) return CARD_STATUS_OPTIONS
@@ -357,28 +361,31 @@ function isExecutor(userId) {
 
 function toggleExecutor(user) {
   const idx = cardExecutors.value.findIndex((e) => e.id === user.id)
+  const cardId = props.card?.id
   if (idx >= 0) {
     cardExecutors.value.splice(idx, 1)
+    if (cardId) {
+      boardStore.removeExecutor(cardId, user.id).then(() => {
+        boardStore.fetchCardLogs(cardId)
+      })
+    }
   } else {
     cardExecutors.value.push(user)
+    if (cardId) {
+      boardStore.addExecutor(cardId, user.id).then(() => {
+        boardStore.fetchCardLogs(cardId)
+      })
+    }
   }
-  save()
 }
 
 const showAllLogs = ref(false)
 const isEditingDescription = ref(false)
+const initializing = ref(false)
 const descEditorRef = ref(null)
 const descriptionBackup = ref('')
 
 const descToolbar = [
-  [
-    {
-      label: 'Tt',
-      fixedLabel: true,
-      list: 'no-icons',
-      options: ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-    },
-  ],
   ['bold', 'italic'],
   ['unordered', 'ordered'],
   ['link', 'hr'],
@@ -404,7 +411,7 @@ const form = ref({
 
 const originalForm = ref({})
 
-const cardLogs = computed(() => props.card?.logs || [])
+const cardLogs = computed(() => boardStore.getCardLogs || [])
 
 const visibleLogs = computed(() => {
   if (showAllLogs.value) return cardLogs.value
@@ -434,23 +441,23 @@ const formattedDeadlineFull = computed(() => {
   return deadlineTime.value ? `${date}, ${deadlineTime.value}` : date
 })
 
-function formatRelativeDate(dateStr) {
+function formatLogDate(dateStr) {
   if (!dateStr) return ''
   const date = new Date(dateStr)
-  const now = new Date()
-  const diffMs = now - date
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
-
-  if (diffMins < 1) return 'только что'
-  if (diffMins < 60) return `${diffMins} мин. назад`
-  if (diffHours < 24) return `${diffHours} ч. назад`
-  if (diffDays < 7) return `${diffDays} дн. назад`
-  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })
+  const datePart = date.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+  const timePart = date.toLocaleTimeString('ru-RU', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  return `${datePart}, ${timePart}`
 }
 
 function initForm(card) {
+  initializing.value = true
   const data = {
     name: card.name || '',
     status: card.status || 'open',
@@ -470,6 +477,11 @@ function initForm(card) {
     userStore.fetchUsers()
   }
 
+  // Fetch card logs from API
+  if (card.id) {
+    boardStore.fetchCardLogs(card.id)
+  }
+
   if (card.deadline) {
     deadlineDate.value = card.deadline.slice(0, 10)
     deadlineTime.value = card.deadline.slice(11, 16) || '12:00'
@@ -479,6 +491,7 @@ function initForm(card) {
     deadlineTime.value = '12:00'
     deadlineEnabled.value = false
   }
+  nextTick(() => { initializing.value = false })
 }
 
 function saveDeadline() {
@@ -529,8 +542,8 @@ function saveDescription() {
   if (form.value.description !== originalForm.value.description) save()
 }
 
-// Auto-save on status change
-watch(() => form.value.status, (val, old) => { if (old && val !== old) save() })
+// Auto-save on status change (skip during init)
+watch(() => form.value.status, (val, old) => { if (!initializing.value && old && val !== old) save() })
 
 function onTimeInput(e) {
   let v = e.target.value.replace(/[^\d]/g, '').slice(0, 4)
@@ -775,8 +788,31 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 .description-editor-wrap {
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   background: rgba(255, 255, 255, 0.04);
+}
+
+.desc-editor-toolbar-row {
+  display: flex;
+  align-items: flex-start;
+
+  .heading-dropdown {
+    padding: 0.25rem 0 0 0.25rem;
+    flex-shrink: 0;
+  }
+
+  .description-editor {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.desc-toolbar-sep {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.12);
+  margin-top: 0.5rem;
+  flex-shrink: 0;
 }
 
 .description-editor {
@@ -983,23 +1019,16 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   min-width: 0;
 }
 
-.log-user {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 0.125rem;
-}
-
 .log-description {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.75);
   line-height: 1.4;
   word-break: break-word;
 }
 
 .log-date {
   font-size: 0.6875rem;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(139, 92, 246, 0.6);
   margin-top: 0.25rem;
 }
 
@@ -1042,23 +1071,6 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     max-height: 80vh !important;
     overflow-y: auto;
   }
-}
-
-/* Editor heading dropdown formatting */
-.q-menu .q-editor__toolbar-group {
-  h1, h2, h3, h4, h5, h6, p {
-    margin: 0 !important;
-    line-height: 1.5 !important;
-    color: #e0e0e0;
-  }
-
-  h1 { font-size: 1.125rem !important;  font-weight: 700 !important; }
-  h2 { font-size: 1rem !important;      font-weight: 700 !important; }
-  h3 { font-size: 0.9375rem !important; font-weight: 600 !important; }
-  h4 { font-size: 0.875rem !important;  font-weight: 600 !important; }
-  h5 { font-size: 0.8125rem !important; font-weight: 600 !important; }
-  h6 { font-size: 0.75rem !important;   font-weight: 600 !important; }
-  p  { font-size: 0.75rem !important;   font-weight: 400 !important; }
 }
 
 /* Deadline panel — rendered as portal on <body>, must be unscoped */

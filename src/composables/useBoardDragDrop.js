@@ -25,9 +25,22 @@ export function useBoardDragDrop() {
   function persistListOrder() {
     const reindexed = reindexPositions(sortedLists.value)
     boardStore.setCurrentBoardLists(reindexed)
-    // TODO: Replace with batch PATCH calls for list positions
+    // Persist each list position to API
     reindexed.forEach((list) => {
       boardStore.patchList(list.id, { position: list.position })
+    })
+  }
+
+  function persistCardMove(card, newIndex, listId, targetListId) {
+    const list = sortedLists.value.find((l) => l.id === listId)
+    const cards = list?.cards || []
+    const prevCard = newIndex > 0 ? cards[newIndex - 1] : null
+    const nextCard = newIndex < cards.length - 1 ? cards[newIndex + 1] : null
+
+    boardStore.moveCardPosition(card.id, {
+      targetListId: targetListId || null,
+      prevCardId: prevCard?.id !== card.id ? prevCard?.id : null,
+      nextCardId: nextCard?.id !== card.id ? nextCard?.id : null,
     })
   }
 
@@ -35,8 +48,11 @@ export function useBoardDragDrop() {
     if (event.added) {
       const card = event.added.element
       card.list = { id: listId }
-      // TODO: Replace with api.patch('/cards/' + card.id, { list: '/api/board_lists/' + listId })
-      boardStore.patchCard(card.id, { list: { id: listId } })
+      persistCardMove(card, event.added.newIndex, listId, listId)
+    }
+    if (event.moved) {
+      const card = event.moved.element
+      persistCardMove(card, event.moved.newIndex, listId, null)
     }
   }
 
