@@ -28,6 +28,18 @@ export const useUserStore = defineStore('user', {
     isAdmin(state) {
       return state.user.roles.includes('ROLE_ADMIN')
     },
+    isSMM(state) {
+      return state.user.roles.includes('ROLE_SMM')
+    },
+    canCreateBoard() {
+      return this.isAdmin
+    },
+    canDeleteBoard() {
+      return this.isAdmin
+    },
+    canManageList() {
+      return this.isAdmin || this.isSMM
+    },
     isLoaded: (state) => state.loaded,
     getUsers: (state) => state.users.items,
     getSelectedUserId: (state) => state.selectedUserId,

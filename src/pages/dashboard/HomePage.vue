@@ -54,11 +54,7 @@
             <template v-else>
               <!-- Mobile Cards View -->
               <div class="mobile-cards show-mobile-only">
-                <div
-                  v-for="plan in todaysContentPlans"
-                  :key="plan.id"
-                  class="mobile-card"
-                >
+                <div v-for="plan in todaysContentPlans" :key="plan.id" class="mobile-card">
                   <div class="mobile-card-header">
                     <span class="mobile-card-title">{{ plan.post }}</span>
                     <span class="format-badge">{{ plan.format }}</span>
@@ -68,7 +64,7 @@
                       <span class="mobile-card-label">Проект:</span>
                       <span class="project-name-table">{{ getProjectName(plan.project) }}</span>
                     </div>
-                    
+
                     <div v-if="plan.platforms?.length" class="mobile-card-row">
                       <span class="mobile-card-label">Платформы:</span>
                       <div class="platform-icons-row">
@@ -86,20 +82,30 @@
                           <div v-if="getStatusIcon(p.status)" class="status-indicator-icon">
                             <q-icon :name="getStatusIcon(p.status)" size="8px" />
                           </div>
-                          
-                          <q-menu v-if="!userStore.isAdmin" auto-close anchor="top middle" self="bottom middle" class="glass-menu">
+
+                          <q-menu
+                            v-if="!userStore.isAdmin"
+                            auto-close
+                            anchor="top middle"
+                            self="bottom middle"
+                            class="glass-menu"
+                          >
                             <q-list style="min-width: 150px">
-                              <q-item 
-                                v-for="opt in statusOptions" 
+                              <q-item
+                                v-for="opt in statusOptions"
                                 :key="opt.value"
-                                clickable 
+                                clickable
                                 v-close-popup
                                 @click="setPlatformStatus(plan, p.name, opt.value)"
                                 :active="p.status === opt.value"
                                 active-class="bg-blue-1 text-primary"
                               >
                                 <q-item-section avatar style="min-width: 32px; padding-right: 0">
-                                  <q-icon :name="getStatusIcon(opt.value)" size="xs" :color="STATUS_COLORS[opt.value]" />
+                                  <q-icon
+                                    :name="getStatusIcon(opt.value)"
+                                    size="xs"
+                                    :color="STATUS_COLORS[opt.value]"
+                                  />
                                 </q-item-section>
                                 <q-item-section>{{ opt.label }}</q-item-section>
                               </q-item>
@@ -155,20 +161,30 @@
                           <div v-if="getStatusIcon(p.status)" class="status-indicator-icon">
                             <q-icon :name="getStatusIcon(p.status)" size="8px" />
                           </div>
-                          
-                          <q-menu v-if="!userStore.isAdmin" auto-close anchor="top middle" self="bottom middle" class="glass-menu">
+
+                          <q-menu
+                            v-if="!userStore.isAdmin"
+                            auto-close
+                            anchor="top middle"
+                            self="bottom middle"
+                            class="glass-menu"
+                          >
                             <q-list style="min-width: 150px">
-                              <q-item 
-                                v-for="opt in statusOptions" 
+                              <q-item
+                                v-for="opt in statusOptions"
                                 :key="opt.value"
-                                clickable 
+                                clickable
                                 v-close-popup
                                 @click="setPlatformStatus(plan, p.name, opt.value)"
                                 :active="p.status === opt.value"
                                 active-class="bg-blue-1 text-primary"
                               >
                                 <q-item-section avatar style="min-width: 32px; padding-right: 0">
-                                  <q-icon :name="getStatusIcon(opt.value)" size="xs" :color="STATUS_COLORS[opt.value]" />
+                                  <q-icon
+                                    :name="getStatusIcon(opt.value)"
+                                    size="xs"
+                                    :color="STATUS_COLORS[opt.value]"
+                                  />
                                 </q-item-section>
                                 <q-item-section>{{ opt.label }}</q-item-section>
                               </q-item>
@@ -227,7 +243,9 @@
                   :key="role.value"
                   class="role-chip"
                   :class="{ 'role-chip-active': selectedRoleFilter === role.value }"
-                  @click="selectedRoleFilter = selectedRoleFilter === role.value ? null : role.value"
+                  @click="
+                    selectedRoleFilter = selectedRoleFilter === role.value ? null : role.value
+                  "
                 >
                   {{ role.label }}
                 </button>
@@ -461,23 +479,19 @@ async function setPlatformStatus(plan, platformName, newStatus) {
   }))
 
   try {
-    await contentPlanStore.patchContentPlan(
-      { platforms: updatedPlatforms },
-      plan.id
-    )
+    await contentPlanStore.patchContentPlan({ platforms: updatedPlatforms }, plan.id)
     q.notify({
       message: `${PLATFORM_LABELS[platformName]}: ${STATUS_LABELS[newStatus]}`,
       type: STATUS_COLORS[newStatus] || 'info',
       position: 'top',
       timeout: 1000,
-      icon: getStatusIcon(newStatus)
+      icon: getStatusIcon(newStatus),
     })
-    
-    // Refresh today's list if the plan is in it
-    if (todaysContentPlans.value.some(p => p.id === plan.id)) {
-        fetchTodaysContentPlans()
-    }
 
+    // Refresh today's list if the plan is in it
+    if (todaysContentPlans.value.some((p) => p.id === plan.id)) {
+      fetchTodaysContentPlans()
+    }
   } catch (e) {
     // Revert on error
     platform.status = originalStatus
@@ -1340,7 +1354,7 @@ onMounted(() => {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     z-index: 10;
   }
-  
+
   &:active {
     transform: scale(0.95);
   }
@@ -1359,13 +1373,13 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   z-index: 2;
 
   .status-PUBLISHED & {
     color: #22c55e;
     border-color: #22c55e;
-    background: #ecfdf5; 
+    background: #ecfdf5;
   }
   .status-CANCELED & {
     color: #ef4444;
@@ -1449,7 +1463,7 @@ onMounted(() => {
   font-size: 10px !important;
   padding: 4px 8px !important;
   letter-spacing: 0.3px;
-  
+
   .body--dark & {
     background: rgba(20, 20, 20, 0.65) !important;
     border-color: rgba(255, 255, 255, 0.1) !important;

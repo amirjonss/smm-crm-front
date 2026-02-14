@@ -28,10 +28,12 @@ npm run format    # Prettier formatting
 ## Architecture
 
 ### Routing (`/src/router/routes.js`)
+
 - Route guards: `isAuthorised()` checks auth token, `isAdmin()` verifies admin role
 - Routes: `/` (main), `/calendar`, `/login`, `/dashboard` (admin-only)
 
 ### State Management (`/src/stores/`)
+
 - `auth.js` - JWT tokens, refresh logic, localStorage persistence
 - `user.js` - Current user & users list CRUD
 - `project.js` - Projects CRUD
@@ -39,23 +41,27 @@ npm run format    # Prettier formatting
 - `theme.js` - Dark/light theme toggle
 
 ### API Layer (`/src/boot/axios.js`)
+
 - Base URL: `https://api.khsystem.uz/api` (via `.env`)
 - Content-Type: `application/ld+json` (default), `application/merge-patch+json` (PATCH)
 - Auto token refresh on 401 responses
 
 ### Component Organization
+
 - `/src/layouts/` - Page wrappers (MainLayout, DashboardLayout)
 - `/src/pages/` - Route-mounted components
 - `/src/components/` - Reusable UI, with `/dashboard/` and `/dashboard/shared/` subdirs
 - `/src/composables/` - Vue 3 composition functions for reusable logic
 
 ### Styling (`/src/css/`)
+
 - `app.scss` - Global styles
 - `dashboard.scss` - Dashboard-specific styles
 - `quasar.variables.scss` - Quasar CSS variables
 - Theme CSS variables: `--bg-primary`, `--bg-secondary`, `--text-primary`, etc.
 
 ### Types (`/src/types/dashboard.ts`)
+
 - `StatusType` - 'NOT_PUBLISHED', 'PUBLISHED', 'CANCELED', 'RESCHEDULED'
 - `User`, `Project`, `ContentPlan` - Core domain interfaces
 - `ApiResponse<T>` - Generic response wrapper with `member`, `totalItems`
@@ -69,4 +75,5 @@ npm run format    # Prettier formatting
 - PDF export via jspdf, drag-drop via vuedraggable
 
 ## Rules
+
 - Always use Context7 MCP when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.

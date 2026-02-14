@@ -13,6 +13,15 @@
           <q-btn
             flat
             no-caps
+            label="Доски"
+            to="/boards"
+            class="nav-btn"
+            :class="{ 'nav-btn-active': $route.path.startsWith('/boards') }"
+          />
+          <q-btn
+            v-if="userStore.isAdmin || userStore.isSMM"
+            flat
+            no-caps
             label="Календарь"
             to="/calendar"
             class="nav-btn"
@@ -57,6 +66,18 @@
               <!-- Mobile Navigation Links -->
               <template v-if="$q.screen.lt.md">
                 <q-item
+                  clickable
+                  to="/boards"
+                  class="menu-item"
+                  :class="{ 'menu-item-active': $route.path.startsWith('/boards') }"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="dashboard" size="20px" />
+                  </q-item-section>
+                  <q-item-section> Доски </q-item-section>
+                </q-item>
+                <q-item
+                  v-if="userStore.isAdmin || userStore.isSMM"
                   clickable
                   to="/calendar"
                   class="menu-item"
