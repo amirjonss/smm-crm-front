@@ -81,6 +81,12 @@ const routes = [
     beforeEnter: [isAuthorised],
   },
   {
+    path: '/profile',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [{ path: '', component: () => import('pages/settings/ProfileSettingsPage.vue') }],
+    beforeEnter: [isAuthorised],
+  },
+  {
     path: '/login',
     component: () => import('pages/LoginPage.vue'),
   },

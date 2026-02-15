@@ -423,6 +423,47 @@ function cancelNameEdit() {
 
 <style lang="scss">
 /* Global (unscoped) — SortableJS appends clones to <body> */
+.column-dropdown-menu {
+  background: rgba(20, 24, 38, 0.96) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.38) !important;
+  min-width: 280px;
+  padding: 0.4rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.column-dropdown-menu .dropdown-header-title {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.column-dropdown-menu .dropdown-sep {
+  background: rgba(255, 255, 255, 0.14) !important;
+}
+
+.column-dropdown-menu .dropdown-item {
+  color: rgba(255, 255, 255, 0.88);
+  border-radius: 8px;
+  min-height: 42px;
+}
+
+.column-dropdown-menu .dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.column-dropdown-menu .dropdown-item .q-icon {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.column-dropdown-menu .dropdown-section {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
 .card-drag-ghost {
   opacity: 0.4;
   border: 2px dashed rgba(139, 92, 246, 0.5) !important;

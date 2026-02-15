@@ -12,6 +12,8 @@ export const useUserStore = defineStore('user', {
       updatedBy: null,
       givenName: null,
       familyName: null,
+      telegramUsername: null,
+      avatar: null,
     },
     loaded: false,
     users: {
@@ -90,8 +92,14 @@ export const useUserStore = defineStore('user', {
       return new Promise((resolve, reject) => {
         api
           .patch('/users/' + id, data)
-          .then(() => {
-            resolve()
+          .then((response) => {
+            if (this.user?.id === id && response?.data) {
+              this.user = {
+                ...this.user,
+                ...response.data,
+              }
+            }
+            resolve(response?.data)
           })
           .catch((e) => {
             reject(e)
@@ -112,6 +120,72 @@ export const useUserStore = defineStore('user', {
     },
     setSelectedUserId(id) {
       this.selectedUserId = id
+    },
+    verifyCurrentPassword(password) {
+      return new Promise((resolve, reject) => {
+        api
+          .post('/users/auth', {
+            email: this.user.email,
+            password,
+          }, {
+            skipAuthRefresh: true,
+          })
+          .then(() => {
+            resolve()
+          })
+          .catch((e) => {
+            reject(e)
+          })
+      })
+    },
+    changePassword(userId, newPassword) {
+      return new Promise((resolve, reject) => {
+        api
+          .patch('/users/' + userId + '/password', {
+            password: newPassword,
+          })
+          .then((response) => {
+            resolve(response?.data)
+          })
+          .catch((e) => {
+            reject(e)
+          })
+      })
+    },
+    uploadAvatar(file) {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      return new Promise((resolve, reject) => {
+        api
+          .post('/media_objects', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          })
+          .then((response) => {
+            resolve(response?.data)
+          })
+          .catch((e) => {
+            reject(e)
+          })
+      })
+    },
+    fetchMediaObject(iriOrPath) {
+      let path = iriOrPath
+      if (typeof path === 'string' && path.startsWith('/api/')) {
+        path = path.slice(4)
+      }
+      return new Promise((resolve, reject) => {
+        api
+          .get(path)
+          .then((response) => {
+            resolve(response?.data)
+          })
+          .catch((e) => {
+            reject(e)
+          })
+      })
     },
   },
 })

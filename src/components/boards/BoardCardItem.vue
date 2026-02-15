@@ -45,7 +45,8 @@
             class="executor-avatar"
             :style="{ zIndex: card.executor.length - i }"
           >
-            <span class="executor-initial">{{ (user.givenName?.[0] || '').toUpperCase() }}</span>
+            <img v-if="getUserAvatarUrl(user)" :src="getUserAvatarUrl(user)" alt="User avatar" />
+            <span v-else class="executor-initial">{{ (user.givenName?.[0] || '').toUpperCase() }}</span>
             <q-tooltip>{{ user.givenName }} {{ user.familyName }}</q-tooltip>
           </q-avatar>
           <span v-if="overflowCount > 0" class="executor-overflow">+{{ overflowCount }}</span>
@@ -56,7 +57,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { CARD_STATUS_LABELS, CARD_STATUS_STYLE } from '@/constants/cardStatus'
 import { useUserStore } from 'stores/user.js'
 
@@ -66,6 +67,8 @@ const props = defineProps({
 
 const emit = defineEmits(['click', 'archive'])
 const userStore = useUserStore()
+const avatarUrlCache = ref({})
+const avatarLoadingSet = ref(new Set())
 
 const statusColors = computed(() => CARD_STATUS_STYLE[props.card.status] || CARD_STATUS_STYLE.open)
 
@@ -89,6 +92,68 @@ const formattedDeadline = computed(() => {
 
 const visibleExecutors = computed(() => (props.card.executor || []).slice(0, 3))
 const overflowCount = computed(() => Math.max(0, (props.card.executor?.length || 0) - 3))
+
+function toAbsoluteUrl(path) {
+  if (!path) return ''
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+
+  const baseUrl = import.meta.env.VITE_BASE_URL || ''
+  const origin = baseUrl.startsWith('http') ? new URL(baseUrl).origin : window.location.origin
+  return origin + path
+}
+
+function getUserAvatarUrl(user) {
+  const avatar = user?.avatar
+  if (!avatar) return ''
+
+  if (typeof avatar === 'object' && avatar.contentUrl) {
+    return toAbsoluteUrl(avatar.contentUrl)
+  }
+
+  const iri = getAvatarIri(user)
+  if (!iri) return ''
+  return avatarUrlCache.value[iri] || ''
+}
+
+function getAvatarIri(user) {
+  const avatar = user?.avatar
+  if (!avatar) return null
+  if (typeof avatar === 'string') return avatar
+  if (typeof avatar === 'object' && avatar['@id']) return avatar['@id']
+  return null
+}
+
+async function ensureUserAvatarResolved(user) {
+  const iri = getAvatarIri(user)
+  if (!iri) return
+  if (avatarUrlCache.value[iri]) return
+  if (avatarLoadingSet.value.has(iri)) return
+
+  avatarLoadingSet.value.add(iri)
+  try {
+    const media = await userStore.fetchMediaObject(iri)
+    const url = media?.contentUrl ? toAbsoluteUrl(media.contentUrl) : ''
+    avatarUrlCache.value = {
+      ...avatarUrlCache.value,
+      [iri]: url,
+    }
+  } catch {
+    avatarUrlCache.value = {
+      ...avatarUrlCache.value,
+      [iri]: '',
+    }
+  } finally {
+    avatarLoadingSet.value.delete(iri)
+  }
+}
+
+watch(
+  () => visibleExecutors.value,
+  (users) => {
+    users.forEach((user) => ensureUserAvatarResolved(user))
+  },
+  { immediate: true, deep: true },
+)
 </script>
 
 <style scoped lang="scss">
@@ -262,5 +327,34 @@ const overflowCount = computed(() => Math.max(0, (props.card.executor?.length ||
   font-weight: 600;
   color: rgba(255, 255, 255, 0.45);
   margin-left: 0.25rem;
+}
+</style>
+
+<style lang="scss">
+.card-dropdown-menu {
+  background: rgba(20, 24, 38, 0.96) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.38) !important;
+  min-width: 220px;
+  padding: 0.35rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.card-dropdown-menu .card-dropdown-item {
+  color: rgba(255, 255, 255, 0.88);
+  border-radius: 8px;
+  min-height: 38px;
+}
+
+.card-dropdown-menu .card-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.card-dropdown-menu .card-dropdown-item .q-icon {
+  color: rgba(255, 255, 255, 0.72);
 }
 </style>
