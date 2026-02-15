@@ -62,18 +62,6 @@
               <q-item-section avatar><q-icon name="archive" size="18px" /></q-item-section>
               <q-item-section>Архивировать список</q-item-section>
             </q-item>
-
-            <q-item
-              v-close-popup
-              clickable
-              class="dropdown-item text-negative"
-              @click="$emit('delete')"
-            >
-              <q-item-section avatar>
-                <q-icon name="delete_outline" size="18px" color="negative" />
-              </q-item-section>
-              <q-item-section>Удалить</q-item-section>
-            </q-item>
           </template>
 
           <q-item v-if="!userStore.canManageList" class="dropdown-item text-grey-5">
@@ -99,7 +87,11 @@
         @change="onDragChange"
       >
         <template #item="{ element }">
-          <board-card-item :card="element" @click="$emit('openCard', element)" />
+          <board-card-item
+            :card="element"
+            @click="$emit('openCard', element)"
+            @archive="$emit('archiveCard', element)"
+          />
         </template>
       </draggable>
     </div>
@@ -127,8 +119,8 @@ const emit = defineEmits([
   'cardChange',
   'addCard',
   'openCard',
+  'archiveCard',
   'archive',
-  'delete',
   'rename',
   'changeColor',
 ])
@@ -138,8 +130,14 @@ const isEditingName = ref(false)
 const editName = ref('')
 const nameInputRef = ref(null)
 
+function positionOrMax(value) {
+  return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER
+}
+
 const activeCards = computed(() =>
-  (props.list.cards || []).filter((c) => !c.isArchived).sort((a, b) => a.position - b.position),
+  (props.list.cards || [])
+    .filter((c) => !c.isArchived)
+    .sort((a, b) => positionOrMax(a.position) - positionOrMax(b.position)),
 )
 
 // Local ref — vuedraggable mutates this directly via splice (instant, no lag).
@@ -204,6 +202,8 @@ function cancelNameEdit() {
   padding: 0.75rem;
   gap: 0.375rem;
   position: relative;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .column-color-bar {
@@ -223,6 +223,8 @@ function cancelNameEdit() {
   gap: 0.5rem;
   padding: 0.25rem 0.375rem;
   border-radius: 4px;
+  user-select: none;
+  -webkit-user-select: none;
 
   &.editable {
     cursor: pointer;
@@ -252,6 +254,8 @@ function cancelNameEdit() {
 
 .column-name-edit {
   flex: 1;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .name-input {
@@ -272,22 +276,27 @@ function cancelNameEdit() {
 }
 
 .column-icon-btn {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 
   &:hover {
-    color: rgba(255, 255, 255, 0.8);
+    color: #fff;
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.22);
   }
 }
 
 /* Column dropdown menu */
 .column-dropdown-menu {
-  background: rgba(20, 18, 50, 0.95) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(20, 24, 38, 0.92) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  min-width: 280px;
+  padding: 0.4rem;
   border-radius: 12px !important;
-  min-width: 260px;
-  padding: 0;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
   overflow: hidden;
 }
 
@@ -295,49 +304,66 @@ function cancelNameEdit() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.625rem 0.75rem;
+  padding: 0.55rem 0.6rem 0.5rem;
 }
 
 .dropdown-header-title {
-  font-size: 0.8125rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.82);
+  letter-spacing: 0.01em;
+  text-transform: none;
 }
 
 .dropdown-close {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.72);
+  background: transparent;
+  border: 1px solid transparent;
 
   &:hover {
     color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.16);
   }
 }
 
 .dropdown-sep {
-  background: rgba(255, 255, 255, 0.08) !important;
+  margin: 0.25rem 0.25rem;
+  background: rgba(255, 255, 255, 0.14) !important;
 }
 
 .dropdown-item {
-  color: rgba(255, 255, 255, 0.7);
-  min-height: 40px;
+  color: rgba(255, 255, 255, 0.88);
+  min-height: 42px;
+  border-radius: 8px;
+  margin: 0.1rem 0.25rem;
+  transition: background 0.15s ease, color 0.15s ease;
 
   :deep(.q-icon) {
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.72);
   }
 
   &:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
   }
 }
 
 .dropdown-section {
-  padding: 0.5rem 0.75rem;
+  margin: 0.2rem 0.25rem;
+  padding: 0.55rem 0.6rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .dropdown-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.45);
-  margin-bottom: 0.5rem;
+  color: rgba(255, 255, 255, 0.66);
+  margin-bottom: 0.55rem;
+  text-transform: none;
+  letter-spacing: 0.01em;
 }
 
 .dropdown-color-grid {
@@ -349,19 +375,20 @@ function cancelNameEdit() {
 .color-swatch {
   width: 100%;
   aspect-ratio: 1.6;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 0.15s ease;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  transition: transform 0.16s ease, opacity 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
 
   &:hover {
-    transform: scale(1.08);
-    opacity: 0.85;
+    transform: translateY(-1px);
+    opacity: 0.95;
+    border-color: rgba(255, 255, 255, 0.3);
   }
 
   &.selected {
     border-color: #fff;
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.34), 0 4px 14px rgba(0, 0, 0, 0.22);
   }
 
   &.no-color {
@@ -396,6 +423,47 @@ function cancelNameEdit() {
 
 <style lang="scss">
 /* Global (unscoped) — SortableJS appends clones to <body> */
+.column-dropdown-menu {
+  background: rgba(20, 24, 38, 0.96) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.38) !important;
+  min-width: 280px;
+  padding: 0.4rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.column-dropdown-menu .dropdown-header-title {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.column-dropdown-menu .dropdown-sep {
+  background: rgba(255, 255, 255, 0.14) !important;
+}
+
+.column-dropdown-menu .dropdown-item {
+  color: rgba(255, 255, 255, 0.88);
+  border-radius: 8px;
+  min-height: 42px;
+}
+
+.column-dropdown-menu .dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.column-dropdown-menu .dropdown-item .q-icon {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.column-dropdown-menu .dropdown-section {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
 .card-drag-ghost {
   opacity: 0.4;
   border: 2px dashed rgba(139, 92, 246, 0.5) !important;

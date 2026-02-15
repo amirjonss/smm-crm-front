@@ -10,11 +10,18 @@ function extractId(iriOrObj) {
   return null
 }
 
+function positionOrMax(value) {
+  return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER
+}
+
 function normalizeCard(card) {
+  const listId = extractId(card.list)
+  const listName = typeof card.list === 'object' ? card.list.name : null
+
   return {
     ...card,
     id: extractId(card['@id']) ?? card.id,
-    list: { id: extractId(card.list) },
+    list: { id: listId, name: listName },
     executor: Array.isArray(card.executor)
       ? card.executor.map((e) => (typeof e === 'object' ? e : { id: extractId(e) }))
       : [],
@@ -44,6 +51,12 @@ export const useBoardStore = defineStore('board', {
     currentBoard: null,
     cardLogs: [],
     loading: false,
+    archivedCards: [],
+    archivedCardsTotal: 0,
+    archivedCardsPage: 1,
+    archivedLists: [],
+    archivedListsTotal: 0,
+    archivedListsPage: 1,
   }),
 
   getters: {
@@ -53,7 +66,7 @@ export const useBoardStore = defineStore('board', {
       if (!state.currentBoard) return []
       return state.currentBoard.lists
         .filter((l) => !l.isArchived)
-        .sort((a, b) => a.position - b.position)
+        .sort((a, b) => positionOrMax(a.position) - positionOrMax(b.position))
     },
     getCardLogs: (state) => state.cardLogs,
   },
@@ -69,19 +82,23 @@ export const useBoardStore = defineStore('board', {
     async fetchBoard(id) {
       this.loading = true
       try {
-        const [boardRes, cardsRes] = await Promise.all([
+        const [boardRes, listsRes, cardsRes] = await Promise.all([
           api.get('/boards/' + id),
-          api.get('/cards?list.board.id=' + id + '&order[position]=asc&isArchived=false&itemsPerPage=200'),
+          api.get('/board_lists?board.id=' + id + '&order[position]=asc&itemsPerPage=200'),
+          api.get('/cards?list.board.id=' + id + '&order[position]=asc&itemsPerPage=200'),
         ])
 
         const board = normalizeBoard(boardRes.data)
+        const lists = (listsRes.data.member || []).map(normalizeList)
         const cards = (cardsRes.data.member || []).map(normalizeCard)
+
+        board.lists = lists
 
         // Attach cards to their respective lists
         board.lists.forEach((list) => {
           list.cards = cards.filter((c) => c.list.id === list.id)
         })
-        board.lists.sort((a, b) => a.position - b.position)
+        board.lists.sort((a, b) => positionOrMax(a.position) - positionOrMax(b.position))
 
         this.currentBoard = board
         return this.currentBoard
@@ -144,12 +161,34 @@ export const useBoardStore = defineStore('board', {
       const updated = normalizeList(response.data)
 
       if (this.currentBoard) {
-        const list = this.currentBoard.lists.find((l) => l.id === listId)
-        if (list) {
-          const cards = list.cards
-          Object.assign(list, updated)
-          // Preserve local cards array (API response from PATCH may include cards without executors depth)
-          list.cards = cards
+        if (data.isArchived === true) {
+          // Archiving: remove from board lists, add to archivedLists
+          const idx = this.currentBoard.lists.findIndex((l) => l.id === listId)
+          if (idx !== -1) {
+            this.currentBoard.lists.splice(idx, 1)
+          }
+          const alreadyInArchive = this.archivedLists.some((l) => l.id === listId)
+          if (!alreadyInArchive) {
+            this.archivedLists.unshift(updated)
+            this.archivedListsTotal++
+          }
+        } else if (data.isArchived === false) {
+          // Unarchiving: remove from archivedLists, add back to board lists
+          const archIdx = this.archivedLists.findIndex((l) => l.id === listId)
+          if (archIdx !== -1) {
+            this.archivedLists.splice(archIdx, 1)
+            this.archivedListsTotal = Math.max(0, this.archivedListsTotal - 1)
+          }
+          updated.cards = []
+          this.currentBoard.lists.push(updated)
+        } else {
+          const list = this.currentBoard.lists.find((l) => l.id === listId)
+          if (list) {
+            const cards = list.cards
+            Object.assign(list, updated)
+            // Preserve local cards array (API response from PATCH may include cards without executors depth)
+            list.cards = cards
+          }
         }
       }
       return updated
@@ -162,6 +201,12 @@ export const useBoardStore = defineStore('board', {
         if (idx !== -1) {
           this.currentBoard.lists.splice(idx, 1)
         }
+      }
+      // Also remove from archived lists if present
+      const archIdx = this.archivedLists.findIndex((l) => l.id === listId)
+      if (archIdx !== -1) {
+        this.archivedLists.splice(archIdx, 1)
+        this.archivedListsTotal = Math.max(0, this.archivedListsTotal - 1)
       }
     },
 
@@ -192,16 +237,46 @@ export const useBoardStore = defineStore('board', {
       const updated = normalizeCard(response.data)
 
       if (this.currentBoard) {
-        for (const list of this.currentBoard.lists) {
-          const card = list.cards.find((c) => c.id === cardId)
-          if (card) {
-            // Preserve executor from local state if API didn't return full depth
-            const executor = card.executor
-            Object.assign(card, updated)
-            if (!updated.executor || updated.executor.length === 0) {
-              card.executor = executor
+        if (data.isArchived === true) {
+          // Archiving: remove from board list, add to archivedCards
+          for (const list of this.currentBoard.lists) {
+            const idx = list.cards.findIndex((c) => c.id === cardId)
+            if (idx !== -1) {
+              list.cards.splice(idx, 1)
+              break
             }
-            break
+          }
+          const alreadyInArchive = this.archivedCards.some((c) => c.id === cardId)
+          if (!alreadyInArchive) {
+            this.archivedCards.unshift(updated)
+            this.archivedCardsTotal++
+          }
+        } else if (data.isArchived === false) {
+          // Unarchiving: remove from archivedCards, add back to target list
+          const archIdx = this.archivedCards.findIndex((c) => c.id === cardId)
+          if (archIdx !== -1) {
+            this.archivedCards.splice(archIdx, 1)
+            this.archivedCardsTotal = Math.max(0, this.archivedCardsTotal - 1)
+          }
+          const targetListId = extractId(updated.list)
+          if (targetListId) {
+            const targetList = this.currentBoard.lists.find((l) => l.id === targetListId)
+            if (targetList) {
+              targetList.cards.push(updated)
+            }
+          }
+        } else {
+          for (const list of this.currentBoard.lists) {
+            const card = list.cards.find((c) => c.id === cardId)
+            if (card) {
+              // Preserve executor from local state if API didn't return full depth
+              const executor = card.executor
+              Object.assign(card, updated)
+              if (!updated.executor || updated.executor.length === 0) {
+                card.executor = executor
+              }
+              break
+            }
           }
         }
       }
@@ -218,6 +293,12 @@ export const useBoardStore = defineStore('board', {
             break
           }
         }
+      }
+      // Also remove from archived cards if present
+      const archIdx = this.archivedCards.findIndex((c) => c.id === cardId)
+      if (archIdx !== -1) {
+        this.archivedCards.splice(archIdx, 1)
+        this.archivedCardsTotal = Math.max(0, this.archivedCardsTotal - 1)
       }
     },
 
@@ -261,6 +342,23 @@ export const useBoardStore = defineStore('board', {
       return normalizeCard(response.data)
     },
 
+    async moveListPosition(listId, { targetBoardId, prevListId, nextListId }) {
+      const payload = {
+        boardList: '/api/board_lists/' + listId,
+      }
+      if (targetBoardId) {
+        payload.targetBoard = '/api/boards/' + targetBoardId
+      }
+      if (prevListId) {
+        payload.prevBoardList = '/api/board_lists/' + prevListId
+      }
+      if (nextListId) {
+        payload.nextBoardList = '/api/board_lists/' + nextListId
+      }
+      const response = await api.post('/board_lists/move-position', payload)
+      return normalizeList(response.data)
+    },
+
     // Reorder helpers (local state + API persistence)
     reorderLists(orderedLists) {
       if (!this.currentBoard) return
@@ -295,9 +393,49 @@ export const useBoardStore = defineStore('board', {
       this.reorderCards(toListId, toList.cards)
     },
 
+    // Archive fetching
+    async fetchArchivedCards(boardId, page = 1, reset = false) {
+      if (reset) {
+        this.archivedCards = []
+        this.archivedCardsPage = 1
+      }
+      const response = await api.get(
+        '/cards/archived?list.board.id=' + boardId + '&page=' + page,
+      )
+      const items = (response.data.member || []).map(normalizeCard)
+      if (reset) {
+        this.archivedCards = items
+      } else {
+        this.archivedCards.push(...items)
+      }
+      this.archivedCardsTotal = response.data.totalItems ?? 0
+      this.archivedCardsPage = page
+      return items
+    },
+
+    async fetchArchivedLists(boardId, page = 1, reset = false) {
+      if (reset) {
+        this.archivedLists = []
+        this.archivedListsPage = 1
+      }
+      const response = await api.get(
+        '/board_lists/archived?board.id=' + boardId + '&page=' + page,
+      )
+      const items = (response.data.member || []).map(normalizeList)
+      if (reset) {
+        this.archivedLists = items
+      } else {
+        this.archivedLists.push(...items)
+      }
+      this.archivedListsTotal = response.data.totalItems ?? 0
+      this.archivedListsPage = page
+      return items
+    },
+
     setCurrentBoardLists(lists) {
       if (this.currentBoard) {
-        this.currentBoard.lists = lists
+        const archived = this.currentBoard.lists.filter((list) => list.isArchived)
+        this.currentBoard.lists = [...lists, ...archived]
       }
     },
   },

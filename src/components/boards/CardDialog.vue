@@ -31,6 +31,16 @@
 
           <q-space />
 
+          <q-btn
+            flat
+            round
+            dense
+            :icon="isCardArchived ? 'unarchive' : 'archive'"
+            class="top-btn"
+            @click="toggleArchive"
+          >
+            <q-tooltip>{{ isCardArchived ? 'Восстановить карточку' : 'Архивировать карточку' }}</q-tooltip>
+          </q-btn>
           <q-btn flat round dense icon="close" class="top-btn" @click="close" />
         </div>
 
@@ -153,7 +163,8 @@
                           class="ex-avatar"
                           :style="{ background: avatarColor(user.id) }"
                         >
-                          <span>{{ (user.givenName?.[0] || '').toUpperCase() }}</span>
+                          <img v-if="getUserAvatarUrl(user)" :src="getUserAvatarUrl(user)" alt="User avatar" />
+                          <span v-else class="avatar-fallback-initial">{{ (user.givenName?.[0] || '').toUpperCase() }}</span>
                         </q-avatar>
                         <div class="ex-user-info">
                           <span class="ex-name">{{ user.givenName }} {{ user.familyName }}</span>
@@ -187,9 +198,11 @@
                     :key="'av-' + user.id"
                     size="32px"
                     class="meta-avatar"
+                    :class="{ 'has-image': !!getUserAvatarUrl(user) }"
                     :style="{ background: avatarColor(user.id) }"
                   >
-                    <span>{{ (user.givenName?.[0] || '').toUpperCase() }}</span>
+                    <img v-if="getUserAvatarUrl(user)" :src="getUserAvatarUrl(user)" alt="User avatar" />
+                    <span v-else class="avatar-fallback-initial">{{ (user.givenName?.[0] || '').toUpperCase() }}</span>
                     <q-tooltip :delay="400">{{ user.givenName }} {{ user.familyName }}</q-tooltip>
                   </q-avatar>
                 </div>
@@ -220,11 +233,11 @@
                     v-model="form.description"
                     :toolbar="descToolbar"
                     flat
-                    min-height="120px"
+                    min-height="140px"
                     content-class="desc-editor-content"
                     toolbar-bg="transparent"
                     class="description-editor"
-                    placeholder="Добавьте форматирование, пока пишете, используя символы разметки..."
+                    placeholder="Добавьте подробное описание карточки..."
                   />
                 </div>
                 <div class="desc-editor-actions">
@@ -277,7 +290,8 @@
             <div v-else class="sidebar-logs">
               <div v-for="log in visibleLogs" :key="log.id" class="log-entry">
                 <q-avatar size="28px" color="primary" text-color="white" class="log-avatar">
-                  {{ (log.createdBy?.givenName?.[0] || '?').toUpperCase() }}
+                  <img v-if="getUserAvatarUrl(log.createdBy)" :src="getUserAvatarUrl(log.createdBy)" alt="User avatar" />
+                  <span v-else class="avatar-fallback-initial">{{ (log.createdBy?.givenName?.[0] || '?').toUpperCase() }}</span>
                 </q-avatar>
                 <div class="log-content">
                   <div class="log-description">{{ log.description }}</div>
@@ -317,7 +331,7 @@ const props = defineProps({
   lists: { type: Array, default: () => [] },
 })
 
-const emit = defineEmits(['update:modelValue', 'save'])
+const emit = defineEmits(['update:modelValue', 'save', 'toggleArchive'])
 
 const userStore = useUserStore()
 const boardStore = useBoardStore()
@@ -327,6 +341,12 @@ const statusOptions = computed(() => {
   return CARD_STATUS_OPTIONS.filter((o) => o.value !== CARD_STATUS.DONE)
 })
 
+const isCardArchived = computed(() => {
+  if (!props.card?.id) return false
+  if (props.card.isArchived === true) return true
+  return boardStore.archivedCards.some((card) => card.id === props.card.id)
+})
+
 const showDeadlinePicker = ref(false)
 const showExecutorPicker = ref(false)
 const executorSearch = ref('')
@@ -334,6 +354,8 @@ const deadlineDate = ref('')
 const deadlineTime = ref('12:00')
 const deadlineEnabled = ref(false)
 const cardExecutors = ref([])
+const avatarUrlCache = ref({})
+const avatarLoadingSet = ref(new Set())
 
 const filteredUsers = computed(() => {
   const users = userStore.getUsers || []
@@ -353,6 +375,67 @@ function avatarColor(id) {
   if (!id) return AVATAR_COLORS[0]
   const hash = typeof id === 'string' ? id.split('').reduce((a, c) => a + c.charCodeAt(0), 0) : id
   return AVATAR_COLORS[hash % AVATAR_COLORS.length]
+}
+
+function toAbsoluteUrl(path) {
+  if (!path) return ''
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+
+  const baseUrl = import.meta.env.VITE_BASE_URL || ''
+  const origin = baseUrl.startsWith('http') ? new URL(baseUrl).origin : window.location.origin
+  return origin + path
+}
+
+function getUserAvatarUrl(user) {
+  const avatar = user?.avatar
+  if (!avatar) return ''
+
+  if (typeof avatar === 'object' && avatar.contentUrl) {
+    return toAbsoluteUrl(avatar.contentUrl)
+  }
+
+  const iri = typeof avatar === 'string' ? avatar : avatar['@id']
+  if (!iri) return ''
+  return avatarUrlCache.value[iri] || ''
+}
+
+function getAvatarIri(user) {
+  const avatar = user?.avatar
+  if (!avatar) return null
+  if (typeof avatar === 'string') return avatar
+  if (typeof avatar === 'object' && avatar['@id']) return avatar['@id']
+  return null
+}
+
+async function ensureUserAvatarResolved(user) {
+  const iri = getAvatarIri(user)
+  if (!iri) return
+  if (avatarUrlCache.value[iri]) return
+  if (avatarLoadingSet.value.has(iri)) return
+
+  avatarLoadingSet.value.add(iri)
+  try {
+    const media = await userStore.fetchMediaObject(iri)
+    const url = media?.contentUrl ? toAbsoluteUrl(media.contentUrl) : ''
+    avatarUrlCache.value = {
+      ...avatarUrlCache.value,
+      [iri]: url,
+    }
+  } catch {
+    avatarUrlCache.value = {
+      ...avatarUrlCache.value,
+      [iri]: '',
+    }
+  } finally {
+    avatarLoadingSet.value.delete(iri)
+  }
+}
+
+function resolveUsersAvatars(users) {
+  if (!Array.isArray(users)) return
+  users.forEach((user) => {
+    ensureUserAvatarResolved(user)
+  })
 }
 
 function isExecutor(userId) {
@@ -386,9 +469,10 @@ const descEditorRef = ref(null)
 const descriptionBackup = ref('')
 
 const descToolbar = [
-  ['bold', 'italic'],
-  ['unordered', 'ordered'],
-  ['link', 'hr'],
+  ['bold', 'italic', 'underline', 'strike'],
+  ['left', 'center', 'right', 'justify'],
+  ['unordered', 'ordered', 'outdent', 'indent'],
+  ['link', 'hr', 'removeFormat'],
 ]
 
 function startDescriptionEdit() {
@@ -515,8 +599,41 @@ watch(() => props.card, (card) => { if (card) initForm(card) }, { immediate: tru
 
 watch(() => props.modelValue, (open) => { if (open && props.card) initForm(props.card) })
 
+watch(
+  () => filteredUsers.value,
+  (users) => {
+    resolveUsersAvatars(users)
+  },
+  { immediate: true },
+)
+
+watch(
+  () => cardExecutors.value,
+  (users) => {
+    resolveUsersAvatars(users)
+  },
+  { immediate: true, deep: true },
+)
+
+watch(
+  () => cardLogs.value,
+  (logs) => {
+    if (!Array.isArray(logs)) return
+    logs.forEach((log) => ensureUserAvatarResolved(log.createdBy))
+  },
+  { immediate: true, deep: true },
+)
+
 function close() {
   emit('update:modelValue', false)
+}
+
+function toggleArchive() {
+  if (!props.card?.id) return
+  emit('toggleArchive', {
+    cardId: props.card.id,
+    isArchived: !isCardArchived.value,
+  })
 }
 
 function save() {
@@ -711,18 +828,32 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   color: #fff;
   font-size: 0.75rem;
   font-weight: 600;
-  border: 2px solid rgba(20, 18, 50, 0.92);
+  border: 2px solid rgba(12, 14, 36, 1);
+  overflow: hidden;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 50%;
+  }
 
   & + .meta-avatar {
-    margin-left: -6px;
+    margin-left: -4px;
   }
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
     z-index: 1;
+  }
+
+  &.has-image {
+    background: rgba(12, 14, 36, 1) !important;
   }
 }
 
@@ -857,16 +988,22 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     padding: 0.75rem;
     min-height: 120px;
 
-    h1 { font-size: 1.375rem; font-weight: 700; margin: 0.5rem 0; }
-    h2 { font-size: 1.175rem; font-weight: 700; margin: 0.4rem 0; }
-    h3 { font-size: 1.05rem; font-weight: 600; margin: 0.35rem 0; }
-    h4 { font-size: 0.95rem; font-weight: 600; margin: 0.3rem 0; }
-    h5 { font-size: 0.875rem; font-weight: 600; margin: 0.25rem 0; }
-    h6 { font-size: 0.8125rem; font-weight: 600; margin: 0.2rem 0; }
+    h1 { font-size: 1.375rem; font-weight: 700; margin: 0.5rem 0; color: rgba(255, 255, 255, 0.92); }
+    h2 { font-size: 1.175rem; font-weight: 700; margin: 0.4rem 0; color: rgba(255, 255, 255, 0.9); }
+    h3 { font-size: 1.05rem; font-weight: 600; margin: 0.35rem 0; color: rgba(255, 255, 255, 0.9); }
+    h4 { font-size: 0.95rem; font-weight: 600; margin: 0.3rem 0; color: rgba(255, 255, 255, 0.88); }
+    h5 { font-size: 0.875rem; font-weight: 600; margin: 0.25rem 0; color: rgba(255, 255, 255, 0.86); }
+    h6 { font-size: 0.8125rem; font-weight: 600; margin: 0.2rem 0; color: rgba(255, 255, 255, 0.82); }
   }
 
   :deep(.q-editor__content a) {
     color: #8b5cf6;
+  }
+
+  :deep(.q-editor__content hr) {
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.28);
+    margin: 0.85rem 0;
   }
 }
 
@@ -918,6 +1055,12 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
   :deep(a) {
     color: #8b5cf6;
+  }
+
+  :deep(hr) {
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.28);
+    margin: 0.85rem 0;
   }
 
   :deep(ul),
@@ -1013,6 +1156,14 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 .log-avatar {
   flex-shrink: 0;
   font-size: 0.625rem;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
 }
 
 .log-content {
@@ -1379,6 +1530,25 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   color: #fff;
   font-size: 0.75rem;
   font-weight: 600;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.avatar-fallback-initial {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-weight: 700;
+  transform: translateY(1px);
 }
 
 .ex-user-info {

@@ -1,7 +1,28 @@
 <template>
   <div class="board-card-item" @click="$emit('click', card)">
     <div class="card-item-content">
-      <div class="card-item-title">{{ card.name }}</div>
+      <div class="card-item-header">
+        <div class="card-item-title">{{ card.name }}</div>
+        <q-btn
+          v-if="userStore.canManageList"
+          flat
+          round
+          dense
+          size="sm"
+          icon="more_horiz"
+          class="card-menu-btn"
+          @click.stop
+          @mousedown.stop
+          @touchstart.stop
+        >
+          <q-menu class="card-dropdown-menu" @click.stop @mousedown.stop @touchstart.stop>
+            <q-item v-close-popup clickable class="card-dropdown-item" @click.stop="emit('archive', card)">
+              <q-item-section avatar><q-icon name="archive" size="16px" /></q-item-section>
+              <q-item-section>Архивировать карточку</q-item-section>
+            </q-item>
+          </q-menu>
+        </q-btn>
+      </div>
 
       <div class="card-item-footer">
         <div class="footer-left">
@@ -24,7 +45,8 @@
             class="executor-avatar"
             :style="{ zIndex: card.executor.length - i }"
           >
-            <span class="executor-initial">{{ (user.givenName?.[0] || '').toUpperCase() }}</span>
+            <img v-if="getUserAvatarUrl(user)" :src="getUserAvatarUrl(user)" alt="User avatar" />
+            <span v-else class="executor-initial">{{ (user.givenName?.[0] || '').toUpperCase() }}</span>
             <q-tooltip>{{ user.givenName }} {{ user.familyName }}</q-tooltip>
           </q-avatar>
           <span v-if="overflowCount > 0" class="executor-overflow">+{{ overflowCount }}</span>
@@ -35,14 +57,18 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { CARD_STATUS_LABELS, CARD_STATUS_STYLE } from '@/constants/cardStatus'
+import { useUserStore } from 'stores/user.js'
 
 const props = defineProps({
   card: { type: Object, required: true },
 })
 
-defineEmits(['click'])
+const emit = defineEmits(['click', 'archive'])
+const userStore = useUserStore()
+const avatarUrlCache = ref({})
+const avatarLoadingSet = ref(new Set())
 
 const statusColors = computed(() => CARD_STATUS_STYLE[props.card.status] || CARD_STATUS_STYLE.open)
 
@@ -66,6 +92,68 @@ const formattedDeadline = computed(() => {
 
 const visibleExecutors = computed(() => (props.card.executor || []).slice(0, 3))
 const overflowCount = computed(() => Math.max(0, (props.card.executor?.length || 0) - 3))
+
+function toAbsoluteUrl(path) {
+  if (!path) return ''
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+
+  const baseUrl = import.meta.env.VITE_BASE_URL || ''
+  const origin = baseUrl.startsWith('http') ? new URL(baseUrl).origin : window.location.origin
+  return origin + path
+}
+
+function getUserAvatarUrl(user) {
+  const avatar = user?.avatar
+  if (!avatar) return ''
+
+  if (typeof avatar === 'object' && avatar.contentUrl) {
+    return toAbsoluteUrl(avatar.contentUrl)
+  }
+
+  const iri = getAvatarIri(user)
+  if (!iri) return ''
+  return avatarUrlCache.value[iri] || ''
+}
+
+function getAvatarIri(user) {
+  const avatar = user?.avatar
+  if (!avatar) return null
+  if (typeof avatar === 'string') return avatar
+  if (typeof avatar === 'object' && avatar['@id']) return avatar['@id']
+  return null
+}
+
+async function ensureUserAvatarResolved(user) {
+  const iri = getAvatarIri(user)
+  if (!iri) return
+  if (avatarUrlCache.value[iri]) return
+  if (avatarLoadingSet.value.has(iri)) return
+
+  avatarLoadingSet.value.add(iri)
+  try {
+    const media = await userStore.fetchMediaObject(iri)
+    const url = media?.contentUrl ? toAbsoluteUrl(media.contentUrl) : ''
+    avatarUrlCache.value = {
+      ...avatarUrlCache.value,
+      [iri]: url,
+    }
+  } catch {
+    avatarUrlCache.value = {
+      ...avatarUrlCache.value,
+      [iri]: '',
+    }
+  } finally {
+    avatarLoadingSet.value.delete(iri)
+  }
+}
+
+watch(
+  () => visibleExecutors.value,
+  (users) => {
+    users.forEach((user) => ensureUserAvatarResolved(user))
+  },
+  { immediate: true, deep: true },
+)
 </script>
 
 <style scoped lang="scss">
@@ -93,6 +181,14 @@ const overflowCount = computed(() => Math.max(0, (props.card.executor?.length ||
   min-width: 0;
 }
 
+.card-item-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.375rem;
+  margin-bottom: 0.625rem;
+}
+
 .card-item-title {
   font-size: 0.875rem;
   font-weight: 500;
@@ -102,7 +198,54 @@ const overflowCount = computed(() => Math.max(0, (props.card.executor?.length ||
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  margin-bottom: 0.625rem;
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.card-menu-btn {
+  margin-top: -2px;
+  color: rgba(255, 255, 255, 0.72);
+  opacity: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  transition: opacity 0.16s ease, color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+
+  .board-card-item:hover & {
+    opacity: 1;
+  }
+
+  &:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.24);
+  }
+}
+
+.card-dropdown-menu {
+  background: rgba(20, 24, 38, 0.92) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  min-width: 220px;
+  padding: 0.35rem;
+  border-radius: 10px !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+.card-dropdown-item {
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.88);
+  min-height: 38px;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  :deep(.q-icon) {
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+  }
 }
 
 .card-item-footer {
@@ -184,5 +327,34 @@ const overflowCount = computed(() => Math.max(0, (props.card.executor?.length ||
   font-weight: 600;
   color: rgba(255, 255, 255, 0.45);
   margin-left: 0.25rem;
+}
+</style>
+
+<style lang="scss">
+.card-dropdown-menu {
+  background: rgba(20, 24, 38, 0.96) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.38) !important;
+  min-width: 220px;
+  padding: 0.35rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.card-dropdown-menu .card-dropdown-item {
+  color: rgba(255, 255, 255, 0.88);
+  border-radius: 8px;
+  min-height: 38px;
+}
+
+.card-dropdown-menu .card-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.card-dropdown-menu .card-dropdown-item .q-icon {
+  color: rgba(255, 255, 255, 0.72);
 }
 </style>
