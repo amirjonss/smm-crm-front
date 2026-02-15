@@ -31,6 +31,16 @@
 
           <q-space />
 
+          <q-btn
+            flat
+            round
+            dense
+            :icon="isCardArchived ? 'unarchive' : 'archive'"
+            class="top-btn"
+            @click="toggleArchive"
+          >
+            <q-tooltip>{{ isCardArchived ? 'Восстановить карточку' : 'Архивировать карточку' }}</q-tooltip>
+          </q-btn>
           <q-btn flat round dense icon="close" class="top-btn" @click="close" />
         </div>
 
@@ -317,7 +327,7 @@ const props = defineProps({
   lists: { type: Array, default: () => [] },
 })
 
-const emit = defineEmits(['update:modelValue', 'save'])
+const emit = defineEmits(['update:modelValue', 'save', 'toggleArchive'])
 
 const userStore = useUserStore()
 const boardStore = useBoardStore()
@@ -325,6 +335,12 @@ const boardStore = useBoardStore()
 const statusOptions = computed(() => {
   if (userStore.isAdmin || userStore.isSMM) return CARD_STATUS_OPTIONS
   return CARD_STATUS_OPTIONS.filter((o) => o.value !== CARD_STATUS.DONE)
+})
+
+const isCardArchived = computed(() => {
+  if (!props.card?.id) return false
+  if (props.card.isArchived === true) return true
+  return boardStore.archivedCards.some((card) => card.id === props.card.id)
 })
 
 const showDeadlinePicker = ref(false)
@@ -517,6 +533,14 @@ watch(() => props.modelValue, (open) => { if (open && props.card) initForm(props
 
 function close() {
   emit('update:modelValue', false)
+}
+
+function toggleArchive() {
+  if (!props.card?.id) return
+  emit('toggleArchive', {
+    cardId: props.card.id,
+    isArchived: !isCardArchived.value,
+  })
 }
 
 function save() {

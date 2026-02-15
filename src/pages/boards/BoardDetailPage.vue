@@ -20,6 +20,18 @@
       <h1 v-else class="board-name" @click="startBoardNameEdit">
         {{ boardStore.currentBoard?.name || 'Загрузка...' }}
       </h1>
+
+      <div class="board-top-bar-spacer" />
+
+      <q-btn
+        flat
+        dense
+        icon="inventory_2"
+        class="archive-btn"
+        @click="showArchiveSidebar = true"
+      >
+        <q-tooltip>Архив</q-tooltip>
+      </q-btn>
     </div>
 
     <div v-if="!boardStore.currentBoard" class="loading-state">
@@ -45,7 +57,7 @@
         :scroll-sensitivity="100"
         handle=".column-header"
         class="columns-row"
-        @end="persistListOrder"
+        @change="persistListOrder"
       >
         <template #item="{ element: list }">
           <board-column
@@ -53,9 +65,9 @@
             @update:cards="updateCards(list.id, $event)"
             @card-change="handleCardChange($event, list.id)"
             @add-card="addCard(list.id, $event)"
+            @archive-card="archiveCard"
             @open-card="openCard($event)"
             @archive="archiveList(list)"
-            @delete="confirmDeleteList(list)"
             @rename="renameList(list, $event)"
             @change-color="changeListColor(list, $event)"
           />
@@ -90,6 +102,13 @@
       :card="editingCard"
       :lists="boardStore.currentBoard?.lists || []"
       @save="saveCard"
+      @toggle-archive="toggleCardArchive"
+    />
+
+    <board-archive-sidebar
+      v-model="showArchiveSidebar"
+      :board-id="boardStore.currentBoard?.id"
+      @open-card="openCard"
     />
   </q-page>
 </template>
@@ -105,6 +124,7 @@ import draggable from 'vuedraggable'
 import BoardColumn from 'components/boards/BoardColumn.vue'
 import AddListButton from 'components/boards/AddListButton.vue'
 import CardDialog from 'components/boards/CardDialog.vue'
+import BoardArchiveSidebar from 'components/boards/BoardArchiveSidebar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -115,6 +135,7 @@ const { sortedLists, persistListOrder, handleCardChange } = useBoardDragDrop()
 
 const showCardDialog = ref(false)
 const editingCard = ref(null)
+const showArchiveSidebar = ref(false)
 
 const isEditingBoardName = ref(false)
 const editBoardName = ref('')
@@ -191,6 +212,13 @@ function addCard(listId, name) {
   })
 }
 
+function archiveCard(card) {
+  if (!card?.id) return
+  boardStore.patchCard(card.id, { isArchived: true }).then(() => {
+    q.notify({ message: 'Карточка архивирована', type: 'positive', position: 'top', timeout: 1000 })
+  })
+}
+
 function openCard(card) {
   editingCard.value = card
   showCardDialog.value = true
@@ -229,6 +257,14 @@ function saveCard(data) {
   })
 }
 
+function toggleCardArchive({ cardId, isArchived }) {
+  boardStore.patchCard(cardId, { isArchived }).then(() => {
+    showCardDialog.value = false
+    const message = isArchived ? 'Карточка архивирована' : 'Карточка восстановлена'
+    q.notify({ message, type: 'positive', position: 'top', timeout: 1200 })
+  })
+}
+
 function addList(data) {
   const boardId = boardStore.currentBoard?.id
   if (!boardId) return
@@ -248,20 +284,6 @@ function changeListColor(list, color) {
 function archiveList(list) {
   boardStore.patchList(list.id, { isArchived: true }).then(() => {
     q.notify({ message: 'Список архивирован', type: 'positive', position: 'top' })
-  })
-}
-
-function confirmDeleteList(list) {
-  q.dialog({
-    title: 'Удаление списка',
-    message: `Удалить список "${list.name}" и все его карточки?`,
-    cancel: { flat: true, label: 'Отмена' },
-    ok: { color: 'negative', label: 'Удалить' },
-    persistent: true,
-  }).onOk(() => {
-    boardStore.deleteList(list.id).then(() => {
-      q.notify({ message: 'Список удалён', type: 'positive', position: 'top' })
-    })
   })
 }
 
@@ -322,6 +344,20 @@ onMounted(() => {
 
   @media (max-width: 599px) {
     font-size: 1.125rem;
+  }
+}
+
+.board-top-bar-spacer {
+  flex: 1;
+}
+
+.archive-btn {
+  color: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+
+  &:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
   }
 }
 

@@ -1,7 +1,28 @@
 <template>
   <div class="board-card-item" @click="$emit('click', card)">
     <div class="card-item-content">
-      <div class="card-item-title">{{ card.name }}</div>
+      <div class="card-item-header">
+        <div class="card-item-title">{{ card.name }}</div>
+        <q-btn
+          v-if="userStore.canManageList"
+          flat
+          round
+          dense
+          size="sm"
+          icon="more_horiz"
+          class="card-menu-btn"
+          @click.stop
+          @mousedown.stop
+          @touchstart.stop
+        >
+          <q-menu class="card-dropdown-menu" @click.stop @mousedown.stop @touchstart.stop>
+            <q-item v-close-popup clickable class="card-dropdown-item" @click.stop="emit('archive', card)">
+              <q-item-section avatar><q-icon name="archive" size="16px" /></q-item-section>
+              <q-item-section>Архивировать карточку</q-item-section>
+            </q-item>
+          </q-menu>
+        </q-btn>
+      </div>
 
       <div class="card-item-footer">
         <div class="footer-left">
@@ -37,12 +58,14 @@
 <script setup>
 import { computed } from 'vue'
 import { CARD_STATUS_LABELS, CARD_STATUS_STYLE } from '@/constants/cardStatus'
+import { useUserStore } from 'stores/user.js'
 
 const props = defineProps({
   card: { type: Object, required: true },
 })
 
-defineEmits(['click'])
+const emit = defineEmits(['click', 'archive'])
+const userStore = useUserStore()
 
 const statusColors = computed(() => CARD_STATUS_STYLE[props.card.status] || CARD_STATUS_STYLE.open)
 
@@ -93,6 +116,14 @@ const overflowCount = computed(() => Math.max(0, (props.card.executor?.length ||
   min-width: 0;
 }
 
+.card-item-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.375rem;
+  margin-bottom: 0.625rem;
+}
+
 .card-item-title {
   font-size: 0.875rem;
   font-weight: 500;
@@ -102,7 +133,54 @@ const overflowCount = computed(() => Math.max(0, (props.card.executor?.length ||
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  margin-bottom: 0.625rem;
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.card-menu-btn {
+  margin-top: -2px;
+  color: rgba(255, 255, 255, 0.72);
+  opacity: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  transition: opacity 0.16s ease, color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+
+  .board-card-item:hover & {
+    opacity: 1;
+  }
+
+  &:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.24);
+  }
+}
+
+.card-dropdown-menu {
+  background: rgba(20, 24, 38, 0.92) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  min-width: 220px;
+  padding: 0.35rem;
+  border-radius: 10px !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+.card-dropdown-item {
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.88);
+  min-height: 38px;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  :deep(.q-icon) {
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+  }
 }
 
 .card-item-footer {

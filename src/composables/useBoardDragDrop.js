@@ -2,6 +2,10 @@ import { ref, watch } from 'vue'
 import { useBoardStore } from 'stores/board.js'
 import { reindexPositions } from '@/utils/positionHelpers'
 
+function positionOrMax(value) {
+  return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER
+}
+
 export function useBoardDragDrop() {
   const boardStore = useBoardStore()
 
@@ -14,7 +18,7 @@ export function useBoardDragDrop() {
       if (!boardStore.currentBoard) return []
       return [...boardStore.currentBoard.lists]
         .filter((l) => !l.isArchived)
-        .sort((a, b) => a.position - b.position)
+        .sort((a, b) => positionOrMax(a.position) - positionOrMax(b.position))
     },
     (val) => {
       sortedLists.value = val
@@ -22,12 +26,22 @@ export function useBoardDragDrop() {
     { immediate: true },
   )
 
-  function persistListOrder() {
+  function persistListOrder(event) {
     const reindexed = reindexPositions(sortedLists.value)
     boardStore.setCurrentBoardLists(reindexed)
-    // Persist each list position to API
-    reindexed.forEach((list) => {
-      boardStore.patchList(list.id, { position: list.position })
+
+    if (!event?.moved) return
+
+    const movedList = reindexed[event.moved.newIndex]
+    if (!movedList) return
+
+    const prevList = event.moved.newIndex > 0 ? reindexed[event.moved.newIndex - 1] : null
+    const nextList = event.moved.newIndex < reindexed.length - 1 ? reindexed[event.moved.newIndex + 1] : null
+
+    boardStore.moveListPosition(movedList.id, {
+      targetBoardId: boardStore.currentBoard?.id ?? null,
+      prevListId: prevList?.id ?? null,
+      nextListId: nextList?.id ?? null,
     })
   }
 
