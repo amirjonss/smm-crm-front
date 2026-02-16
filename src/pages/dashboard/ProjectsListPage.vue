@@ -1,5 +1,12 @@
 <template>
   <q-page class="dashboard-page">
+    <page-loader
+      v-if="isLoading && !hasLoadedOnce"
+      title="Загружаем проекты"
+      subtitle="Готовим список, исполнителей и аналитику"
+      :fixed="false"
+    />
+
     <div class="page-container">
       <!-- Header -->
       <div class="page-header">
@@ -605,6 +612,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { api } from 'boot/axios.js'
 import { useQuasar } from 'quasar'
+import PageLoader from 'components/shared/PageLoader.vue'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import bgSvgRaw from 'assets/asset7.svg?raw'
@@ -615,6 +623,7 @@ import '../../components/Roboto-Bold-normal.js'
 
 const q = useQuasar()
 const isLoading = ref(true)
+const hasLoadedOnce = ref(false)
 const executorsWithProjects = ref([])
 const allUsers = ref([])
 const visiblePrices = ref(new Set())
@@ -669,6 +678,7 @@ async function fetchAllData() {
     console.error('Error fetching data:', error)
     q.notify({ message: 'Ошибка загрузки данных', type: 'negative', position: 'top' })
   } finally {
+    hasLoadedOnce.value = true
     isLoading.value = false
   }
 }
@@ -1084,6 +1094,7 @@ onMounted(fetchAllData)
 <style scoped lang="scss">
 .dashboard-page {
   padding: 0;
+  position: relative;
 }
 
 .page-container {

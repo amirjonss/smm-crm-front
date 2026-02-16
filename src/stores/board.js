@@ -45,6 +45,20 @@ function normalizeBoard(board) {
   }
 }
 
+function normalizeCardPattern(pattern) {
+  const card = typeof pattern.card === 'object' ? pattern.card : null
+  return {
+    ...pattern,
+    id: pattern.id ?? extractId(pattern['@id']),
+    card: pattern.card ?? null,
+    cardId: extractId(pattern.card),
+    name: pattern.name || card?.name || 'Без названия',
+    description: pattern.description || card?.description || '',
+    deadline: pattern.deadline || card?.deadline || null,
+    status: pattern.status || card?.status || 'open',
+  }
+}
+
 export const useBoardStore = defineStore('board', {
   state: () => ({
     boards: [],
@@ -57,6 +71,7 @@ export const useBoardStore = defineStore('board', {
     archivedLists: [],
     archivedListsTotal: 0,
     archivedListsPage: 1,
+    cardPatterns: [],
   }),
 
   getters: {
@@ -69,6 +84,7 @@ export const useBoardStore = defineStore('board', {
         .sort((a, b) => positionOrMax(a.position) - positionOrMax(b.position))
     },
     getCardLogs: (state) => state.cardLogs,
+    getCardPatterns: (state) => state.cardPatterns,
   },
 
   actions: {
@@ -283,6 +299,11 @@ export const useBoardStore = defineStore('board', {
       return updated
     },
 
+    async fetchCardById(cardId) {
+      const response = await api.get('/cards/' + cardId)
+      return normalizeCard(response.data)
+    },
+
     async deleteCard(cardId) {
       await api.delete('/cards/' + cardId)
       if (this.currentBoard) {
@@ -430,6 +451,59 @@ export const useBoardStore = defineStore('board', {
       this.archivedListsTotal = response.data.totalItems ?? 0
       this.archivedListsPage = page
       return items
+    },
+
+    // Card patterns
+    async fetchCardPatterns() {
+      try {
+        const response = await api.get('/card_patterns?itemsPerPage=200')
+        this.cardPatterns = (response.data.member || []).map(normalizeCardPattern)
+        return this.cardPatterns
+      } catch {
+        const fallback = await api.get('/card-patterns?itemsPerPage=200')
+        this.cardPatterns = (fallback.data.member || []).map(normalizeCardPattern)
+        return this.cardPatterns
+      }
+    },
+
+    async createCardPatternFromCard(cardId) {
+      const response = await api.post('/card-patterns/from-card', {
+        card: '/api/cards/' + cardId,
+      })
+      const pattern = normalizeCardPattern(response.data)
+      const idx = this.cardPatterns.findIndex((p) => p.id === pattern.id)
+      if (idx === -1) {
+        this.cardPatterns.unshift(pattern)
+      } else {
+        this.cardPatterns[idx] = pattern
+      }
+      return pattern
+    },
+
+    async patchCardPattern(patternId, data) {
+      let response
+      try {
+        response = await api.patch('/card_patterns/' + patternId, data)
+      } catch {
+        response = await api.patch('/card-patterns/' + patternId, data)
+      }
+      const pattern = normalizeCardPattern(response.data)
+      const idx = this.cardPatterns.findIndex((p) => p.id === pattern.id)
+      if (idx === -1) {
+        this.cardPatterns.unshift(pattern)
+      } else {
+        this.cardPatterns[idx] = pattern
+      }
+      return pattern
+    },
+
+    async deleteCardPattern(patternId) {
+      try {
+        await api.delete('/card_patterns/' + patternId)
+      } catch {
+        await api.delete('/card-patterns/' + patternId)
+      }
+      this.cardPatterns = this.cardPatterns.filter((p) => p.id !== patternId)
     },
 
     setCurrentBoardLists(lists) {

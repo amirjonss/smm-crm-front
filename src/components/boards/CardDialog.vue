@@ -35,6 +35,16 @@
             flat
             round
             dense
+            icon="note_add"
+            class="top-btn"
+            @click="syncPattern"
+          >
+            <q-tooltip>{{ isTemplateCard ? 'Обновить шаблон' : 'Создать шаблон' }}</q-tooltip>
+          </q-btn>
+          <q-btn
+            flat
+            round
+            dense
             :icon="isCardArchived ? 'unarchive' : 'archive'"
             class="top-btn"
             @click="toggleArchive"
@@ -331,7 +341,7 @@ const props = defineProps({
   lists: { type: Array, default: () => [] },
 })
 
-const emit = defineEmits(['update:modelValue', 'save', 'toggleArchive'])
+const emit = defineEmits(['update:modelValue', 'save', 'toggleArchive', 'syncPattern'])
 
 const userStore = useUserStore()
 const boardStore = useBoardStore()
@@ -345,6 +355,14 @@ const isCardArchived = computed(() => {
   if (!props.card?.id) return false
   if (props.card.isArchived === true) return true
   return boardStore.archivedCards.some((card) => card.id === props.card.id)
+})
+const isTemplateCard = computed(() => {
+  return !!(
+    props.card?.cardPattern?.id ||
+    props.card?.cardPatternId ||
+    props.card?.pattern?.id ||
+    props.card?.patternId
+  )
 })
 
 const showDeadlinePicker = ref(false)
@@ -633,6 +651,15 @@ function toggleArchive() {
   emit('toggleArchive', {
     cardId: props.card.id,
     isArchived: !isCardArchived.value,
+  })
+}
+
+function syncPattern() {
+  if (!props.card?.id) return
+  emit('syncPattern', {
+    ...props.card,
+    name: form.value.name,
+    description: form.value.description,
   })
 }
 

@@ -1,5 +1,13 @@
 <template>
   <q-page class="board-detail-page">
+    <page-loader
+      v-if="isPageLoading || boardStore.loading"
+      title="Загружаем доску"
+      subtitle="Собираем списки, карточки и порядок"
+      :fixed="false"
+      dark
+    />
+
     <div class="board-top-bar">
       <q-btn flat round dense icon="arrow_back" class="back-btn" @click="router.push('/boards')">
         <q-tooltip>Назад к доскам</q-tooltip>
@@ -32,6 +40,15 @@
       >
         <q-tooltip>Архив</q-tooltip>
       </q-btn>
+      <q-btn
+        flat
+        dense
+        icon="note_add"
+        class="archive-btn"
+        @click="showPatternsSidebar = true"
+      >
+        <q-tooltip>Шаблоны</q-tooltip>
+      </q-btn>
     </div>
 
     <div v-if="!boardStore.currentBoard" class="loading-state">
@@ -62,10 +79,17 @@
         <template #item="{ element: list }">
           <board-column
             :list="list"
+            :patterns="boardStore.getCardPatterns"
+            :patterns-loading="isPatternsLoading"
+            :pattern-submitting="isPatternSubmitting"
             @update:cards="updateCards(list.id, $event)"
             @card-change="handleCardChange($event, list.id)"
             @add-card="addCard(list.id, $event)"
             @archive-card="archiveCard"
+            @sync-pattern="syncCardPattern"
+            @open-patterns="openPatternDialog"
+            @use-pattern="createCardFromPattern"
+            @create-pattern="createPatternAndCard"
             @open-card="openCard($event)"
             @archive="archiveList(list)"
             @rename="renameList(list, $event)"
@@ -102,7 +126,15 @@
       :card="editingCard"
       :lists="boardStore.currentBoard?.lists || []"
       @save="saveCard"
+      @sync-pattern="syncCardPattern"
       @toggle-archive="toggleCardArchive"
+    />
+
+    <card-pattern-dialog
+      v-model="showPatternDialog"
+      :pattern="editingPattern"
+      :saving="isPatternDialogSaving"
+      @save="savePatternDialog"
     />
 
     <board-archive-sidebar
@@ -110,6 +142,12 @@
       :board-id="boardStore.currentBoard?.id"
       @open-card="openCard"
     />
+
+    <board-patterns-sidebar
+      v-model="showPatternsSidebar"
+      @edit-pattern="openPatternEditor"
+    />
+
   </q-page>
 </template>
 
@@ -124,7 +162,10 @@ import draggable from 'vuedraggable'
 import BoardColumn from 'components/boards/BoardColumn.vue'
 import AddListButton from 'components/boards/AddListButton.vue'
 import CardDialog from 'components/boards/CardDialog.vue'
+import CardPatternDialog from 'components/boards/CardPatternDialog.vue'
 import BoardArchiveSidebar from 'components/boards/BoardArchiveSidebar.vue'
+import BoardPatternsSidebar from 'components/boards/BoardPatternsSidebar.vue'
+import PageLoader from 'components/shared/PageLoader.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -135,7 +176,14 @@ const { sortedLists, persistListOrder, handleCardChange } = useBoardDragDrop()
 
 const showCardDialog = ref(false)
 const editingCard = ref(null)
+const showPatternDialog = ref(false)
+const editingPattern = ref(null)
+const isPatternDialogSaving = ref(false)
 const showArchiveSidebar = ref(false)
+const showPatternsSidebar = ref(false)
+const isPageLoading = ref(true)
+const isPatternsLoading = ref(false)
+const isPatternSubmitting = ref(false)
 
 const isEditingBoardName = ref(false)
 const editBoardName = ref('')
@@ -212,6 +260,22 @@ function addCard(listId, name) {
   })
 }
 
+function getCardPatternId(card) {
+  return card?.cardPattern?.id || card?.cardPatternId || card?.pattern?.id || card?.patternId || null
+}
+
+function markCardAsPattern(cardId, pattern) {
+  if (!boardStore.currentBoard?.lists?.length) return
+  for (const list of boardStore.currentBoard.lists) {
+    const card = list.cards?.find((item) => item.id === cardId)
+    if (card) {
+      card.cardPattern = { id: pattern.id, name: pattern.name || card.name }
+      card.cardPatternId = pattern.id
+      break
+    }
+  }
+}
+
 function archiveCard(card) {
   if (!card?.id) return
   boardStore.patchCard(card.id, { isArchived: true }).then(() => {
@@ -222,6 +286,120 @@ function archiveCard(card) {
 function openCard(card) {
   editingCard.value = card
   showCardDialog.value = true
+}
+
+function openPatternEditor(pattern) {
+  editingPattern.value = {
+    id: pattern.id,
+    name: pattern.name || '',
+    description: pattern.description || '',
+    status: pattern.status || 'open',
+    deadline: pattern.deadline || null,
+  }
+  showPatternDialog.value = true
+}
+
+function updatePatternNameInCards(patternId, patternName) {
+  if (!boardStore.currentBoard?.lists?.length) return
+  for (const list of boardStore.currentBoard.lists) {
+    for (const card of list.cards || []) {
+      const cardPatternId =
+        card?.cardPattern?.id || card?.cardPatternId || card?.pattern?.id || card?.patternId
+      if (cardPatternId === patternId) {
+        card.cardPattern = { id: patternId, name: patternName }
+        card.cardPatternId = patternId
+      }
+    }
+  }
+}
+
+async function savePatternDialog(payload) {
+  if (!editingPattern.value?.id) return
+  isPatternDialogSaving.value = true
+  try {
+    const updated = await boardStore.patchCardPattern(editingPattern.value.id, payload)
+    updatePatternNameInCards(updated.id, updated.name || payload.name)
+    showPatternDialog.value = false
+    q.notify({ message: 'Шаблон обновлён', type: 'positive', position: 'top' })
+  } catch {
+    q.notify({ message: 'Ошибка обновления шаблона', type: 'negative', position: 'top' })
+  } finally {
+    isPatternDialogSaving.value = false
+  }
+}
+
+async function syncCardPattern(card) {
+  if (!card?.id) return
+  try {
+    let pattern
+    const patternId = getCardPatternId(card)
+    if (patternId) {
+      pattern = await boardStore.patchCardPattern(patternId, {
+        name: card.name,
+        description: card.description || '',
+      })
+      q.notify({ message: 'Шаблон обновлён', type: 'positive', position: 'top', timeout: 1200 })
+    } else {
+      pattern = await boardStore.createCardPatternFromCard(card.id)
+      q.notify({ message: 'Шаблон создан', type: 'positive', position: 'top', timeout: 1200 })
+    }
+    markCardAsPattern(card.id, pattern)
+  } catch {
+    q.notify({ message: 'Ошибка при сохранении шаблона', type: 'negative', position: 'top' })
+  }
+}
+
+async function openPatternDialog() {
+  if (isPatternsLoading.value) return
+  isPatternsLoading.value = true
+  try {
+    await boardStore.fetchCardPatterns()
+  } catch {
+    q.notify({ message: 'Не удалось загрузить шаблоны', type: 'negative', position: 'top' })
+  } finally {
+    isPatternsLoading.value = false
+  }
+}
+
+async function createCardFromPattern({ listId, pattern }) {
+  if (!listId || !pattern?.name) return
+  isPatternSubmitting.value = true
+  try {
+    const payload = {
+      name: pattern.name,
+      description: pattern.description || '',
+    }
+
+    if (pattern.status) {
+      payload.status = pattern.status
+    }
+
+    if (pattern.deadline) {
+      payload.deadline = pattern.deadline
+    }
+
+    await boardStore.createCard(listId, payload)
+    q.notify({ message: 'Карточка создана по шаблону', type: 'positive', position: 'top' })
+  } catch {
+    q.notify({ message: 'Ошибка создания карточки', type: 'negative', position: 'top' })
+  } finally {
+    isPatternSubmitting.value = false
+  }
+}
+
+async function createPatternAndCard({ listId, name }) {
+  if (!listId || !name?.trim()) return
+  isPatternSubmitting.value = true
+  try {
+    const card = await boardStore.createCard(listId, { name: name.trim() })
+    const pattern = await boardStore.createCardPatternFromCard(card.id)
+    markCardAsPattern(card.id, pattern)
+    q.notify({ message: 'Созданы карточка и шаблон', type: 'positive', position: 'top' })
+  } catch {
+    q.notify({ message: 'Ошибка создания шаблона', type: 'negative', position: 'top' })
+  } finally {
+    isPatternSubmitting.value = false
+  }
 }
 
 function saveCard(data) {
@@ -287,11 +465,16 @@ function archiveList(list) {
   })
 }
 
-onMounted(() => {
-  boardStore.fetchBoard(route.params.id).catch(() => {
+onMounted(async () => {
+  isPageLoading.value = true
+  try {
+    await boardStore.fetchBoard(route.params.id)
+  } catch {
     q.notify({ message: 'Доска не найдена', type: 'negative', position: 'top' })
     router.push('/boards')
-  })
+  } finally {
+    isPageLoading.value = false
+  }
 })
 </script>
 
@@ -301,6 +484,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
   background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
   min-height: 100vh;
 }

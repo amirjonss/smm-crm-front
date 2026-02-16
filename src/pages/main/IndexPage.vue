@@ -1,5 +1,12 @@
 <template>
   <q-page class="index-page">
+    <page-loader
+      v-if="isInitialLoading"
+      title="Загружаем проекты"
+      subtitle="Считаем планы на день, неделю и месяц"
+      :fixed="false"
+    />
+
     <div class="page-container">
       <!-- Page Header -->
       <div class="page-header">
@@ -840,6 +847,7 @@ import { useQuasar } from 'quasar'
 import { useContentPlanStore } from 'stores/content-plan.js'
 import { api } from 'boot/axios.js'
 import PdfPrinterComponent from 'components/PdfPrinterComponent.vue'
+import PageLoader from 'components/shared/PageLoader.vue'
 import draggable from 'vuedraggable'
 import { getProjectName } from '@/utils/projectHelpers'
 import { getTodayISO, getWeekRange, getMonthRange } from '@/utils/dateHelpers'
@@ -867,6 +875,7 @@ const q = useQuasar()
 const todaysContentPlans = ref([])
 const weekCount = ref(0)
 const monthCount = ref(0)
+const isInitialLoading = ref(true)
 
 const projectOptions = computed(() => {
   return projectStore.getProjects.map((p) => ({
@@ -1259,9 +1268,10 @@ async function setPlatformStatus(plan, platformName, newStatus) {
   }
 }
 
-onMounted(() => {
-  projectStore.fetchProjects()
-  fetchTodaysContentPlans()
+onMounted(async () => {
+  isInitialLoading.value = true
+  await Promise.allSettled([projectStore.fetchProjects(), fetchTodaysContentPlans()])
+  isInitialLoading.value = false
 })
 </script>
 
@@ -1389,6 +1399,7 @@ onMounted(() => {
 
 .index-page {
   padding: 0;
+  position: relative;
 }
 
 .page-container {
