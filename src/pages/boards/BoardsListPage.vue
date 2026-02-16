@@ -1,5 +1,13 @@
 <template>
   <q-page class="boards-list-page">
+    <page-loader
+      v-if="isPageLoading"
+      title="Загружаем доски"
+      subtitle="Собираем ваши Kanban-проекты"
+      :fixed="false"
+      dark
+    />
+
     <div class="page-container">
       <div class="page-header">
         <div>
@@ -54,6 +62,7 @@ import { useBoardStore } from 'stores/board.js'
 import { useUserStore } from 'stores/user.js'
 import BoardCard from 'components/boards/BoardCard.vue'
 import BoardDialog from 'components/boards/BoardDialog.vue'
+import PageLoader from 'components/shared/PageLoader.vue'
 
 const router = useRouter()
 const q = useQuasar()
@@ -62,6 +71,7 @@ const userStore = useUserStore()
 
 const showDialog = ref(false)
 const editingBoard = ref(null)
+const isPageLoading = ref(true)
 
 function openCreateDialog() {
   editingBoard.value = null
@@ -100,8 +110,13 @@ function confirmDelete(board) {
   })
 }
 
-onMounted(() => {
-  boardStore.fetchBoards()
+onMounted(async () => {
+  isPageLoading.value = true
+  try {
+    await boardStore.fetchBoards()
+  } finally {
+    isPageLoading.value = false
+  }
 })
 </script>
 
@@ -110,6 +125,7 @@ onMounted(() => {
   padding: 0;
   background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
   min-height: 100vh;
+  position: relative;
 }
 
 .page-container {

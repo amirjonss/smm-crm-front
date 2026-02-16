@@ -1,5 +1,12 @@
 <template>
   <q-page class="dashboard-page">
+    <page-loader
+      v-if="isInitialLoading"
+      title="Загружаем дашборд"
+      subtitle="Собираем статистику и список персонала"
+      :fixed="false"
+    />
+
     <div class="page-container">
       <!-- Stats Cards -->
       <div class="stats-grid">
@@ -408,6 +415,7 @@ import { useUserStore } from 'stores/user.js'
 import { useProjectStore } from 'stores/project.js'
 import { useContentPlanStore } from 'stores/content-plan.js'
 import ProjectsAndContentListComponent from 'components/dashboard/ProjectsAndContentListComponent.vue'
+import PageLoader from 'components/shared/PageLoader.vue'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios.js'
 import { getProjectName } from '@/utils/projectHelpers'
@@ -439,6 +447,7 @@ const userForm = ref({
   email: '',
   roles: null,
 })
+const isInitialLoading = ref(true)
 const isLoading = ref(false)
 const editingUserId = ref(null)
 const showUserDialog = ref(false)
@@ -627,17 +636,22 @@ function confirmUserDeletion(user) {
   }).onOk(() => deleteUser(user.id))
 }
 
-onMounted(() => {
-  userStore.fetchUsers()
-  projectStore.fetchProjectsCount()
-  contentPlanStore.fetchMonthlyContentPlansCount()
-  fetchTodaysContentPlans()
+onMounted(async () => {
+  isInitialLoading.value = true
+  await Promise.allSettled([
+    userStore.fetchUsers(),
+    projectStore.fetchProjectsCount(),
+    contentPlanStore.fetchMonthlyContentPlansCount(),
+    fetchTodaysContentPlans(),
+  ])
+  isInitialLoading.value = false
 })
 </script>
 
 <style scoped lang="scss">
 .dashboard-page {
   padding: 0;
+  position: relative;
 }
 
 .page-container {

@@ -1,5 +1,12 @@
 <template>
   <q-page class="profile-page">
+    <page-loader
+      v-if="isInitialLoading"
+      title="Загружаем профиль"
+      subtitle="Подтягиваем данные аккаунта и аватар"
+      :fixed="false"
+    />
+
     <div class="profile-shell">
       <section class="hero">
         <div>
@@ -163,10 +170,12 @@
 import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useUserStore } from 'stores/user.js'
+import PageLoader from 'components/shared/PageLoader.vue'
 
 const q = useQuasar()
 const userStore = useUserStore()
 
+const isInitialLoading = ref(true)
 const savingProfile = ref(false)
 const savingPassword = ref(false)
 const avatarInputRef = ref(null)
@@ -342,10 +351,15 @@ async function changePassword() {
 }
 
 onMounted(async () => {
-  if (!userStore.isLoaded) {
-    await userStore.fetchUser({})
+  isInitialLoading.value = true
+  try {
+    if (!userStore.isLoaded) {
+      await userStore.fetchUser({})
+    }
+    fillFormFromUser()
+  } finally {
+    isInitialLoading.value = false
   }
-  fillFormFromUser()
 })
 </script>
 
@@ -353,6 +367,7 @@ onMounted(async () => {
 .profile-page {
   min-height: 100%;
   padding: 1.25rem;
+  position: relative;
   background:
     radial-gradient(1200px 600px at 100% -10%, rgba(14, 165, 233, 0.14), transparent 55%),
     radial-gradient(900px 500px at 0% 0%, rgba(16, 185, 129, 0.1), transparent 48%),

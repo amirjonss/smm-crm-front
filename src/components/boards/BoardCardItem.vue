@@ -16,6 +16,18 @@
           @touchstart.stop
         >
           <q-menu class="card-dropdown-menu" @click.stop @mousedown.stop @touchstart.stop>
+            <q-item
+              v-close-popup
+              clickable
+              class="card-dropdown-item"
+              @click.stop="emit('pattern', card)"
+            >
+              <q-item-section avatar>
+                <q-icon :name="isTemplateCard ? 'check_box' : 'check_box_outline_blank'" size="16px" />
+              </q-item-section>
+              <q-item-section>Шаблон</q-item-section>
+            </q-item>
+
             <q-item v-close-popup clickable class="card-dropdown-item" @click.stop="emit('archive', card)">
               <q-item-section avatar><q-icon name="archive" size="16px" /></q-item-section>
               <q-item-section>Архивировать карточку</q-item-section>
@@ -52,6 +64,7 @@
           <span v-if="overflowCount > 0" class="executor-overflow">+{{ overflowCount }}</span>
         </div>
       </div>
+
     </div>
   </div>
 </template>
@@ -65,7 +78,7 @@ const props = defineProps({
   card: { type: Object, required: true },
 })
 
-const emit = defineEmits(['click', 'archive'])
+const emit = defineEmits(['click', 'archive', 'pattern'])
 const userStore = useUserStore()
 const avatarUrlCache = ref({})
 const avatarLoadingSet = ref(new Set())
@@ -92,6 +105,14 @@ const formattedDeadline = computed(() => {
 
 const visibleExecutors = computed(() => (props.card.executor || []).slice(0, 3))
 const overflowCount = computed(() => Math.max(0, (props.card.executor?.length || 0) - 3))
+const templatePatternId = computed(() =>
+  props.card.cardPattern?.id ||
+  props.card.cardPatternId ||
+  props.card.pattern?.id ||
+  props.card.patternId ||
+  null,
+)
+const isTemplateCard = computed(() => !!templatePatternId.value)
 
 function toAbsoluteUrl(path) {
   if (!path) return ''

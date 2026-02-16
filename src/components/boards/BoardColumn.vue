@@ -91,6 +91,7 @@
             :card="element"
             @click="$emit('openCard', element)"
             @archive="$emit('archiveCard', element)"
+            @pattern="$emit('syncPattern', element)"
           />
         </template>
       </draggable>
@@ -98,6 +99,33 @@
 
     <div v-if="userStore.canManageList" class="column-footer">
       <add-card-button @add="$emit('addCard', $event)" />
+      <q-btn
+        flat
+        dense
+        icon="note_add"
+        size="sm"
+        class="pattern-btn"
+      >
+        <q-tooltip>Карточки по шаблону</q-tooltip>
+        <q-menu
+          v-model="showPatternsMenu"
+          class="patterns-popover-menu"
+          anchor="top right"
+          self="bottom right"
+          :offset="[0, 8]"
+          @before-show="$emit('openPatterns')"
+        >
+          <card-patterns-popover
+            :open="showPatternsMenu"
+            :patterns="patterns"
+            :loading="patternsLoading"
+            :submitting="patternSubmitting"
+            @close="showPatternsMenu = false"
+            @use-pattern="onUsePattern"
+            @create-pattern="onCreatePattern"
+          />
+        </q-menu>
+      </q-btn>
     </div>
   </div>
 </template>
@@ -109,9 +137,13 @@ import { useUserStore } from 'stores/user.js'
 import { LIST_COLORS } from '@/constants/cardStatus'
 import BoardCardItem from './BoardCardItem.vue'
 import AddCardButton from './AddCardButton.vue'
+import CardPatternsPopover from './CardPatternsPopover.vue'
 
 const props = defineProps({
   list: { type: Object, required: true },
+  patterns: { type: Array, default: () => [] },
+  patternsLoading: { type: Boolean, default: false },
+  patternSubmitting: { type: Boolean, default: false },
 })
 
 const emit = defineEmits([
@@ -120,6 +152,10 @@ const emit = defineEmits([
   'addCard',
   'openCard',
   'archiveCard',
+  'syncPattern',
+  'openPatterns',
+  'usePattern',
+  'createPattern',
   'archive',
   'rename',
   'changeColor',
@@ -129,6 +165,7 @@ const userStore = useUserStore()
 const isEditingName = ref(false)
 const editName = ref('')
 const nameInputRef = ref(null)
+const showPatternsMenu = ref(false)
 
 function positionOrMax(value) {
   return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER
@@ -173,6 +210,16 @@ function saveName() {
 
 function cancelNameEdit() {
   isEditingName.value = false
+}
+
+function onUsePattern(pattern) {
+  emit('usePattern', { listId: props.list.id, pattern })
+  showPatternsMenu.value = false
+}
+
+function onCreatePattern(name) {
+  emit('createPattern', { listId: props.list.id, name })
+  showPatternsMenu.value = false
 }
 </script>
 
@@ -417,6 +464,31 @@ function cancelNameEdit() {
 
 .column-footer {
   padding: 0.25rem 0.5rem 0.5rem;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.25rem;
+
+  :deep(.add-card-wrapper) {
+    flex: 1;
+  }
+}
+
+.pattern-btn {
+  color: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  margin-bottom: 0.3rem;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  border-radius: 8px;
+
+  &:hover {
+    color: #fff;
+    border-color: rgba(96, 165, 250, 0.5);
+    background: rgba(59, 130, 246, 0.18);
+  }
 }
 
 </style>
@@ -462,6 +534,11 @@ function cancelNameEdit() {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.05);
+}
+
+.patterns-popover-menu {
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .card-drag-ghost {

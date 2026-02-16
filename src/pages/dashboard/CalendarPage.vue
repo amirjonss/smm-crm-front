@@ -1,5 +1,12 @@
 <template>
   <q-page class="calendar-page">
+    <page-loader
+      v-if="isPageLoading || isEventsLoading"
+      title="Загружаем календарь"
+      subtitle="Подтягиваем контент-планы и события"
+      :fixed="false"
+    />
+
     <div class="page-container">
       <!-- Calendar Header -->
       <div class="calendar-header">
@@ -522,6 +529,7 @@ import { date, useQuasar } from 'quasar'
 import { useProjectStore } from 'stores/project.js'
 import { useUserStore } from 'stores/user.js'
 import { useContentPlanStore } from 'stores/content-plan.js'
+import PageLoader from 'components/shared/PageLoader.vue'
 import {
   PLATFORM_OPTIONS,
   PLATFORM,
@@ -551,6 +559,8 @@ const selectedDayEvents = ref([])
 const selectedDateLabel = ref('')
 const selectedDateForMobileList = ref(null)
 const hoveredDayKey = ref(null)
+const isPageLoading = ref(true)
+const isEventsLoading = ref(false)
 
 const tempEvent = ref({
   id: null,
@@ -750,7 +760,13 @@ function getStatusIcon(status) {
 }
 
 // 5. Async Functions
-async function fetchEvents() {
+async function fetchEvents({ initial = false } = {}) {
+  if (initial) {
+    isPageLoading.value = true
+  } else {
+    isEventsLoading.value = true
+  }
+
   const year = currentDate.value.getFullYear()
   const month = currentDate.value.getMonth()
 
@@ -783,6 +799,12 @@ async function fetchEvents() {
   } catch (e) {
     console.error('Error fetching events', e)
     $q.notify({ type: 'negative', message: 'Ошибка загрузки событий' })
+  } finally {
+    if (initial) {
+      isPageLoading.value = false
+    } else {
+      isEventsLoading.value = false
+    }
   }
 }
 
@@ -940,12 +962,12 @@ watch(currentDate, () => {
   fetchEvents()
 })
 
-onMounted(() => {
-  projectStore.fetchProjects()
-  if (userStore.isAdmin) {
-    userStore.fetchUsers()
-  }
-  fetchEvents()
+onMounted(async () => {
+  await Promise.allSettled([
+    projectStore.fetchProjects(),
+    userStore.isAdmin ? userStore.fetchUsers() : Promise.resolve(),
+    fetchEvents({ initial: true }),
+  ])
 })
 </script>
 
@@ -978,6 +1000,7 @@ onMounted(() => {
 
 .calendar-page {
   padding: 0;
+  position: relative;
 }
 
 .dialog-card {
