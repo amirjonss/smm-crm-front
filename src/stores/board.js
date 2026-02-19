@@ -14,9 +14,9 @@ function positionOrMax(value) {
   return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER
 }
 
-function normalizeCard(card) {
-  const listId = extractId(card.list)
-  const listName = typeof card.list === 'object' ? card.list.name : null
+function normalizeCard(card, fallbackList = null) {
+  const listId = extractId(card.list) ?? fallbackList?.id ?? null
+  const listName = typeof card.list === 'object' ? card.list.name : fallbackList?.name ?? null
 
   return {
     ...card,
@@ -29,11 +29,16 @@ function normalizeCard(card) {
 }
 
 function normalizeList(list) {
+  const listId = list.id ?? extractId(list['@id'])
+  const listName = list.name ?? null
+
   return {
     ...list,
-    id: list.id ?? extractId(list['@id']),
+    id: listId,
     board: { id: extractId(list.board) },
-    cards: Array.isArray(list.cards) ? list.cards.map(normalizeCard) : [],
+    cards: Array.isArray(list.cards)
+      ? list.cards.map((card) => normalizeCard(card, { id: listId, name: listName }))
+      : [],
   }
 }
 
@@ -98,24 +103,18 @@ export const useBoardStore = defineStore('board', {
     async fetchBoard(id) {
       this.loading = true
       try {
-        const [boardRes, listsRes, cardsRes] = await Promise.all([
+        const [boardRes, listsRes] = await Promise.all([
           api.get('/boards/' + id),
           api.get('/board_lists?board.id=' + id + '&order[position]=asc&itemsPerPage=200'),
-          api.get('/cards?list.board.id=' + id + '&order[position]=asc&itemsPerPage=200'),
         ])
 
         const board = normalizeBoard(boardRes.data)
         const lists = (listsRes.data.member || []).map(normalizeList)
-        const cards = (cardsRes.data.member || []).map(normalizeCard)
-
-        board.lists = lists
-
-        // Attach cards to their respective lists
-        board.lists.forEach((list) => {
-          list.cards = cards.filter((c) => c.list.id === list.id)
+        lists.forEach((list) => {
+          list.cards.sort((a, b) => positionOrMax(a.position) - positionOrMax(b.position))
         })
-        board.lists.sort((a, b) => positionOrMax(a.position) - positionOrMax(b.position))
 
+        board.lists = lists.sort((a, b) => positionOrMax(a.position) - positionOrMax(b.position))
         this.currentBoard = board
         return this.currentBoard
       } finally {
@@ -333,16 +332,46 @@ export const useBoardStore = defineStore('board', {
     },
 
     // Executor management
-    async addExecutor(cardId, userId) {
+    async addExecutor(cardId, userOrId) {
+      const userId = typeof userOrId === 'object' ? extractId(userOrId) : extractId(userOrId)
+      if (!userId) return
+
       await api.post('/cards/' + cardId + '/executor', {
         executor: '/api/users/' + userId,
       })
+
+      if (!this.currentBoard) return
+
+      for (const list of this.currentBoard.lists) {
+        const card = list.cards.find((c) => c.id === cardId)
+        if (!card) continue
+
+        const alreadyExists = (card.executor || []).some((e) => extractId(e) === userId)
+        if (!alreadyExists) {
+          const executorEntry = typeof userOrId === 'object' ? userOrId : { id: userId }
+          card.executor = [...(card.executor || []), executorEntry]
+        }
+        break
+      }
     },
 
     async removeExecutor(cardId, userId) {
+      const executorId = extractId(userId)
+      if (!executorId) return
+
       await api.post('/cards/' + cardId + '/executor-delete', {
-        executor: '/api/users/' + userId,
+        executor: '/api/users/' + executorId,
       })
+
+      if (!this.currentBoard) return
+
+      for (const list of this.currentBoard.lists) {
+        const card = list.cards.find((c) => c.id === cardId)
+        if (!card) continue
+
+        card.executor = (card.executor || []).filter((e) => extractId(e) !== executorId)
+        break
+      }
     },
 
     // Move card position (between lists or reorder within list)

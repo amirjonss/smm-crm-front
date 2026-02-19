@@ -276,7 +276,8 @@
                 >
                   <div class="user-info">
                     <q-avatar size="40px" color="primary" text-color="white" class="user-avatar">
-                      {{ (row.givenName?.[0] || '').toUpperCase() }}
+                      <img v-if="getUserAvatarUrl(row)" :src="getUserAvatarUrl(row)" :alt="row.email" />
+                      <span v-else>{{ (row.givenName?.[0] || '').toUpperCase() }}</span>
                     </q-avatar>
                     <div class="user-details">
                       <span class="user-name">{{ row.givenName }} {{ row.familyName }}</span>
@@ -457,6 +458,26 @@ const selectedUserId = computed(() => userStore.getSelectedUserId)
 const selectedRoleFilter = ref(null)
 
 const statusOptions = STATUS_OPTIONS
+
+function toAbsoluteUrl(path) {
+  if (!path) return ''
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+
+  const baseUrl = import.meta.env.VITE_BASE_URL || ''
+  const origin = baseUrl.startsWith('http') ? new URL(baseUrl).origin : window.location.origin
+  return origin + path
+}
+
+function getUserAvatarUrl(user) {
+  const avatar = user?.avatar
+  if (!avatar) return ''
+
+  if (typeof avatar === 'object' && avatar.contentUrl) {
+    return toAbsoluteUrl(avatar.contentUrl)
+  }
+
+  return ''
+}
 
 function getStatusIcon(status) {
   switch (status) {

@@ -70,7 +70,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { CARD_STATUS_LABELS, CARD_STATUS_STYLE } from '@/constants/cardStatus'
 import { useUserStore } from 'stores/user.js'
 
@@ -80,8 +80,6 @@ const props = defineProps({
 
 const emit = defineEmits(['click', 'archive', 'pattern'])
 const userStore = useUserStore()
-const avatarUrlCache = ref({})
-const avatarLoadingSet = ref(new Set())
 
 const statusColors = computed(() => CARD_STATUS_STYLE[props.card.status] || CARD_STATUS_STYLE.open)
 
@@ -130,51 +128,8 @@ function getUserAvatarUrl(user) {
   if (typeof avatar === 'object' && avatar.contentUrl) {
     return toAbsoluteUrl(avatar.contentUrl)
   }
-
-  const iri = getAvatarIri(user)
-  if (!iri) return ''
-  return avatarUrlCache.value[iri] || ''
+  return ''
 }
-
-function getAvatarIri(user) {
-  const avatar = user?.avatar
-  if (!avatar) return null
-  if (typeof avatar === 'string') return avatar
-  if (typeof avatar === 'object' && avatar['@id']) return avatar['@id']
-  return null
-}
-
-async function ensureUserAvatarResolved(user) {
-  const iri = getAvatarIri(user)
-  if (!iri) return
-  if (avatarUrlCache.value[iri]) return
-  if (avatarLoadingSet.value.has(iri)) return
-
-  avatarLoadingSet.value.add(iri)
-  try {
-    const media = await userStore.fetchMediaObject(iri)
-    const url = media?.contentUrl ? toAbsoluteUrl(media.contentUrl) : ''
-    avatarUrlCache.value = {
-      ...avatarUrlCache.value,
-      [iri]: url,
-    }
-  } catch {
-    avatarUrlCache.value = {
-      ...avatarUrlCache.value,
-      [iri]: '',
-    }
-  } finally {
-    avatarLoadingSet.value.delete(iri)
-  }
-}
-
-watch(
-  () => visibleExecutors.value,
-  (users) => {
-    users.forEach((user) => ensureUserAvatarResolved(user))
-  },
-  { immediate: true, deep: true },
-)
 </script>
 
 <style scoped lang="scss">

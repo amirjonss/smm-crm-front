@@ -115,7 +115,15 @@
                             v-close-popup
                             @click="changeExecutor(project, user.id)"
                           >
-                            <div class="reassign-popup__avatar">{{ getInitials(user.label) }}</div>
+                            <div class="reassign-popup__avatar">
+                              <img
+                                v-if="user.avatarUrl"
+                                :src="user.avatarUrl"
+                                :alt="user.label"
+                                class="reassign-popup__avatar-img"
+                              />
+                              <span v-else>{{ getInitials(user.label) }}</span>
+                            </div>
                             <span class="reassign-popup__name">{{ user.label }}</span>
                             <q-icon
                               v-if="isCurrentExecutor(project.id, user.id)"
@@ -387,7 +395,13 @@
                                 @click="changeExecutor(project, user.id)"
                               >
                                 <div class="reassign-popup__avatar">
-                                  {{ getInitials(user.label) }}
+                                  <img
+                                    v-if="user.avatarUrl"
+                                    :src="user.avatarUrl"
+                                    :alt="user.label"
+                                    class="reassign-popup__avatar-img"
+                                  />
+                                  <span v-else>{{ getInitials(user.label) }}</span>
                                 </div>
                                 <span class="reassign-popup__name">{{ user.label }}</span>
                                 <q-icon
@@ -662,18 +676,39 @@ const totalActiveSum = computed(() => {
     .reduce((sum, p) => sum + Number(p.price), 0)
 })
 
+function toAbsoluteUrl(path) {
+  if (!path) return ''
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+
+  const baseUrl = import.meta.env.VITE_BASE_URL || ''
+  const origin = baseUrl.startsWith('http') ? new URL(baseUrl).origin : window.location.origin
+  return origin + path
+}
+
 async function fetchAllData() {
   isLoading.value = true
   try {
-    const [projectsRes, usersRes] = await Promise.all([
+    const [projectsRes, adminUsersRes, smmUsersRes] = await Promise.all([
       api.post('/users/projects'),
-      api.get('/users'),
+      api.get('/users', { params: { roles: 'ROLE_ADMIN' } }),
+      api.get('/users', { params: { roles: 'ROLE_SMM' } }),
     ])
+
+    const mappedUsers = [...(adminUsersRes.data?.member || []), ...(smmUsersRes.data?.member || [])].map(
+      (u) => ({
+        id: u.id,
+        label: `${u.givenName || ''} ${u.familyName || ''}`.trim(),
+        avatarUrl:
+          typeof u.avatar === 'object' && u.avatar?.contentUrl
+            ? toAbsoluteUrl(u.avatar.contentUrl)
+            : '',
+      }),
+    )
+
     executorsWithProjects.value = projectsRes.data || []
-    allUsers.value = (usersRes.data?.member || usersRes.data || []).map((u) => ({
-      id: u.id,
-      label: `${u.givenName || ''} ${u.familyName || ''}`.trim(),
-    }))
+    allUsers.value = mappedUsers.filter(
+      (user, index, array) => array.findIndex((item) => item.id === user.id) === index,
+    )
   } catch (error) {
     console.error('Error fetching data:', error)
     q.notify({ message: 'Ошибка загрузки данных', type: 'negative', position: 'top' })
@@ -2000,6 +2035,14 @@ onMounted(fetchAllData)
     color: var(--text-muted, #888);
     flex-shrink: 0;
     border: 1px solid var(--border-color, #333);
+  }
+
+  &__avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+    display: block;
   }
 
   &__name {

@@ -32,6 +32,7 @@
           <q-space />
 
           <q-btn
+            v-if="canManageCardDetails"
             flat
             round
             dense
@@ -42,6 +43,7 @@
             <q-tooltip>{{ isTemplateCard ? 'Обновить шаблон' : 'Создать шаблон' }}</q-tooltip>
           </q-btn>
           <q-btn
+            v-if="canManageCardDetails"
             flat
             round
             dense
@@ -70,6 +72,7 @@
                 v-model="form.name"
                 borderless
                 autogrow
+                :readonly="!canManageCardDetails"
                 class="title-input"
                 placeholder="Название карточки"
                 @blur="onTitleBlur"
@@ -77,7 +80,7 @@
             </div>
 
             <!-- Action chips row -->
-            <div class="action-chips">
+            <div v-if="canManageCardDetails" class="action-chips">
               <q-btn flat dense no-caps class="action-chip">
                 <q-icon name="event" size="16px" class="q-mr-xs" />
                 Даты
@@ -220,10 +223,18 @@
 
               <div v-if="form.deadline" class="meta-group">
                 <div class="meta-label">Срок</div>
-                <q-btn flat dense no-caps class="meta-deadline-chip" @click="showDeadlinePicker = true">
+                <q-btn
+                  v-if="canManageCardDetails"
+                  flat
+                  dense
+                  no-caps
+                  class="meta-deadline-chip"
+                  @click="showDeadlinePicker = true"
+                >
                   {{ formattedDeadlineFull }}
                   <q-icon name="expand_more" size="14px" class="q-ml-xs" />
                 </q-btn>
+                <span v-else class="meta-deadline-text">{{ formattedDeadlineFull }}</span>
               </div>
             </div>
 
@@ -345,6 +356,7 @@ const emit = defineEmits(['update:modelValue', 'save', 'toggleArchive', 'syncPat
 
 const userStore = useUserStore()
 const boardStore = useBoardStore()
+const canManageCardDetails = computed(() => userStore.isAdmin || userStore.isSMM)
 
 const statusOptions = computed(() => {
   if (userStore.isAdmin || userStore.isSMM) return CARD_STATUS_OPTIONS
@@ -372,8 +384,6 @@ const deadlineDate = ref('')
 const deadlineTime = ref('12:00')
 const deadlineEnabled = ref(false)
 const cardExecutors = ref([])
-const avatarUrlCache = ref({})
-const avatarLoadingSet = ref(new Set())
 
 const filteredUsers = computed(() => {
   const users = userStore.getUsers || []
@@ -411,49 +421,7 @@ function getUserAvatarUrl(user) {
   if (typeof avatar === 'object' && avatar.contentUrl) {
     return toAbsoluteUrl(avatar.contentUrl)
   }
-
-  const iri = typeof avatar === 'string' ? avatar : avatar['@id']
-  if (!iri) return ''
-  return avatarUrlCache.value[iri] || ''
-}
-
-function getAvatarIri(user) {
-  const avatar = user?.avatar
-  if (!avatar) return null
-  if (typeof avatar === 'string') return avatar
-  if (typeof avatar === 'object' && avatar['@id']) return avatar['@id']
-  return null
-}
-
-async function ensureUserAvatarResolved(user) {
-  const iri = getAvatarIri(user)
-  if (!iri) return
-  if (avatarUrlCache.value[iri]) return
-  if (avatarLoadingSet.value.has(iri)) return
-
-  avatarLoadingSet.value.add(iri)
-  try {
-    const media = await userStore.fetchMediaObject(iri)
-    const url = media?.contentUrl ? toAbsoluteUrl(media.contentUrl) : ''
-    avatarUrlCache.value = {
-      ...avatarUrlCache.value,
-      [iri]: url,
-    }
-  } catch {
-    avatarUrlCache.value = {
-      ...avatarUrlCache.value,
-      [iri]: '',
-    }
-  } finally {
-    avatarLoadingSet.value.delete(iri)
-  }
-}
-
-function resolveUsersAvatars(users) {
-  if (!Array.isArray(users)) return
-  users.forEach((user) => {
-    ensureUserAvatarResolved(user)
-  })
+  return ''
 }
 
 function isExecutor(userId) {
@@ -473,7 +441,7 @@ function toggleExecutor(user) {
   } else {
     cardExecutors.value.push(user)
     if (cardId) {
-      boardStore.addExecutor(cardId, user.id).then(() => {
+      boardStore.addExecutor(cardId, user).then(() => {
         boardStore.fetchCardLogs(cardId)
       })
     }
@@ -575,7 +543,7 @@ function initForm(card) {
   isEditingDescription.value = false
 
   // Fetch users list if not loaded
-  if (!userStore.getUsers?.length) {
+  if (canManageCardDetails.value && !userStore.getUsers?.length) {
     userStore.fetchUsers()
   }
 
@@ -613,33 +581,18 @@ function deleteDeadline() {
   save()
 }
 
-watch(() => props.card, (card) => { if (card) initForm(card) }, { immediate: true })
-
-watch(() => props.modelValue, (open) => { if (open && props.card) initForm(props.card) })
-
 watch(
-  () => filteredUsers.value,
-  (users) => {
-    resolveUsersAvatars(users)
+  () => [props.modelValue, props.card?.id],
+  ([open, cardId], prevState) => {
+    const [prevOpen, prevCardId] = prevState || []
+    if (!open || !cardId || !props.card) return
+    const isOpening = !prevOpen && open
+    const isCardSwitchedWhileOpen = prevOpen && open && cardId !== prevCardId
+    if (isOpening || isCardSwitchedWhileOpen) {
+      initForm(props.card)
+    }
   },
   { immediate: true },
-)
-
-watch(
-  () => cardExecutors.value,
-  (users) => {
-    resolveUsersAvatars(users)
-  },
-  { immediate: true, deep: true },
-)
-
-watch(
-  () => cardLogs.value,
-  (logs) => {
-    if (!Array.isArray(logs)) return
-    logs.forEach((log) => ensureUserAvatarResolved(log.createdBy))
-  },
-  { immediate: true, deep: true },
 )
 
 function close() {
@@ -678,6 +631,7 @@ function save() {
 }
 
 function onTitleBlur() {
+  if (!canManageCardDetails.value) return
   if (form.value.name !== originalForm.value.name) save()
 }
 
@@ -718,7 +672,7 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
 .card-dialog-container {
   width: 100%;
-  max-width: 900px;
+  max-width: 1180px;
   max-height: calc(100vh - 4rem);
   background: rgba(20, 18, 50, 0.92);
   backdrop-filter: blur(24px);
@@ -898,6 +852,17 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   }
 }
 
+.meta-deadline-text {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.8125rem;
+}
+
 /* Action chips */
 .action-chips {
   display: flex;
@@ -978,6 +943,10 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   color: rgba(255, 255, 255, 0.85);
 
   :deep(.q-editor__toolbar) {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     padding: 0.25rem;
     min-height: auto;
