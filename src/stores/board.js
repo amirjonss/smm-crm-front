@@ -42,6 +42,12 @@ function normalizeList(list) {
   }
 }
 
+async function fetchListCards(listId, listName = null) {
+  const response = await api.get('/cards?list.id=' + listId + '&order[position]=asc&itemsPerPage=200')
+  const cards = (response.data.member || []).map((card) => normalizeCard(card, { id: listId, name: listName }))
+  return cards.sort((a, b) => positionOrMax(a.position) - positionOrMax(b.position))
+}
+
 function normalizeBoard(board) {
   return {
     ...board,
@@ -194,8 +200,9 @@ export const useBoardStore = defineStore('board', {
             this.archivedLists.splice(archIdx, 1)
             this.archivedListsTotal = Math.max(0, this.archivedListsTotal - 1)
           }
-          updated.cards = []
+          updated.cards = await fetchListCards(listId, updated.name)
           this.currentBoard.lists.push(updated)
+          this.currentBoard.lists.sort((a, b) => positionOrMax(a.position) - positionOrMax(b.position))
         } else {
           const list = this.currentBoard.lists.find((l) => l.id === listId)
           if (list) {
