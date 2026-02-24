@@ -32,6 +32,10 @@ async function isNotAdmin() {
   if (user.isAdmin) {
     return { path: '/dashboard' }
   }
+  // designer/editor/operator → boards as home
+  if (!user.isSMM) {
+    return { path: '/boards' }
+  }
 }
 const routes = [
   {
@@ -62,6 +66,24 @@ const routes = [
     path: '/calendar',
     component: () => import('layouts/MainLayout.vue'),
     children: [{ path: '', component: () => import('pages/dashboard/CalendarPage.vue') }],
+    beforeEnter: [isAuthorised],
+  },
+  {
+    path: '/boards',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [{ path: '', component: () => import('pages/boards/BoardsListPage.vue') }],
+    beforeEnter: [isAuthorised],
+  },
+  {
+    path: '/boards/:id',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [{ path: '', component: () => import('pages/boards/BoardDetailPage.vue') }],
+    beforeEnter: [isAuthorised],
+  },
+  {
+    path: '/profile',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [{ path: '', component: () => import('pages/settings/ProfileSettingsPage.vue') }],
     beforeEnter: [isAuthorised],
   },
   {

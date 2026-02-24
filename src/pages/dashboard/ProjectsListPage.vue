@@ -1,5 +1,12 @@
 <template>
   <q-page class="dashboard-page">
+    <page-loader
+      v-if="isLoading && !hasLoadedOnce"
+      title="Загружаем проекты"
+      subtitle="Готовим список, исполнителей и аналитику"
+      :fixed="false"
+    />
+
     <div class="page-container">
       <!-- Header -->
       <div class="page-header">
@@ -91,7 +98,12 @@
                             <q-icon name="search" size="16px" />
                           </template>
                           <template v-if="executorSearch" #append>
-                            <q-icon name="close" size="14px" class="cursor-pointer" @click="executorSearch = ''" />
+                            <q-icon
+                              name="close"
+                              size="14px"
+                              class="cursor-pointer"
+                              @click="executorSearch = ''"
+                            />
                           </template>
                         </q-input>
                         <div class="reassign-popup__list">
@@ -103,7 +115,15 @@
                             v-close-popup
                             @click="changeExecutor(project, user.id)"
                           >
-                            <div class="reassign-popup__avatar">{{ getInitials(user.label) }}</div>
+                            <div class="reassign-popup__avatar">
+                              <img
+                                v-if="user.avatarUrl"
+                                :src="user.avatarUrl"
+                                :alt="user.label"
+                                class="reassign-popup__avatar-img"
+                              />
+                              <span v-else>{{ getInitials(user.label) }}</span>
+                            </div>
                             <span class="reassign-popup__name">{{ user.label }}</span>
                             <q-icon
                               v-if="isCurrentExecutor(project.id, user.id)"
@@ -340,14 +360,7 @@
                   <td class="td-project">
                     <div class="project-cell">
                       <span class="project-name">{{ project.name }}</span>
-                      <q-btn
-                        flat
-                        dense
-                        round
-                        size="xs"
-                        icon="person"
-                        class="reassign-trigger"
-                      >
+                      <q-btn flat dense round size="xs" icon="person" class="reassign-trigger">
                         <q-popup-proxy transition-show="scale" transition-hide="scale">
                           <q-card class="reassign-popup">
                             <div class="reassign-popup__header">Сменить исполнителя</div>
@@ -364,7 +377,12 @@
                                 <q-icon name="search" size="16px" />
                               </template>
                               <template v-if="executorSearch" #append>
-                                <q-icon name="close" size="14px" class="cursor-pointer" @click="executorSearch = ''" />
+                                <q-icon
+                                  name="close"
+                                  size="14px"
+                                  class="cursor-pointer"
+                                  @click="executorSearch = ''"
+                                />
                               </template>
                             </q-input>
                             <div class="reassign-popup__list">
@@ -376,7 +394,15 @@
                                 v-close-popup
                                 @click="changeExecutor(project, user.id)"
                               >
-                                <div class="reassign-popup__avatar">{{ getInitials(user.label) }}</div>
+                                <div class="reassign-popup__avatar">
+                                  <img
+                                    v-if="user.avatarUrl"
+                                    :src="user.avatarUrl"
+                                    :alt="user.label"
+                                    class="reassign-popup__avatar-img"
+                                  />
+                                  <span v-else>{{ getInitials(user.label) }}</span>
+                                </div>
                                 <span class="reassign-popup__name">{{ user.label }}</span>
                                 <q-icon
                                   v-if="isCurrentExecutor(project.id, user.id)"
@@ -600,6 +626,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { api } from 'boot/axios.js'
 import { useQuasar } from 'quasar'
+import PageLoader from 'components/shared/PageLoader.vue'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import bgSvgRaw from 'assets/asset7.svg?raw'
@@ -610,6 +637,7 @@ import '../../components/Roboto-Bold-normal.js'
 
 const q = useQuasar()
 const isLoading = ref(true)
+const hasLoadedOnce = ref(false)
 const executorsWithProjects = ref([])
 const allUsers = ref([])
 const visiblePrices = ref(new Set())
@@ -648,22 +676,44 @@ const totalActiveSum = computed(() => {
     .reduce((sum, p) => sum + Number(p.price), 0)
 })
 
+function toAbsoluteUrl(path) {
+  if (!path) return ''
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+
+  const baseUrl = import.meta.env.VITE_BASE_URL || ''
+  const origin = baseUrl.startsWith('http') ? new URL(baseUrl).origin : window.location.origin
+  return origin + path
+}
+
 async function fetchAllData() {
   isLoading.value = true
   try {
-    const [projectsRes, usersRes] = await Promise.all([
+    const [projectsRes, adminUsersRes, smmUsersRes] = await Promise.all([
       api.post('/users/projects'),
-      api.get('/users'),
+      api.get('/users', { params: { roles: 'ROLE_ADMIN' } }),
+      api.get('/users', { params: { roles: 'ROLE_SMM' } }),
     ])
+
+    const mappedUsers = [...(adminUsersRes.data?.member || []), ...(smmUsersRes.data?.member || [])].map(
+      (u) => ({
+        id: u.id,
+        label: `${u.givenName || ''} ${u.familyName || ''}`.trim(),
+        avatarUrl:
+          typeof u.avatar === 'object' && u.avatar?.contentUrl
+            ? toAbsoluteUrl(u.avatar.contentUrl)
+            : '',
+      }),
+    )
+
     executorsWithProjects.value = projectsRes.data || []
-    allUsers.value = (usersRes.data?.member || usersRes.data || []).map((u) => ({
-      id: u.id,
-      label: `${u.givenName || ''} ${u.familyName || ''}`.trim(),
-    }))
+    allUsers.value = mappedUsers.filter(
+      (user, index, array) => array.findIndex((item) => item.id === user.id) === index,
+    )
   } catch (error) {
     console.error('Error fetching data:', error)
     q.notify({ message: 'Ошибка загрузки данных', type: 'negative', position: 'top' })
   } finally {
+    hasLoadedOnce.value = true
     isLoading.value = false
   }
 }
@@ -931,9 +981,9 @@ async function exportToPDF() {
       { content: 'Ijrochi', rowSpan: 2 },
       { content: 'Proyekt', rowSpan: 2 },
       { content: 'Postlar soni', colSpan: 2 },
-      { content: 'Hisob kuni', rowSpan: 2 }
+      { content: 'Hisob kuni', rowSpan: 2 },
     ],
-    ['Grafika', 'Video']
+    ['Grafika', 'Video'],
   ]
   const body = []
   const rowColors = [] // Track inactive rows
@@ -946,7 +996,7 @@ async function exportToPDF() {
     const name = `${executor.givenName} ${executor.familyName || ''}`.trim()
 
     // Filter only active projects
-    const activeProjects = executor.projects.filter(p => p.isActive)
+    const activeProjects = executor.projects.filter((p) => p.isActive)
     const activeProjectCount = activeProjects.length
 
     // Skip executor if no active projects
@@ -1014,8 +1064,8 @@ async function exportToPDF() {
     columnStyles: {
       0: { cellWidth: tableWidth * 0.25, halign: 'center' }, // Executor - centered
       1: { cellWidth: tableWidth * 0.47, halign: 'left' }, // Project (slightly reduced)
-      2: { cellWidth: tableWidth * 0.10, halign: 'center', fontSize: 6.5 }, // Graf
-      3: { cellWidth: tableWidth * 0.10, halign: 'center', fontSize: 6.5 }, // Vid
+      2: { cellWidth: tableWidth * 0.1, halign: 'center', fontSize: 6.5 }, // Graf
+      3: { cellWidth: tableWidth * 0.1, halign: 'center', fontSize: 6.5 }, // Vid
       4: { cellWidth: tableWidth * 0.08, halign: 'center', fontSize: 6.5 }, // Charge Day (wider)
     },
     didParseCell: (data) => {
@@ -1079,6 +1129,7 @@ onMounted(fetchAllData)
 <style scoped lang="scss">
 .dashboard-page {
   padding: 0;
+  position: relative;
 }
 
 .page-container {
@@ -1889,8 +1940,6 @@ onMounted(fetchAllData)
     }
   }
 }
-
-
 </style>
 
 <style lang="scss">
@@ -1986,6 +2035,14 @@ onMounted(fetchAllData)
     color: var(--text-muted, #888);
     flex-shrink: 0;
     border: 1px solid var(--border-color, #333);
+  }
+
+  &__avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+    display: block;
   }
 
   &__name {

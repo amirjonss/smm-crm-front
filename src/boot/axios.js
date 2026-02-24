@@ -6,6 +6,11 @@ const baseUrl = import.meta.env.VITE_BASE_URL
 const api = axios.create({ baseURL: baseUrl })
 api.defaults.headers.common['Content-Type'] = 'application/ld+json'
 api.defaults.headers.patch['Content-Type'] = 'application/merge-patch+json'
+
+function isAuthEndpoint(url = '') {
+  return url.endsWith('/users/auth') || url === '/users/auth' || url.endsWith('/users/auth/refreshToken') || url === '/users/auth/refreshToken'
+}
+
 api.interceptors.request.use(
   (config) => {
     const authStore = useAuthStore()
@@ -27,10 +32,12 @@ api.interceptors.response.use(
     if (error.response === undefined) {
       return Promise.reject('connection refused')
     }
+    if (error.config?.skipAuthRefresh === true) {
+      return Promise.reject(error)
+    }
     if (
       error.response.status === 401 &&
-      error.config.url !== '/api/users/auth' &&
-      error.config.url !== '/api/users/auth/refreshToken'
+      !isAuthEndpoint(error.config?.url || '')
     ) {
       useAuthStore()
         .fetchRefreshToken()

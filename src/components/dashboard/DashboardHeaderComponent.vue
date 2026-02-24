@@ -5,12 +5,21 @@
         <!-- Logo/Brand -->
         <router-link to="/dashboard" class="header-brand">
           <img src="~assets/logo.svg" alt="KH Agency" class="header-logo" />
-          <span class="brand-badge hide-mobile">Админ</span>
+          <span v-if="currentRoleLabel" class="brand-badge hide-mobile">{{ currentRoleLabel }}</span>
         </router-link>
 
         <!-- Header Navigation (Desktop) -->
         <div class="header-nav q-ml-md gt-sm">
           <q-btn
+            flat
+            no-caps
+            label="Доски"
+            to="/boards"
+            class="nav-btn"
+            :class="{ 'nav-btn-active': $route.path.startsWith('/boards') }"
+          />
+          <q-btn
+            v-if="userStore.isAdmin || userStore.isSMM"
             flat
             no-caps
             label="Календарь"
@@ -19,6 +28,7 @@
             :class="{ 'nav-btn-active': $route.path === '/calendar' }"
           />
           <q-btn
+            v-if="userStore.isAdmin"
             flat
             no-caps
             label="Список проектов"
@@ -31,14 +41,20 @@
         <q-space />
 
         <!-- Settings/Burger menu -->
-        <q-btn flat round :icon="$q.screen.lt.md ? 'menu' : 'settings'" class="settings-btn">
+        <q-btn flat round class="settings-btn">
+          <q-icon v-if="$q.screen.lt.md" name="menu" />
+          <q-avatar v-else size="34px" class="settings-avatar">
+            <img v-if="currentUserAvatarUrl" :src="currentUserAvatarUrl" alt="User avatar" />
+            <span v-else>{{ userInitial }}</span>
+          </q-avatar>
           <q-menu auto-close class="settings-menu shadow-10">
             <q-list class="settings-list">
               <!-- User Info Header -->
               <q-item class="user-info-item" v-if="userStore.getUser">
                 <q-item-section avatar>
                   <q-avatar size="36px" color="primary" text-color="white" class="user-avatar-menu">
-                    {{ userInitial }}
+                    <img v-if="currentUserAvatarUrl" :src="currentUserAvatarUrl" alt="User avatar" />
+                    <span v-else>{{ userInitial }}</span>
                   </q-avatar>
                 </q-item-section>
                 <q-item-section>
@@ -57,6 +73,18 @@
               <template v-if="$q.screen.lt.md">
                 <q-item
                   clickable
+                  to="/boards"
+                  class="menu-item"
+                  :class="{ 'menu-item-active': $route.path.startsWith('/boards') }"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="dashboard" size="20px" />
+                  </q-item-section>
+                  <q-item-section> Доски </q-item-section>
+                </q-item>
+                <q-item
+                  v-if="userStore.isAdmin || userStore.isSMM"
+                  clickable
                   to="/calendar"
                   class="menu-item"
                   :class="{ 'menu-item-active': $route.path === '/calendar' }"
@@ -67,6 +95,7 @@
                   <q-item-section> Календарь </q-item-section>
                 </q-item>
                 <q-item
+                  v-if="userStore.isAdmin"
                   clickable
                   to="/dashboard/projects-list"
                   class="menu-item"
@@ -79,6 +108,18 @@
                 </q-item>
                 <q-separator />
               </template>
+
+              <q-item
+                clickable
+                to="/profile"
+                class="menu-item"
+                :class="{ 'menu-item-active': $route.path === '/profile' }"
+              >
+                <q-item-section avatar>
+                  <q-icon name="manage_accounts" size="20px" />
+                </q-item-section>
+                <q-item-section>Профиль</q-item-section>
+              </q-item>
 
               <q-item clickable @click="themeStore.toggleTheme" class="menu-item">
                 <q-item-section avatar>
@@ -111,7 +152,7 @@ import { useUserStore } from 'stores/user.js'
 import { useAuthStore } from 'stores/auth.js'
 import { useThemeStore } from 'stores/theme.js'
 import { useRouter, useRoute } from 'vue-router'
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 
 const authStore = useAuthStore()
@@ -120,6 +161,7 @@ const $route = useRoute()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
 const $q = useQuasar()
+const currentUserAvatarUrl = ref('')
 
 const shortName = computed(() => {
   const user = userStore.getUser
@@ -137,10 +179,64 @@ const userInitial = computed(() => {
   return (user.givenName?.[0] || user.familyName?.[0] || '').toUpperCase()
 })
 
+const currentRoleLabel = computed(() => {
+  const role = userStore.getUser?.roles?.[0]
+  if (!role) return ''
+  const map = {
+    ROLE_ADMIN: 'Админ',
+    ROLE_SMM: 'SMM',
+  }
+  if (map[role]) return map[role]
+  return role.replace(/^ROLE_/, '')
+})
+
 function logout() {
   authStore.clearTokens()
   router.push('/login')
 }
+
+function toAbsoluteUrl(path) {
+  if (!path) return ''
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+
+  const baseUrl = import.meta.env.VITE_BASE_URL || ''
+  const origin = baseUrl.startsWith('http') ? new URL(baseUrl).origin : window.location.origin
+  return origin + path
+}
+
+async function resolveCurrentUserAvatar() {
+  const avatar = userStore.getUser?.avatar
+  if (!avatar) {
+    currentUserAvatarUrl.value = ''
+    return
+  }
+
+  if (typeof avatar === 'object' && avatar.contentUrl) {
+    currentUserAvatarUrl.value = toAbsoluteUrl(avatar.contentUrl)
+    return
+  }
+
+  const iri = typeof avatar === 'string' ? avatar : avatar['@id']
+  if (!iri) {
+    currentUserAvatarUrl.value = ''
+    return
+  }
+
+  try {
+    const media = await userStore.fetchMediaObject(iri)
+    currentUserAvatarUrl.value = media?.contentUrl ? toAbsoluteUrl(media.contentUrl) : ''
+  } catch {
+    currentUserAvatarUrl.value = ''
+  }
+}
+
+watch(
+  () => userStore.getUser?.avatar,
+  () => {
+    resolveCurrentUserAvatar()
+  },
+  { immediate: true, deep: true },
+)
 </script>
 
 <style scoped lang="scss">
@@ -262,6 +358,31 @@ function logout() {
   &:hover {
     color: var(--text-primary);
     background: var(--bg-hover);
+  }
+}
+
+.settings-avatar {
+  background: rgba(139, 92, 246, 0.22);
+  color: #fff;
+  font-weight: 700;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.user-avatar-menu {
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
 }
 

@@ -1,5 +1,12 @@
 <template>
   <q-page class="index-page">
+    <page-loader
+      v-if="isInitialLoading"
+      title="Загружаем проекты"
+      subtitle="Считаем планы на день, неделю и месяц"
+      :fixed="false"
+    />
+
     <div class="page-container">
       <!-- Page Header -->
       <div class="page-header">
@@ -57,11 +64,7 @@
             <template v-else>
               <!-- Mobile Cards View -->
               <div class="mobile-cards show-mobile-only">
-                <div
-                  v-for="plan in todaysContentPlans"
-                  :key="plan.id"
-                  class="mobile-card"
-                >
+                <div v-for="plan in todaysContentPlans" :key="plan.id" class="mobile-card">
                   <div class="mobile-card-header">
                     <span class="mobile-card-title">{{ plan.post }}</span>
                     <span class="format-badge">{{ plan.format }}</span>
@@ -88,29 +91,39 @@
                           <div v-if="getStatusIcon(p.status)" class="status-indicator-icon">
                             <q-icon :name="getStatusIcon(p.status)" size="8px" />
                           </div>
-                          
-                          <q-menu auto-close anchor="top middle" self="bottom middle" class="glass-menu">
+
+                          <q-menu
+                            auto-close
+                            anchor="top middle"
+                            self="bottom middle"
+                            class="glass-menu"
+                          >
                             <q-list style="min-width: 150px">
-                              <q-item 
-                                v-for="opt in statusOptions" 
+                              <q-item
+                                v-for="opt in statusOptions"
                                 :key="opt.value"
-                                clickable 
+                                clickable
                                 v-close-popup
                                 @click="setPlatformStatus(plan, p.name, opt.value)"
                                 :active="p.status === opt.value"
                                 active-class="bg-blue-1 text-primary"
                               >
                                 <q-item-section avatar style="min-width: 32px; padding-right: 0">
-                                  <q-icon :name="getStatusIcon(opt.value)" size="xs" :color="STATUS_COLORS[opt.value]" />
+                                  <q-icon
+                                    :name="getStatusIcon(opt.value)"
+                                    size="xs"
+                                    :color="STATUS_COLORS[opt.value]"
+                                  />
                                 </q-item-section>
                                 <q-item-section>{{ opt.label }}</q-item-section>
                               </q-item>
                             </q-list>
                           </q-menu>
 
-                                                    <q-tooltip class="glass-tooltip" :offset="[0, 8]">
-                                                      {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
-                                                    </q-tooltip>                        </div>
+                          <q-tooltip class="glass-tooltip" :offset="[0, 8]">
+                            {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
+                          </q-tooltip>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -151,29 +164,39 @@
                           <div v-if="getStatusIcon(p.status)" class="status-indicator-icon">
                             <q-icon :name="getStatusIcon(p.status)" size="8px" />
                           </div>
-                          
-                          <q-menu auto-close anchor="top middle" self="bottom middle" class="glass-menu">
+
+                          <q-menu
+                            auto-close
+                            anchor="top middle"
+                            self="bottom middle"
+                            class="glass-menu"
+                          >
                             <q-list style="min-width: 150px">
-                              <q-item 
-                                v-for="opt in statusOptions" 
+                              <q-item
+                                v-for="opt in statusOptions"
                                 :key="opt.value"
-                                clickable 
+                                clickable
                                 v-close-popup
                                 @click="setPlatformStatus(plan, p.name, opt.value)"
                                 :active="p.status === opt.value"
                                 active-class="bg-blue-1 text-primary"
                               >
                                 <q-item-section avatar style="min-width: 32px; padding-right: 0">
-                                  <q-icon :name="getStatusIcon(opt.value)" size="xs" :color="STATUS_COLORS[opt.value]" />
+                                  <q-icon
+                                    :name="getStatusIcon(opt.value)"
+                                    size="xs"
+                                    :color="STATUS_COLORS[opt.value]"
+                                  />
                                 </q-item-section>
                                 <q-item-section>{{ opt.label }}</q-item-section>
                               </q-item>
                             </q-list>
                           </q-menu>
 
-                                                    <q-tooltip class="glass-tooltip" :offset="[0, 8]">
-                                                      {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
-                                                    </q-tooltip>                        </div>
+                          <q-tooltip class="glass-tooltip" :offset="[0, 8]">
+                            {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
+                          </q-tooltip>
+                        </div>
                         <span v-if="!plan.platforms?.length" class="text-grey-6">—</span>
                       </div>
                     </td>
@@ -365,28 +388,38 @@
                               <q-icon :name="getStatusIcon(p.status)" size="8px" />
                             </div>
 
-                            <q-menu auto-close anchor="top middle" self="bottom middle" class="glass-menu">
+                            <q-menu
+                              auto-close
+                              anchor="top middle"
+                              self="bottom middle"
+                              class="glass-menu"
+                            >
                               <q-list style="min-width: 150px">
-                                <q-item 
-                                  v-for="opt in statusOptions" 
+                                <q-item
+                                  v-for="opt in statusOptions"
                                   :key="opt.value"
-                                  clickable 
+                                  clickable
                                   v-close-popup
                                   @click="setPlatformStatus(row, p.name, opt.value)"
                                   :active="p.status === opt.value"
                                   active-class="bg-blue-1 text-primary"
                                 >
                                   <q-item-section avatar style="min-width: 32px; padding-right: 0">
-                                    <q-icon :name="getStatusIcon(opt.value)" size="xs" :color="STATUS_COLORS[opt.value]" />
+                                    <q-icon
+                                      :name="getStatusIcon(opt.value)"
+                                      size="xs"
+                                      :color="STATUS_COLORS[opt.value]"
+                                    />
                                   </q-item-section>
                                   <q-item-section>{{ opt.label }}</q-item-section>
                                 </q-item>
                               </q-list>
                             </q-menu>
 
-                                                      <q-tooltip class="glass-tooltip" :offset="[0, 8]">
-                                                        {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
-                                                      </q-tooltip>                          </div>
+                            <q-tooltip class="glass-tooltip" :offset="[0, 8]">
+                              {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
+                            </q-tooltip>
+                          </div>
                         </div>
                       </div>
                       <div class="mobile-card-row">
@@ -483,28 +516,38 @@
                               <q-icon :name="getStatusIcon(p.status)" size="8px" />
                             </div>
 
-                            <q-menu auto-close anchor="top middle" self="bottom middle" class="glass-menu">
+                            <q-menu
+                              auto-close
+                              anchor="top middle"
+                              self="bottom middle"
+                              class="glass-menu"
+                            >
                               <q-list style="min-width: 150px">
-                                <q-item 
-                                  v-for="opt in statusOptions" 
+                                <q-item
+                                  v-for="opt in statusOptions"
                                   :key="opt.value"
-                                  clickable 
+                                  clickable
                                   v-close-popup
                                   @click="setPlatformStatus(row, p.name, opt.value)"
                                   :active="p.status === opt.value"
                                   active-class="bg-blue-1 text-primary"
                                 >
                                   <q-item-section avatar style="min-width: 32px; padding-right: 0">
-                                    <q-icon :name="getStatusIcon(opt.value)" size="xs" :color="STATUS_COLORS[opt.value]" />
+                                    <q-icon
+                                      :name="getStatusIcon(opt.value)"
+                                      size="xs"
+                                      :color="STATUS_COLORS[opt.value]"
+                                    />
                                   </q-item-section>
                                   <q-item-section>{{ opt.label }}</q-item-section>
                                 </q-item>
                               </q-list>
                             </q-menu>
 
-                                                      <q-tooltip class="glass-tooltip" :offset="[0, 8]">
-                                                        {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
-                                                      </q-tooltip>                          </div>
+                            <q-tooltip class="glass-tooltip" :offset="[0, 8]">
+                              {{ PLATFORM_LABELS[p.name] }}: {{ STATUS_LABELS[p.status] }}
+                            </q-tooltip>
+                          </div>
                           <span v-if="!row.platforms?.length" class="text-grey-6">—</span>
                         </div>
                       </div>
@@ -694,7 +737,8 @@
                     :key="platform.value"
                     class="platform-card-mini"
                     :class="{
-                      'platform-card-mini-active': contentPlanForm.platforms[platform.value]?.enabled,
+                      'platform-card-mini-active':
+                        contentPlanForm.platforms[platform.value]?.enabled,
                     }"
                     :style="{
                       '--platform-color': PLATFORM_COLORS[platform.value],
@@ -717,7 +761,7 @@
                         @click.stop
                       />
                     </div>
-                    
+
                     <div
                       v-if="contentPlanForm.platforms[platform.value]?.enabled"
                       class="platform-mini-status"
@@ -745,7 +789,11 @@
                           </div>
                         </template>
                         <template #option="{ itemProps, opt }">
-                          <q-item v-bind="itemProps" dense style="min-height: 28px; padding: 4px 8px">
+                          <q-item
+                            v-bind="itemProps"
+                            dense
+                            style="min-height: 28px; padding: 4px 8px"
+                          >
                             <q-item-section avatar style="min-width: 20px">
                               <q-badge
                                 :color="STATUS_COLORS[opt.value] || 'grey'"
@@ -799,6 +847,7 @@ import { useQuasar } from 'quasar'
 import { useContentPlanStore } from 'stores/content-plan.js'
 import { api } from 'boot/axios.js'
 import PdfPrinterComponent from 'components/PdfPrinterComponent.vue'
+import PageLoader from 'components/shared/PageLoader.vue'
 import draggable from 'vuedraggable'
 import { getProjectName } from '@/utils/projectHelpers'
 import { getTodayISO, getWeekRange, getMonthRange } from '@/utils/dateHelpers'
@@ -826,6 +875,7 @@ const q = useQuasar()
 const todaysContentPlans = ref([])
 const weekCount = ref(0)
 const monthCount = ref(0)
+const isInitialLoading = ref(true)
 
 const projectOptions = computed(() => {
   return projectStore.getProjects.map((p) => ({
@@ -1021,8 +1071,6 @@ async function persistOrder(plans) {
   }
 }
 
-
-
 function openContentDialog() {
   cancelContentEdit()
   contentPlanForm.value.platforms = getEmptyPlatforms()
@@ -1043,7 +1091,7 @@ function addToContentList() {
       name,
       status: data.status,
     }))
-  
+
   const payload = {
     project: '/api/projects/' + targetProjectId,
     post: contentPlanForm.value.post,
@@ -1126,22 +1174,22 @@ function saveEditedContentPlan() {
     date: contentPlanForm.value.date,
     idea: contentPlanForm.value.idea,
     position: contentPlanForm.value.position,
-    project: contentPlanForm.value.projectId ? `/api/projects/${contentPlanForm.value.projectId}` : undefined,
+    project: contentPlanForm.value.projectId
+      ? `/api/projects/${contentPlanForm.value.projectId}`
+      : undefined,
     platforms,
   }
 
-  contentPlanStore
-    .patchContentPlan(payload, editingContent.value.id)
-    .then(() => {
-      contentPlanStore.fetchContentPlan(selectedProjectId.value)
-      fetchTodaysContentPlans()
-      showContentDialog.value = false
-      q.notify({
-        message: 'Контент обновлён',
-        type: 'positive',
-        position: 'top',
-      })
+  contentPlanStore.patchContentPlan(payload, editingContent.value.id).then(() => {
+    contentPlanStore.fetchContentPlan(selectedProjectId.value)
+    fetchTodaysContentPlans()
+    showContentDialog.value = false
+    q.notify({
+      message: 'Контент обновлён',
+      type: 'positive',
+      position: 'top',
     })
+  })
   cancelContentEdit()
 }
 
@@ -1195,23 +1243,19 @@ async function setPlatformStatus(plan, platformName, newStatus) {
   }))
 
   try {
-    await contentPlanStore.patchContentPlan(
-      { platforms: updatedPlatforms },
-      plan.id
-    )
+    await contentPlanStore.patchContentPlan({ platforms: updatedPlatforms }, plan.id)
     q.notify({
       message: `${PLATFORM_LABELS[platformName]}: ${STATUS_LABELS[newStatus]}`,
       type: STATUS_COLORS[newStatus] || 'info',
       position: 'top',
       timeout: 1000,
-      icon: getStatusIcon(newStatus)
+      icon: getStatusIcon(newStatus),
     })
-    
-    // Refresh today's list if the plan is in it
-    if (todaysContentPlans.value.some(p => p.id === plan.id)) {
-        fetchTodaysContentPlans()
-    }
 
+    // Refresh today's list if the plan is in it
+    if (todaysContentPlans.value.some((p) => p.id === plan.id)) {
+      fetchTodaysContentPlans()
+    }
   } catch (e) {
     // Revert on error
     platform.status = originalStatus
@@ -1224,9 +1268,10 @@ async function setPlatformStatus(plan, platformName, newStatus) {
   }
 }
 
-onMounted(() => {
-  projectStore.fetchProjects()
-  fetchTodaysContentPlans()
+onMounted(async () => {
+  isInitialLoading.value = true
+  await Promise.allSettled([projectStore.fetchProjects(), fetchTodaysContentPlans()])
+  isInitialLoading.value = false
 })
 </script>
 
@@ -1354,6 +1399,7 @@ onMounted(() => {
 
 .index-page {
   padding: 0;
+  position: relative;
 }
 
 .page-container {
@@ -1840,8 +1886,6 @@ onMounted(() => {
   display: flex;
 }
 
-
-
 .drag-handle {
   cursor: move;
 }
@@ -2209,7 +2253,7 @@ onMounted(() => {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     z-index: 10;
   }
-  
+
   &:active {
     transform: scale(0.95);
   }
@@ -2228,13 +2272,13 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   z-index: 2;
 
   .status-PUBLISHED & {
     color: #22c55e;
     border-color: #22c55e;
-    background: #ecfdf5; 
+    background: #ecfdf5;
   }
   .status-CANCELED & {
     color: #ef4444;
@@ -2261,7 +2305,7 @@ onMounted(() => {
   font-size: 10px !important;
   padding: 4px 8px !important;
   letter-spacing: 0.3px;
-  
+
   .body--dark & {
     background: rgba(20, 20, 20, 0.65) !important;
     border-color: rgba(255, 255, 255, 0.1) !important;

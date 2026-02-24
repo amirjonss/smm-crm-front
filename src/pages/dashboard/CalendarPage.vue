@@ -1,5 +1,12 @@
 <template>
   <q-page class="calendar-page">
+    <page-loader
+      v-if="isPageLoading || isEventsLoading"
+      title="Загружаем календарь"
+      subtitle="Подтягиваем контент-планы и события"
+      :fixed="false"
+    />
+
     <div class="page-container">
       <!-- Calendar Header -->
       <div class="calendar-header">
@@ -176,11 +183,7 @@
               class="q-py-md"
             >
               <q-item-section avatar>
-                <q-icon
-                  :name="getIconForFormat(event.format)"
-                  color="primary"
-                  size="sm"
-                />
+                <q-icon :name="getIconForFormat(event.format)" color="primary" size="sm" />
               </q-item-section>
               <q-item-section>
                 <q-item-label class="text-weight-bold text-primary">{{
@@ -200,7 +203,11 @@
                     :class="`status-${p.status}`"
                     style="width: 20px; height: 20px"
                   >
-                    <q-icon :name="PLATFORM_ICONS[p.name]" size="10px" :style="{ color: PLATFORM_COLORS[p.name] }" />
+                    <q-icon
+                      :name="PLATFORM_ICONS[p.name]"
+                      size="10px"
+                      :style="{ color: PLATFORM_COLORS[p.name] }"
+                    />
                   </div>
                 </div>
               </q-item-section>
@@ -274,7 +281,9 @@
 
             <div>
               <div class="text-caption text-grey-7">Дата</div>
-              <div class="text-body2 text-weight-medium">{{ date.formatDate(tempEvent.date, 'D MMMM YYYY') }}</div>
+              <div class="text-body2 text-weight-medium">
+                {{ date.formatDate(tempEvent.date, 'D MMMM YYYY') }}
+              </div>
             </div>
 
             <div v-if="getEnabledPlatforms(tempEvent.platforms).length > 0">
@@ -471,7 +480,11 @@
                           </div>
                         </template>
                         <template #option="{ itemProps, opt }">
-                          <q-item v-bind="itemProps" dense style="min-height: 28px; padding: 4px 8px">
+                          <q-item
+                            v-bind="itemProps"
+                            dense
+                            style="min-height: 28px; padding: 4px 8px"
+                          >
                             <q-item-section avatar style="min-width: 20px">
                               <q-badge
                                 :color="STATUS_COLORS[opt.value] || 'grey'"
@@ -491,14 +504,7 @@
               </div>
 
               <div class="form-actions row justify-end q-gutter-sm q-mt-md">
-                <q-btn
-                  flat
-                  label="Отмена"
-                  color="grey-7"
-                  dense
-                  v-close-popup
-                  class="btn-cancel"
-                />
+                <q-btn flat label="Отмена" color="grey-7" dense v-close-popup class="btn-cancel" />
                 <q-btn
                   type="submit"
                   :label="tempEvent.id ? 'Сохранить' : 'Добавить'"
@@ -523,6 +529,7 @@ import { date, useQuasar } from 'quasar'
 import { useProjectStore } from 'stores/project.js'
 import { useUserStore } from 'stores/user.js'
 import { useContentPlanStore } from 'stores/content-plan.js'
+import PageLoader from 'components/shared/PageLoader.vue'
 import {
   PLATFORM_OPTIONS,
   PLATFORM,
@@ -552,6 +559,8 @@ const selectedDayEvents = ref([])
 const selectedDateLabel = ref('')
 const selectedDateForMobileList = ref(null)
 const hoveredDayKey = ref(null)
+const isPageLoading = ref(true)
+const isEventsLoading = ref(false)
 
 const tempEvent = ref({
   id: null,
@@ -581,8 +590,7 @@ function getEmptyPlatforms() {
 
 // Toggle platform selection
 function togglePlatform(platformName) {
-  tempEvent.value.platforms[platformName].enabled =
-    !tempEvent.value.platforms[platformName].enabled
+  tempEvent.value.platforms[platformName].enabled = !tempEvent.value.platforms[platformName].enabled
 }
 
 // Get enabled platforms as array for display
@@ -752,7 +760,13 @@ function getStatusIcon(status) {
 }
 
 // 5. Async Functions
-async function fetchEvents() {
+async function fetchEvents({ initial = false } = {}) {
+  if (initial) {
+    isPageLoading.value = true
+  } else {
+    isEventsLoading.value = true
+  }
+
   const year = currentDate.value.getFullYear()
   const month = currentDate.value.getMonth()
 
@@ -785,6 +799,12 @@ async function fetchEvents() {
   } catch (e) {
     console.error('Error fetching events', e)
     $q.notify({ type: 'negative', message: 'Ошибка загрузки событий' })
+  } finally {
+    if (initial) {
+      isPageLoading.value = false
+    } else {
+      isEventsLoading.value = false
+    }
   }
 }
 
@@ -942,12 +962,12 @@ watch(currentDate, () => {
   fetchEvents()
 })
 
-onMounted(() => {
-  projectStore.fetchProjects()
-  if (userStore.isAdmin) {
-    userStore.fetchUsers()
-  }
-  fetchEvents()
+onMounted(async () => {
+  await Promise.allSettled([
+    projectStore.fetchProjects(),
+    userStore.isAdmin ? userStore.fetchUsers() : Promise.resolve(),
+    fetchEvents({ initial: true }),
+  ])
 })
 </script>
 
@@ -980,6 +1000,7 @@ onMounted(() => {
 
 .calendar-page {
   padding: 0;
+  position: relative;
 }
 
 .dialog-card {
@@ -1088,7 +1109,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   z-index: 2;
 
   .status-PUBLISHED & {
