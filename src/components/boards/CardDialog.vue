@@ -303,19 +303,112 @@
               <span class="sidebar-title">Комментарии и события</span>
             </div>
 
+            <div class="comment-compose">
+              <q-input
+                v-model="newCommentText"
+                autogrow
+                dense
+                outlined
+                class="comment-input"
+                maxlength="1000"
+                placeholder="Напишите комментарий..."
+                :disable="isCommentSubmitting || !props.card?.id"
+                @keydown.ctrl.enter.prevent="submitComment"
+                @keydown.meta.enter.prevent="submitComment"
+              />
+              <div class="comment-compose-footer">
+                <span class="comment-compose-hint">Ctrl/⌘ + Enter</span>
+                <q-btn
+                  unelevated
+                  no-caps
+                  class="comment-submit-btn"
+                  label="Отправить"
+                  :loading="isCommentSubmitting"
+                  :disable="!newCommentText.trim() || !props.card?.id"
+                  @click="submitComment"
+                />
+              </div>
+            </div>
+
             <div v-if="cardLogs.length === 0" class="sidebar-empty">
               <q-icon name="info_outline" size="24px" class="empty-icon" />
-              <span>Нет событий</span>
+              <span>Нет комментариев и событий</span>
             </div>
 
             <div v-else class="sidebar-logs">
-              <div v-for="log in visibleLogs" :key="log.id" class="log-entry">
+              <div
+                v-for="log in visibleLogs"
+                :key="log.id"
+                class="log-entry"
+                :class="{ 'is-comment': isComment(log), 'is-log': !isComment(log) }"
+              >
                 <q-avatar size="28px" color="primary" text-color="white" class="log-avatar">
                   <img v-if="getUserAvatarUrl(log.createdBy)" :src="getUserAvatarUrl(log.createdBy)" alt="User avatar" />
                   <span v-else class="avatar-fallback-initial">{{ (log.createdBy?.givenName?.[0] || '?').toUpperCase() }}</span>
                 </q-avatar>
                 <div class="log-content">
-                  <div class="log-description">{{ log.description }}</div>
+                  <div class="log-head-row">
+                    <div class="log-author-row">
+                      <span class="log-author">{{ log.createdBy?.givenName || 'Пользователь' }}</span>
+                      <span class="log-type-badge" :class="{ comment: isComment(log), event: !isComment(log) }">
+                        {{ isComment(log) ? 'Комментарий' : 'Событие' }}
+                      </span>
+                    </div>
+                    <div v-if="canModifyComment(log)" class="log-actions">
+                      <q-btn
+                        flat
+                        dense
+                        round
+                        size="sm"
+                        icon="edit"
+                        class="log-action-btn"
+                        @click="startEditComment(log)"
+                      />
+                      <q-btn
+                        flat
+                        dense
+                        round
+                        size="sm"
+                        icon="delete"
+                        class="log-action-btn delete"
+                        :loading="deletingCommentId === log.id"
+                        @click="deleteComment(log)"
+                      />
+                    </div>
+                  </div>
+                  <template v-if="isEditingComment(log)">
+                    <q-input
+                      v-model="editingCommentText"
+                      autogrow
+                      dense
+                      outlined
+                      class="comment-edit-input"
+                      maxlength="1000"
+                      @keydown.ctrl.enter.prevent="saveEditedComment(log)"
+                      @keydown.meta.enter.prevent="saveEditedComment(log)"
+                    />
+                    <div class="comment-edit-actions">
+                      <q-btn
+                        unelevated
+                        no-caps
+                        dense
+                        label="Сохранить"
+                        class="comment-save-btn"
+                        :loading="isEditingCommentSubmitting"
+                        :disable="!editingCommentText.trim()"
+                        @click="saveEditedComment(log)"
+                      />
+                      <q-btn
+                        flat
+                        no-caps
+                        dense
+                        label="Отмена"
+                        class="comment-cancel-btn"
+                        @click="cancelEditComment"
+                      />
+                    </div>
+                  </template>
+                  <div v-else class="log-description">{{ log.description }}</div>
                   <div class="log-date">{{ formatLogDate(log.createdAt) }}</div>
                 </div>
               </div>
@@ -341,6 +434,7 @@
 
 <script setup>
 import { ref, watch, computed, nextTick } from 'vue'
+import { useQuasar } from 'quasar'
 import { CARD_STATUS, CARD_STATUS_OPTIONS, CARD_STATUS_COLORS } from '@/constants/cardStatus'
 import { useUserStore } from 'stores/user.js'
 import { useBoardStore } from 'stores/board.js'
@@ -354,9 +448,11 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'save', 'toggleArchive', 'syncPattern'])
 
+const q = useQuasar()
 const userStore = useUserStore()
 const boardStore = useBoardStore()
 const canManageCardDetails = computed(() => userStore.isAdmin || userStore.isSMM)
+const currentUserId = computed(() => userStore.getUser?.id || null)
 
 const statusOptions = computed(() => {
   if (userStore.isAdmin || userStore.isSMM) return CARD_STATUS_OPTIONS
@@ -453,6 +549,12 @@ const isEditingDescription = ref(false)
 const initializing = ref(false)
 const descEditorRef = ref(null)
 const descriptionBackup = ref('')
+const newCommentText = ref('')
+const isCommentSubmitting = ref(false)
+const editingCommentId = ref(null)
+const editingCommentText = ref('')
+const isEditingCommentSubmitting = ref(false)
+const deletingCommentId = ref(null)
 
 const descToolbar = [
   ['bold', 'italic', 'underline', 'strike'],
@@ -526,6 +628,106 @@ function formatLogDate(dateStr) {
   return `${datePart}, ${timePart}`
 }
 
+function isComment(log) {
+  return log?.type === 'COMMENT'
+}
+
+function canModifyComment(log) {
+  if (!isComment(log) || !log?.id) return false
+  return canManageCardDetails.value || log.createdBy?.id === currentUserId.value
+}
+
+function isEditingComment(log) {
+  return editingCommentId.value === log?.id
+}
+
+function startEditComment(log) {
+  if (!canModifyComment(log)) return
+  editingCommentId.value = log.id
+  editingCommentText.value = log.description || ''
+}
+
+function cancelEditComment() {
+  editingCommentId.value = null
+  editingCommentText.value = ''
+}
+
+async function submitComment() {
+  const cardId = props.card?.id
+  const description = newCommentText.value.trim()
+  if (!cardId || !description || isCommentSubmitting.value) return
+
+  isCommentSubmitting.value = true
+  try {
+    await boardStore.createCardLog(cardId, description)
+    newCommentText.value = ''
+  } catch {
+    q.notify({
+      message: 'Не удалось добавить комментарий',
+      type: 'negative',
+      position: 'top',
+    })
+  } finally {
+    isCommentSubmitting.value = false
+  }
+}
+
+async function saveEditedComment(log) {
+  const description = editingCommentText.value.trim()
+  if (!canModifyComment(log) || !description || isEditingCommentSubmitting.value) return
+
+  isEditingCommentSubmitting.value = true
+  try {
+    await boardStore.patchCardLog(log.id, description)
+    cancelEditComment()
+  } catch {
+    q.notify({
+      message: 'Не удалось сохранить комментарий',
+      type: 'negative',
+      position: 'top',
+    })
+  } finally {
+    isEditingCommentSubmitting.value = false
+  }
+}
+
+async function deleteComment(log) {
+  if (!canModifyComment(log) || deletingCommentId.value) return
+
+  q.dialog({
+    title: 'Удалить комментарий?',
+    message: 'Это действие нельзя отменить.',
+    persistent: true,
+    ok: {
+      label: 'Удалить',
+      color: 'negative',
+      unelevated: true,
+      noCaps: true,
+    },
+    cancel: {
+      label: 'Отмена',
+      flat: true,
+      noCaps: true,
+    },
+  }).onOk(async () => {
+    deletingCommentId.value = log.id
+    try {
+      await boardStore.deleteCardLog(log.id)
+      if (editingCommentId.value === log.id) {
+        cancelEditComment()
+      }
+    } catch {
+      q.notify({
+        message: 'Не удалось удалить комментарий',
+        type: 'negative',
+        position: 'top',
+      })
+    } finally {
+      deletingCommentId.value = null
+    }
+  })
+}
+
 function initForm(card) {
   initializing.value = true
   const data = {
@@ -541,6 +743,8 @@ function initForm(card) {
   executorSearch.value = ''
   showAllLogs.value = false
   isEditingDescription.value = false
+  newCommentText.value = ''
+  cancelEditComment()
 
   // Fetch users list if not loaded
   if (canManageCardDetails.value && !userStore.getUsers?.length) {
@@ -671,8 +875,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 }
 
 .card-dialog-container {
-  width: 100%;
-  max-width: 1180px;
+  width: 1080px;
+  min-width: 1080px;
+  height: 614px;
+  min-height: 614px;
+  max-width: calc(100vw - 4rem);
   max-height: calc(100vh - 4rem);
   background: rgba(20, 18, 50, 0.92);
   backdrop-filter: blur(24px);
@@ -684,6 +891,13 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   overflow: hidden;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
 
+  @media (max-width: 1199px), (max-height: 760px) {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+  }
+
   @media (max-width: 959px) {
     max-height: calc(100vh - 2rem);
   }
@@ -693,7 +907,9 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 .card-top-bar {
   display: flex;
   align-items: center;
-  padding: 0.75rem 1rem;
+  min-height: 57px;
+  height: 57px;
+  padding: 0 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
 }
@@ -729,8 +945,13 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 .card-dialog-body {
   display: flex;
   flex: 1;
+  height: calc(614px - 57px);
   overflow-y: auto;
   min-height: 0;
+
+  @media (max-width: 1199px), (max-height: 760px) {
+    height: auto;
+  }
 
   @media (max-width: 767px) {
     flex-direction: column;
@@ -1080,19 +1301,30 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
 /* Right sidebar */
 .card-sidebar {
-  width: 300px;
-  min-width: 300px;
+  width: 459px;
+  min-width: 459px;
+  height: 557px;
+  min-height: 557px;
   border-left: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
   background: rgba(255, 255, 255, 0.02);
 
+  @media (max-width: 1199px), (max-height: 760px) {
+    width: 360px;
+    min-width: 360px;
+    height: auto;
+    min-height: 0;
+  }
+
   @media (max-width: 767px) {
     width: 100%;
     min-width: 100%;
+    height: auto;
+    min-height: 0;
     border-left: none;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
-    max-height: 300px;
+    max-height: 46vh;
   }
 }
 
@@ -1100,7 +1332,7 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 1rem 1rem 0.75rem;
+  padding: 1rem 1rem 0.6rem;
   flex-shrink: 0;
 }
 
@@ -1112,6 +1344,49 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   font-size: 0.8125rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.7);
+}
+
+.comment-compose {
+  padding: 0 1rem 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.comment-input {
+  :deep(.q-field__control) {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+  }
+
+  :deep(.q-field__native) {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+}
+
+.comment-compose-footer {
+  margin-top: 0.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.comment-compose-hint {
+  font-size: 0.6875rem;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.comment-submit-btn {
+  font-size: 0.75rem;
+  min-height: 28px;
+  padding: 0 0.7rem;
+  border-radius: 8px;
+  background: rgba(34, 197, 94, 0.85);
+  color: #fff;
+
+  &:hover {
+    background: rgba(22, 163, 74, 0.92);
+  }
 }
 
 .sidebar-empty {
@@ -1136,16 +1411,26 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 .sidebar-logs {
   flex: 1;
   overflow-y: auto;
-  padding: 0 1rem;
+  padding: 0.1rem 1rem 0.75rem;
 }
 
 .log-entry {
   display: flex;
-  gap: 0.625rem;
-  padding: 0.625rem 0;
+  gap: 0.7rem;
+  padding: 0.75rem 0;
 
   & + .log-entry {
     border-top: 1px solid rgba(255, 255, 255, 0.04);
+  }
+
+  &.is-comment .log-content {
+    background: rgba(16, 185, 129, 0.09);
+    border: 1px solid rgba(16, 185, 129, 0.22);
+  }
+
+  &.is-log .log-content {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
 }
 
@@ -1164,29 +1449,127 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
 .log-content {
   min-width: 0;
+  flex: 1;
+  border-radius: 10px;
+  padding: 0.5rem 0.55rem;
+}
+
+.log-head-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.log-author-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.log-author {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.log-type-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.12rem 0.4rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  &.comment {
+    color: rgba(16, 185, 129, 0.95);
+    background: rgba(16, 185, 129, 0.16);
+  }
+
+  &.event {
+    color: rgba(96, 165, 250, 0.95);
+    background: rgba(59, 130, 246, 0.16);
+  }
+}
+
+.log-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.log-action-btn {
+  color: rgba(255, 255, 255, 0.42);
+
+  &:hover {
+    color: #fff;
+  }
+
+  &.delete:hover {
+    color: rgba(248, 113, 113, 1);
+  }
 }
 
 .log-description {
   font-size: 0.8125rem;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.8);
   line-height: 1.4;
   word-break: break-word;
+  white-space: pre-wrap;
+  margin-top: 0.35rem;
 }
 
 .log-date {
   font-size: 0.6875rem;
-  color: rgba(139, 92, 246, 0.6);
-  margin-top: 0.25rem;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 0.35rem;
+}
+
+.comment-edit-input {
+  margin-top: 0.4rem;
+
+  :deep(.q-field__control) {
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 8px;
+  }
+
+  :deep(.q-field__native) {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+}
+
+.comment-edit-actions {
+  margin-top: 0.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.comment-save-btn {
+  background: rgba(34, 197, 94, 0.85);
+  color: #fff;
+  border-radius: 7px;
+  font-size: 0.75rem;
+  padding: 0 0.6rem;
+  min-height: 26px;
+}
+
+.comment-cancel-btn {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.75rem;
 }
 
 .show-more-btn {
-  color: rgba(139, 92, 246, 0.7);
+  color: rgba(96, 165, 250, 0.78);
   font-size: 0.75rem;
   margin: 0.25rem 0;
   width: 100%;
 
   &:hover {
-    color: rgba(139, 92, 246, 1);
+    color: rgba(147, 197, 253, 1);
   }
 }
 

@@ -12,7 +12,6 @@
       <div class="page-header">
         <div>
           <h1 class="page-title">Доски</h1>
-          <p class="page-subtitle">Управление проектами в стиле Kanban</p>
         </div>
         <q-btn
           v-if="userStore.canCreateBoard"
