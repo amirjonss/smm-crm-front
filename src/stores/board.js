@@ -338,6 +338,34 @@ export const useBoardStore = defineStore('board', {
       return this.cardLogs
     },
 
+    async createCardLog(cardId, description) {
+      const response = await api.post('/card_logs', {
+        card: '/api/cards/' + cardId,
+        description,
+      })
+      const created = response.data
+      this.cardLogs = [created, ...(this.cardLogs || [])]
+      return created
+    },
+
+    async patchCardLog(cardLogId, description) {
+      const response = await api.patch('/card_logs/' + cardLogId, { description })
+      const updated = response.data
+      const idx = this.cardLogs.findIndex((log) => log.id === cardLogId)
+      if (idx !== -1) {
+        this.cardLogs[idx] = {
+          ...this.cardLogs[idx],
+          ...updated,
+        }
+      }
+      return updated
+    },
+
+    async deleteCardLog(cardLogId) {
+      await api.delete('/card_logs/' + cardLogId)
+      this.cardLogs = this.cardLogs.filter((log) => log.id !== cardLogId)
+    },
+
     // Executor management
     async addExecutor(cardId, userOrId) {
       const userId = typeof userOrId === 'object' ? extractId(userOrId) : extractId(userOrId)
