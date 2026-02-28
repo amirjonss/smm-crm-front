@@ -634,7 +634,7 @@ function isComment(log) {
 
 function canModifyComment(log) {
   if (!isComment(log) || !log?.id) return false
-  return canManageCardDetails.value || log.createdBy?.id === currentUserId.value
+  return log.createdBy?.id === currentUserId.value
 }
 
 function isEditingComment(log) {
