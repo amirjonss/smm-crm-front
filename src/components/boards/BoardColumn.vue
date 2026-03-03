@@ -105,6 +105,9 @@
             @pattern="$emit('syncPattern', element)"
           />
         </template>
+        <template #footer>
+          <div class="cards-drop-tail" />
+        </template>
       </draggable>
     </div>
 
@@ -481,7 +484,13 @@ function onCreatePattern(name) {
   flex-direction: column;
   gap: 0.5rem;
   min-height: 40px;
+  height: 100%;
   padding-bottom: 0.25rem;
+}
+
+.cards-drop-tail {
+  min-height: 56px;
+  flex-shrink: 0;
 }
 
 .column-footer {

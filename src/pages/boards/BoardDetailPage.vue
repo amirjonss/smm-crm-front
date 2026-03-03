@@ -66,44 +66,46 @@
       }"
       @scroll="onColumnsScroll"
     >
-      <draggable
-        v-model="sortedLists"
-        item-key="id"
-        ghost-class="column-drag-ghost"
-        drag-class="column-drag-fallback"
-        chosen-class="column-drag-chosen"
-        :force-fallback="true"
-        :fallback-on-body="true"
-        :animation="150"
-        :scroll-sensitivity="100"
-        handle=".column-header"
-        class="columns-row"
-        @change="persistListOrder"
-      >
-        <template #item="{ element: list }">
-          <board-column
-            :list="list"
-            :patterns="boardStore.getCardPatterns"
-            :patterns-loading="isPatternsLoading"
-            :pattern-submitting="isPatternSubmitting"
-            @update:cards="updateCards(list.id, $event)"
-            @card-change="handleCardChange($event, list.id)"
-            @add-card="addCard(list.id, $event)"
-            @archive-card="archiveCard"
-            @sync-pattern="syncCardPattern"
-            @open-patterns="openPatternDialog"
-            @use-pattern="createCardFromPattern"
-            @create-pattern="createPatternAndCard"
-            @open-card="openCard($event)"
-            @archive="archiveList(list)"
-            @rename="renameList(list, $event)"
-            @change-color="changeListColor(list, $event)"
-            @card-drag-state="onCardDragState"
-          />
-        </template>
-      </draggable>
+      <div class="board-content-row">
+        <draggable
+          v-model="sortedLists"
+          item-key="id"
+          ghost-class="column-drag-ghost"
+          drag-class="column-drag-fallback"
+          chosen-class="column-drag-chosen"
+          :force-fallback="true"
+          :fallback-on-body="true"
+          :animation="150"
+          :scroll-sensitivity="100"
+          handle=".column-header"
+          class="columns-row"
+          @change="persistListOrder"
+        >
+          <template #item="{ element: list }">
+            <board-column
+              :list="list"
+              :patterns="boardStore.getCardPatterns"
+              :patterns-loading="isPatternsLoading"
+              :pattern-submitting="isPatternSubmitting"
+              @update:cards="updateCards(list.id, $event)"
+              @card-change="handleCardChange($event, list.id)"
+              @add-card="addCard(list.id, $event)"
+              @archive-card="archiveCard"
+              @sync-pattern="syncCardPattern"
+              @open-patterns="openPatternDialog"
+              @use-pattern="createCardFromPattern"
+              @create-pattern="createPatternAndCard"
+              @open-card="openCard($event)"
+              @archive="archiveList(list)"
+              @rename="renameList(list, $event)"
+              @change-color="changeListColor(list, $event)"
+              @card-drag-state="onCardDragState"
+            />
+          </template>
+        </draggable>
 
-      <add-list-button v-if="userStore.canManageList" @add="addList" />
+        <add-list-button v-if="userStore.canManageList" @add="addList" />
+      </div>
     </div>
 
     <!-- Slide dot indicators (zoomed-in mobile only) -->
@@ -202,8 +204,25 @@ const isMobile = computed(() => q.screen.lt.sm)
 const isZoomAnimating = ref(false)
 
 function toggleZoom() {
+  const container = scrollContainerRef.value
+  const currentColumn = activeColumnIndex.value
+
   isZoomAnimating.value = true
   isZoomed.value = !isZoomed.value
+
+  nextTick(() => {
+    if (!container || !isMobile.value) return
+
+    if (!isZoomed.value) {
+      // In zoom-out mode, start from the left edge to avoid empty offset gaps.
+      container.scrollLeft = 0
+      return
+    }
+
+    // Restore to the previously active column when returning to zoomed mode.
+    scrollToColumn(currentColumn)
+  })
+
   setTimeout(() => {
     isZoomAnimating.value = false
   }, 350)
@@ -655,6 +674,16 @@ onBeforeUnmount(() => {
   }
 }
 
+.board-content-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+
+  @media (max-width: 599px) {
+    gap: 0.75rem;
+  }
+}
+
 /* Slide dot indicators */
 .slide-dots {
   position: fixed;
@@ -760,14 +789,10 @@ body:has(.board-detail-page) {
   .board-columns-container:not(.zoomed) {
     scroll-snap-type: none;
 
-    .board-column {
-      width: 220px !important;
-      min-width: 220px !important;
-    }
-
-    .add-list-wrapper {
-      width: 220px !important;
-      min-width: 220px !important;
+    .board-content-row {
+      transform: scale(0.78);
+      transform-origin: top left;
+      width: max-content;
     }
   }
 
