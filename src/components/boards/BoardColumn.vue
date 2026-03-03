@@ -484,8 +484,12 @@ function onCreatePattern(name) {
   flex-direction: column;
   gap: 0.5rem;
   min-height: 40px;
-  height: 100%;
+  min-height: 100%;
   padding-bottom: 0.25rem;
+}
+
+.cards-list > * {
+  flex-shrink: 0;
 }
 
 .cards-drop-tail {
