@@ -59,46 +59,53 @@
       v-else
       ref="scrollContainerRef"
       class="board-columns-container"
-      :class="{ zoomed: isZoomed && isMobile, 'zoom-animating': isZoomAnimating }"
+      :class="{
+        zoomed: isZoomed && isMobile,
+        'zoom-animating': isZoomAnimating,
+        'is-card-dragging': isCardDragging,
+      }"
       @scroll="onColumnsScroll"
     >
-      <draggable
-        v-model="sortedLists"
-        item-key="id"
-        ghost-class="column-drag-ghost"
-        drag-class="column-drag-fallback"
-        chosen-class="column-drag-chosen"
-        :force-fallback="true"
-        :fallback-on-body="true"
-        :animation="150"
-        :scroll-sensitivity="100"
-        handle=".column-header"
-        class="columns-row"
-        @change="persistListOrder"
-      >
-        <template #item="{ element: list }">
-          <board-column
-            :list="list"
-            :patterns="boardStore.getCardPatterns"
-            :patterns-loading="isPatternsLoading"
-            :pattern-submitting="isPatternSubmitting"
-            @update:cards="updateCards(list.id, $event)"
-            @card-change="handleCardChange($event, list.id)"
-            @add-card="addCard(list.id, $event)"
-            @archive-card="archiveCard"
-            @sync-pattern="syncCardPattern"
-            @open-patterns="openPatternDialog"
-            @use-pattern="createCardFromPattern"
-            @create-pattern="createPatternAndCard"
-            @open-card="openCard($event)"
-            @archive="archiveList(list)"
-            @rename="renameList(list, $event)"
-            @change-color="changeListColor(list, $event)"
-          />
-        </template>
-      </draggable>
+      <div class="board-content-row">
+        <draggable
+          v-model="sortedLists"
+          item-key="id"
+          ghost-class="column-drag-ghost"
+          drag-class="column-drag-fallback"
+          chosen-class="column-drag-chosen"
+          :force-fallback="true"
+          :fallback-on-body="true"
+          :animation="150"
+          :scroll-sensitivity="100"
+          handle=".column-header"
+          class="columns-row"
+          @change="persistListOrder"
+        >
+          <template #item="{ element: list }">
+            <board-column
+              :list="list"
+              :patterns="boardStore.getCardPatterns"
+              :patterns-loading="isPatternsLoading"
+              :pattern-submitting="isPatternSubmitting"
+              @update:cards="updateCards(list.id, $event)"
+              @card-change="handleCardChange($event, list.id)"
+              @add-card="addCard(list.id, $event)"
+              @archive-card="archiveCard"
+              @sync-pattern="syncCardPattern"
+              @open-patterns="openPatternDialog"
+              @use-pattern="createCardFromPattern"
+              @create-pattern="createPatternAndCard"
+              @open-card="openCard($event)"
+              @archive="archiveList(list)"
+              @rename="renameList(list, $event)"
+              @change-color="changeListColor(list, $event)"
+              @card-drag-state="onCardDragState"
+            />
+          </template>
+        </draggable>
 
-      <add-list-button v-if="userStore.canManageList" @add="addList" />
+        <add-list-button v-if="userStore.canManageList" @add="addList" />
+      </div>
     </div>
 
     <!-- Slide dot indicators (zoomed-in mobile only) -->
@@ -152,7 +159,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useBoardStore } from 'stores/board.js'
@@ -197,8 +204,25 @@ const isMobile = computed(() => q.screen.lt.sm)
 const isZoomAnimating = ref(false)
 
 function toggleZoom() {
+  const container = scrollContainerRef.value
+  const currentColumn = activeColumnIndex.value
+
   isZoomAnimating.value = true
   isZoomed.value = !isZoomed.value
+
+  nextTick(() => {
+    if (!container || !isMobile.value) return
+
+    if (!isZoomed.value) {
+      // In zoom-out mode, start from the left edge to avoid empty offset gaps.
+      container.scrollLeft = 0
+      return
+    }
+
+    // Restore to the previously active column when returning to zoomed mode.
+    scrollToColumn(currentColumn)
+  })
+
   setTimeout(() => {
     isZoomAnimating.value = false
   }, 350)
@@ -207,6 +231,8 @@ function toggleZoom() {
 // Slide dot tracking
 const scrollContainerRef = ref(null)
 const activeColumnIndex = ref(0)
+const isCardDragging = ref(false)
+const isDragTouchListenerBound = ref(false)
 
 function onColumnsScroll() {
   if (!isZoomed.value || !isMobile.value) return
@@ -226,6 +252,52 @@ function scrollToColumn(index) {
   if (columns[index]) {
     columns[index].scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
   }
+}
+
+function onCardDragState(value) {
+  isCardDragging.value = !!value
+
+  if (isCardDragging.value) {
+    bindDragTouchAutoScroll()
+  } else {
+    unbindDragTouchAutoScroll()
+  }
+}
+
+function handleDragTouchMove(event) {
+  if (!isCardDragging.value || !isMobile.value) return
+  const container = scrollContainerRef.value
+  const touch = event.touches?.[0]
+  if (!container || !touch) return
+
+  const rect = container.getBoundingClientRect()
+  const edgeSize = 72
+  const maxSpeed = 18
+  let deltaX = 0
+
+  if (touch.clientX < rect.left + edgeSize) {
+    const ratio = (rect.left + edgeSize - touch.clientX) / edgeSize
+    deltaX = -maxSpeed * Math.min(1, Math.max(0, ratio))
+  } else if (touch.clientX > rect.right - edgeSize) {
+    const ratio = (touch.clientX - (rect.right - edgeSize)) / edgeSize
+    deltaX = maxSpeed * Math.min(1, Math.max(0, ratio))
+  }
+
+  if (deltaX !== 0) {
+    container.scrollLeft += deltaX
+  }
+}
+
+function bindDragTouchAutoScroll() {
+  if (isDragTouchListenerBound.value) return
+  window.addEventListener('touchmove', handleDragTouchMove, { passive: true })
+  isDragTouchListenerBound.value = true
+}
+
+function unbindDragTouchAutoScroll() {
+  if (!isDragTouchListenerBound.value) return
+  window.removeEventListener('touchmove', handleDragTouchMove)
+  isDragTouchListenerBound.value = false
 }
 
 function startBoardNameEdit() {
@@ -476,6 +548,10 @@ onMounted(async () => {
     isPageLoading.value = false
   }
 })
+
+onBeforeUnmount(() => {
+  unbindDragTouchAutoScroll()
+})
 </script>
 
 <style scoped lang="scss">
@@ -598,6 +674,16 @@ onMounted(async () => {
   }
 }
 
+.board-content-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+
+  @media (max-width: 599px) {
+    gap: 0.75rem;
+  }
+}
+
 /* Slide dot indicators */
 .slide-dots {
   position: fixed;
@@ -670,7 +756,7 @@ onMounted(async () => {
 <style lang="scss">
 /* Prevent body scroll and black bg when drag clone extends viewport */
 body:has(.board-detail-page) {
-  background-color: #0f0c29;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
   overflow: hidden;
 }
 
@@ -694,9 +780,20 @@ body:has(.board-detail-page) {
     }
   }
 
-  /* Zoomed-out: true CSS zoom — everything proportionally smaller */
+  /* During card drag in zoomed mode, disable snap and show more targets */
+  .board-columns-container.zoomed.is-card-dragging {
+    scroll-snap-type: none;
+  }
+
+  /* Zoomed-out on mobile: avoid CSS zoom; use smaller column widths */
   .board-columns-container:not(.zoomed) {
-    zoom: 0.65;
+    scroll-snap-type: none;
+
+    .board-content-row {
+      transform: scale(0.78);
+      transform-origin: top left;
+      width: max-content;
+    }
   }
 
   /* Zoom transition animation */
