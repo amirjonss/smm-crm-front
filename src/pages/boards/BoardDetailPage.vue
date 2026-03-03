@@ -59,7 +59,11 @@
       v-else
       ref="scrollContainerRef"
       class="board-columns-container"
-      :class="{ zoomed: isZoomed && isMobile, 'zoom-animating': isZoomAnimating }"
+      :class="{
+        zoomed: isZoomed && isMobile,
+        'zoom-animating': isZoomAnimating,
+        'is-card-dragging': isCardDragging,
+      }"
       @scroll="onColumnsScroll"
     >
       <draggable
@@ -94,6 +98,7 @@
             @archive="archiveList(list)"
             @rename="renameList(list, $event)"
             @change-color="changeListColor(list, $event)"
+            @card-drag-state="onCardDragState"
           />
         </template>
       </draggable>
@@ -207,6 +212,7 @@ function toggleZoom() {
 // Slide dot tracking
 const scrollContainerRef = ref(null)
 const activeColumnIndex = ref(0)
+const isCardDragging = ref(false)
 
 function onColumnsScroll() {
   if (!isZoomed.value || !isMobile.value) return
@@ -226,6 +232,10 @@ function scrollToColumn(index) {
   if (columns[index]) {
     columns[index].scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
   }
+}
+
+function onCardDragState(value) {
+  isCardDragging.value = !!value
 }
 
 function startBoardNameEdit() {
@@ -694,9 +704,36 @@ body:has(.board-detail-page) {
     }
   }
 
-  /* Zoomed-out: true CSS zoom — everything proportionally smaller */
+  /* During card drag in zoomed mode, disable snap and show more targets */
+  .board-columns-container.zoomed.is-card-dragging {
+    scroll-snap-type: none;
+
+    .board-column {
+      width: 72vw !important;
+      min-width: 72vw !important;
+      scroll-snap-align: none;
+    }
+
+    .add-list-wrapper {
+      width: 72vw !important;
+      min-width: 72vw !important;
+      scroll-snap-align: none;
+    }
+  }
+
+  /* Zoomed-out on mobile: avoid CSS zoom; use smaller column widths */
   .board-columns-container:not(.zoomed) {
-    zoom: 0.65;
+    scroll-snap-type: none;
+
+    .board-column {
+      width: 220px !important;
+      min-width: 220px !important;
+    }
+
+    .add-list-wrapper {
+      width: 220px !important;
+      min-width: 220px !important;
+    }
   }
 
   /* Zoom transition animation */

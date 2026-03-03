@@ -87,6 +87,8 @@
         :animation="150"
         :scroll-sensitivity="100"
         class="cards-list"
+        @start="onDragStart"
+        @end="onDragEnd"
         @change="onDragChange"
       >
         <template #item="{ element }">
@@ -162,6 +164,7 @@ const emit = defineEmits([
   'archive',
   'rename',
   'changeColor',
+  'cardDragState',
 ])
 
 const userStore = useUserStore()
@@ -191,6 +194,14 @@ watch(activeCards, (val) => {
 function onDragChange(event) {
   emit('update:cards', [...localCards.value])
   emit('cardChange', event)
+}
+
+function onDragStart() {
+  emit('cardDragState', true)
+}
+
+function onDragEnd() {
+  emit('cardDragState', false)
 }
 
 function startNameEdit() {

@@ -1,5 +1,14 @@
 <template>
-  <div class="board-card-item" @click="$emit('click', card)">
+  <div
+    class="board-card-item"
+    :class="{ 'is-holding-drag': isHoldingForDrag }"
+    @click="onCardClick"
+    @touchstart.passive="onTouchStart"
+    @touchmove.passive="onTouchMove"
+    @touchend="clearHoldState"
+    @touchcancel="clearHoldState"
+  >
+    <div v-if="isHoldingForDrag" class="drag-hold-progress" />
     <div class="card-item-content">
       <div class="card-item-header">
         <div class="card-item-title">{{ card.name }}</div>
@@ -70,7 +79,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onBeforeUnmount } from 'vue'
 import { CARD_STATUS_LABELS, CARD_STATUS_STYLE } from '@/constants/cardStatus'
 import { useUserStore } from 'stores/user.js'
 
@@ -80,6 +89,14 @@ const props = defineProps({
 
 const emit = defineEmits(['click', 'archive', 'pattern'])
 const userStore = useUserStore()
+const HOLD_TO_DRAG_MS = 1000
+const MOVE_CANCEL_THRESHOLD = 8
+const isHoldingForDrag = ref(false)
+const suppressNextClick = ref(false)
+
+let holdTimer = null
+let touchStartX = 0
+let touchStartY = 0
 
 const statusColors = computed(() => CARD_STATUS_STYLE[props.card.status] || CARD_STATUS_STYLE.open)
 
@@ -130,10 +147,62 @@ function getUserAvatarUrl(user) {
   }
   return ''
 }
+
+function clearHoldTimer() {
+  if (holdTimer) {
+    clearTimeout(holdTimer)
+    holdTimer = null
+  }
+}
+
+function clearHoldState() {
+  clearHoldTimer()
+  isHoldingForDrag.value = false
+}
+
+function onTouchStart(event) {
+  const point = event.touches?.[0]
+  if (!point) return
+
+  touchStartX = point.clientX
+  touchStartY = point.clientY
+  isHoldingForDrag.value = true
+  clearHoldTimer()
+  holdTimer = setTimeout(() => {
+    isHoldingForDrag.value = false
+    suppressNextClick.value = true
+    holdTimer = null
+  }, HOLD_TO_DRAG_MS)
+}
+
+function onTouchMove(event) {
+  if (!isHoldingForDrag.value) return
+  const point = event.touches?.[0]
+  if (!point) return
+
+  const movedX = Math.abs(point.clientX - touchStartX)
+  const movedY = Math.abs(point.clientY - touchStartY)
+  if (movedX > MOVE_CANCEL_THRESHOLD || movedY > MOVE_CANCEL_THRESHOLD) {
+    clearHoldState()
+  }
+}
+
+function onCardClick() {
+  if (suppressNextClick.value) {
+    suppressNextClick.value = false
+    return
+  }
+  emit('click', props.card)
+}
+
+onBeforeUnmount(() => {
+  clearHoldState()
+})
 </script>
 
 <style scoped lang="scss">
 .board-card-item {
+  position: relative;
   background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -149,6 +218,30 @@ function getUserAvatarUrl(user) {
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(139, 92, 246, 0.4);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  &.is-holding-drag {
+    border-color: rgba(96, 165, 250, 0.55);
+    box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.28), 0 6px 16px rgba(0, 0, 0, 0.25);
+  }
+}
+
+.drag-hold-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  transform-origin: left center;
+  transform: scaleX(0);
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.95), rgba(96, 165, 250, 0.95));
+  animation: dragHoldProgress 1s linear forwards;
+  pointer-events: none;
+}
+
+@keyframes dragHoldProgress {
+  to {
+    transform: scaleX(1);
   }
 }
 
