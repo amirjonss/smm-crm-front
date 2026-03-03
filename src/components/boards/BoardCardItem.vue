@@ -8,7 +8,6 @@
     @touchend="clearHoldState"
     @touchcancel="clearHoldState"
   >
-    <div v-if="isHoldingForDrag" class="drag-hold-progress" />
     <div class="card-item-content">
       <div class="card-item-header">
         <div class="card-item-title">{{ card.name }}</div>
@@ -89,7 +88,7 @@ const props = defineProps({
 
 const emit = defineEmits(['click', 'archive', 'pattern'])
 const userStore = useUserStore()
-const HOLD_TO_DRAG_MS = 1000
+const HOLD_TO_DRAG_MS = 300
 const MOVE_CANCEL_THRESHOLD = 8
 const isHoldingForDrag = ref(false)
 const suppressNextClick = ref(false)
@@ -223,25 +222,13 @@ onBeforeUnmount(() => {
   &.is-holding-drag {
     border-color: rgba(96, 165, 250, 0.55);
     box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.28), 0 6px 16px rgba(0, 0, 0, 0.25);
+    animation: holdPulse 0.3s ease-in-out infinite;
   }
 }
 
-.drag-hold-progress {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 3px;
-  transform-origin: left center;
-  transform: scaleX(0);
-  background: linear-gradient(90deg, rgba(34, 211, 238, 0.95), rgba(96, 165, 250, 0.95));
-  animation: dragHoldProgress 1s linear forwards;
-  pointer-events: none;
-}
-
-@keyframes dragHoldProgress {
-  to {
-    transform: scaleX(1);
+@keyframes holdPulse {
+  50% {
+    transform: translateY(-1px) scale(1.01);
   }
 }
 

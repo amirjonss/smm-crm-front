@@ -81,11 +81,17 @@
         drag-class="card-drag-active"
         :force-fallback="true"
         :fallback-on-body="true"
-        :delay="1000"
+        :delay="300"
         :delay-on-touch-only="true"
         :touch-start-threshold="8"
+        :scroll="true"
+        :bubble-scroll="true"
         :animation="150"
-        :scroll-sensitivity="100"
+        :scroll-sensitivity="140"
+        :scroll-speed="18"
+        :swap-threshold="0.2"
+        :invert-swap="true"
+        :empty-insert-threshold="30"
         class="cards-list"
         @start="onDragStart"
         @end="onDragEnd"
@@ -254,6 +260,8 @@ function onCreatePattern(name) {
   @media (max-width: 599px) {
     width: 280px;
     min-width: 280px;
+    height: calc(100dvh - 150px);
+    max-height: calc(100dvh - 150px);
   }
 }
 
@@ -564,6 +572,7 @@ function onCreatePattern(name) {
 
 .card-drag-chosen {
   opacity: 0.9;
+  transform: rotate(-1deg);
 }
 
 .card-drag-active {
@@ -577,5 +586,7 @@ function onCreatePattern(name) {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4) !important;
   z-index: 9999 !important;
   cursor: grabbing !important;
+  transform: rotate(-2.2deg) scale(1.02);
+  transform-origin: center center;
 }
 </style>

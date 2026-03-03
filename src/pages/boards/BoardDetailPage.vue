@@ -157,7 +157,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useBoardStore } from 'stores/board.js'
@@ -213,6 +213,7 @@ function toggleZoom() {
 const scrollContainerRef = ref(null)
 const activeColumnIndex = ref(0)
 const isCardDragging = ref(false)
+const isDragTouchListenerBound = ref(false)
 
 function onColumnsScroll() {
   if (!isZoomed.value || !isMobile.value) return
@@ -236,6 +237,48 @@ function scrollToColumn(index) {
 
 function onCardDragState(value) {
   isCardDragging.value = !!value
+
+  if (isCardDragging.value) {
+    bindDragTouchAutoScroll()
+  } else {
+    unbindDragTouchAutoScroll()
+  }
+}
+
+function handleDragTouchMove(event) {
+  if (!isCardDragging.value || !isMobile.value) return
+  const container = scrollContainerRef.value
+  const touch = event.touches?.[0]
+  if (!container || !touch) return
+
+  const rect = container.getBoundingClientRect()
+  const edgeSize = 72
+  const maxSpeed = 18
+  let deltaX = 0
+
+  if (touch.clientX < rect.left + edgeSize) {
+    const ratio = (rect.left + edgeSize - touch.clientX) / edgeSize
+    deltaX = -maxSpeed * Math.min(1, Math.max(0, ratio))
+  } else if (touch.clientX > rect.right - edgeSize) {
+    const ratio = (touch.clientX - (rect.right - edgeSize)) / edgeSize
+    deltaX = maxSpeed * Math.min(1, Math.max(0, ratio))
+  }
+
+  if (deltaX !== 0) {
+    container.scrollLeft += deltaX
+  }
+}
+
+function bindDragTouchAutoScroll() {
+  if (isDragTouchListenerBound.value) return
+  window.addEventListener('touchmove', handleDragTouchMove, { passive: true })
+  isDragTouchListenerBound.value = true
+}
+
+function unbindDragTouchAutoScroll() {
+  if (!isDragTouchListenerBound.value) return
+  window.removeEventListener('touchmove', handleDragTouchMove)
+  isDragTouchListenerBound.value = false
 }
 
 function startBoardNameEdit() {
@@ -486,6 +529,10 @@ onMounted(async () => {
     isPageLoading.value = false
   }
 })
+
+onBeforeUnmount(() => {
+  unbindDragTouchAutoScroll()
+})
 </script>
 
 <style scoped lang="scss">
@@ -680,7 +727,7 @@ onMounted(async () => {
 <style lang="scss">
 /* Prevent body scroll and black bg when drag clone extends viewport */
 body:has(.board-detail-page) {
-  background-color: #0f0c29;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
   overflow: hidden;
 }
 
@@ -707,18 +754,6 @@ body:has(.board-detail-page) {
   /* During card drag in zoomed mode, disable snap and show more targets */
   .board-columns-container.zoomed.is-card-dragging {
     scroll-snap-type: none;
-
-    .board-column {
-      width: 72vw !important;
-      min-width: 72vw !important;
-      scroll-snap-align: none;
-    }
-
-    .add-list-wrapper {
-      width: 72vw !important;
-      min-width: 72vw !important;
-      scroll-snap-align: none;
-    }
   }
 
   /* Zoomed-out on mobile: avoid CSS zoom; use smaller column widths */
