@@ -259,6 +259,7 @@
                     toolbar-bg="transparent"
                     class="description-editor"
                     placeholder="Добавьте подробное описание карточки..."
+                    @paste="onEditorPaste"
                   />
                 </div>
                 <div class="desc-editor-actions">
@@ -839,8 +840,80 @@ function onTitleBlur() {
   if (form.value.name !== originalForm.value.name) save()
 }
 
+function autoLinkify(html) {
+  if (!html) return html;
+
+  // Clean up zero-width spaces that might break URL parsing
+  let cleanHtml = html.replace(/\u200B/g, '').replace(/<wbr>/gi, '');
+
+  const temp = document.createElement('div');
+  temp.innerHTML = cleanHtml;
+
+  function processNode(node) {
+    if (node.nodeType === 3) {
+      const urlRegex = /(https?:\/\/[^\s<]+)/g;
+      const text = node.nodeValue;
+      let match;
+      let lastIndex = 0;
+      const parent = node.parentNode;
+      let hasMatch = false;
+
+      while ((match = urlRegex.exec(text)) !== null) {
+        hasMatch = true;
+        if (match.index > lastIndex) {
+          parent.insertBefore(document.createTextNode(text.slice(lastIndex, match.index)), node);
+        }
+
+        let url = match[0];
+        let suffix = '';
+        const suffixMatch = url.match(/([.,;?!)]+)$/);
+        if (suffixMatch) {
+          url = url.slice(0, -suffixMatch[1].length);
+          suffix = suffixMatch[1];
+        }
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.target = '_blank';
+        a.textContent = url;
+        parent.insertBefore(a, node);
+
+        if (suffix) {
+          parent.insertBefore(document.createTextNode(suffix), node);
+        }
+
+        lastIndex = urlRegex.lastIndex;
+      }
+
+      if (hasMatch) {
+        if (lastIndex < text.length) {
+          parent.insertBefore(document.createTextNode(text.slice(lastIndex)), node);
+        }
+        parent.removeChild(node);
+      }
+    } else if (node.nodeType === 1) {
+      if (node.nodeName !== 'A' && node.nodeName !== 'BUTTON') {
+        Array.from(node.childNodes).forEach(processNode);
+      }
+    }
+  }
+
+  Array.from(temp.childNodes).forEach(processNode);
+  return temp.innerHTML;
+}
+
+function onEditorPaste(evt) {
+  const text = (evt.clipboardData || window.clipboardData).getData('text');
+  if (/^https?:\/\/[^\s]+$/.test(text.trim())) {
+    evt.preventDefault();
+    const url = text.trim();
+    document.execCommand('insertHTML', false, `<a href="${url}" target="_blank">${url}</a>`);
+  }
+}
+
 function saveDescription() {
   isEditingDescription.value = false
+  form.value.description = autoLinkify(form.value.description)
   if (form.value.description !== originalForm.value.description) save()
 }
 
@@ -875,8 +948,8 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 }
 
 .card-dialog-container {
-  width: 1080px;
-  min-width: 1080px;
+  width: 1200px;
+  min-width: 1200px;
   height: 614px;
   min-height: 614px;
   max-width: calc(100vw - 4rem);
@@ -1215,6 +1288,8 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
   :deep(.q-editor__content a) {
     color: #8b5cf6;
+    word-break: break-all;
+    overflow-wrap: break-word;
   }
 
   :deep(.q-editor__content hr) {
@@ -1272,6 +1347,8 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
   :deep(a) {
     color: #8b5cf6;
+    word-break: break-all;
+    overflow-wrap: break-word;
   }
 
   :deep(hr) {
