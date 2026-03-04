@@ -319,40 +319,42 @@
               <div class="section-header">
                 <q-icon name="subject" size="20px" class="section-icon" />
                 <span class="section-title">Описание</span>
+                <q-space />
+                <q-btn
+                  v-if="canManageCardDetails && !showInlineDescriptionEditor"
+                  flat
+                  dense
+                  round
+                  size="sm"
+                  icon="edit"
+                  class="desc-edit-trigger"
+                  @click.stop="startDescriptionEdit"
+                >
+                  <q-tooltip>Редактировать описание</q-tooltip>
+                </q-btn>
               </div>
 
-              <div class="description-container" :class="{ 'mobile-editor': $q.screen.lt.sm }">
-                <template v-if="isEditingDescription">
-                  <div class="description-editor-wrap">
-                    <div v-if="$q.screen.gt.xs" class="desc-editor-toolbar-row">
-                      <heading-dropdown :editor-ref="descEditorRef" />
-                      <div class="desc-toolbar-sep" />
-                      <q-editor
-                        ref="descEditorRef"
-                        v-model="form.description"
-                        :toolbar="activeToolbar"
-                        flat
-                        min-height="140px"
-                        content-class="desc-editor-content"
-                        class="description-editor"
-                        placeholder="Добавьте подробное описание карточки..."
-                        @paste="onEditorPaste"
-                      />
-                    </div>
-                    <div v-else class="desc-editor-toolbar-row-mobile">
-                      <q-editor
-                        ref="descEditorRef"
-                        v-model="form.description"
-                        :toolbar="activeToolbar"
-                        flat
-                        min-height="140px"
-                        content-class="desc-editor-content"
-                        class="description-editor"
-                        placeholder="Добавьте подробное описание карточки..."
-                        @paste="onEditorPaste"
-                      />
-                    </div>
-
+              <div
+                class="description-container"
+                :class="{
+                  'is-editable': canManageCardDetails && !isEditingDescription,
+                  'is-inline-editing': showInlineDescriptionEditor,
+                }"
+                @click="handleDescriptionClick"
+              >
+                <template v-if="showInlineDescriptionEditor">
+                  <div class="description-editor-wrap description-editor-inline">
+                    <q-editor
+                      ref="descEditorRef"
+                      v-model="form.description"
+                      :toolbar="activeToolbar"
+                      flat
+                      min-height="220px"
+                      content-class="desc-editor-content"
+                      class="description-editor"
+                      placeholder="Добавьте подробное описание карточки..."
+                      @paste="onEditorPaste"
+                    />
                     <div class="desc-editor-actions">
                       <q-btn
                         unelevated
@@ -373,20 +375,72 @@
                     </div>
                   </div>
                 </template>
-
                 <template v-else>
-                  <div class="description-preview" @click="startDescriptionEdit">
-                    <div
-                      v-if="form.description"
-                      class="description-preview-content"
-                      v-html="form.description"
-                    />
-                    <span v-else class="description-placeholder">
-                      Добавить более подробное описание...
-                    </span>
-                  </div>
+                  <div
+                    v-if="form.description"
+                    class="description-preview-content"
+                    v-html="form.description"
+                  />
+                  <span v-else class="description-placeholder">
+                    Добавить более подробное описание...
+                  </span>
                 </template>
               </div>
+
+              <q-dialog
+                v-if="isMobileDescriptionEditor"
+                v-model="isEditingDescription"
+                persistent
+                transition-show="fade"
+                transition-hide="fade"
+              >
+                <q-card class="description-editor-panel">
+                  <div class="description-editor-panel-header">
+                    <div class="description-editor-panel-title">Редактировать описание</div>
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      icon="close"
+                      class="desc-panel-close"
+                      @click="cancelDescriptionEdit"
+                    />
+                  </div>
+
+                  <div class="description-editor-wrap">
+                    <q-editor
+                      ref="descEditorRef"
+                      v-model="form.description"
+                      :toolbar="activeToolbar"
+                      flat
+                      min-height="220px"
+                      content-class="desc-editor-content"
+                      class="description-editor"
+                      placeholder="Добавьте подробное описание карточки..."
+                      @paste="onEditorPaste"
+                    />
+                  </div>
+
+                  <div class="desc-editor-actions">
+                    <q-btn
+                      unelevated
+                      dense
+                      no-caps
+                      label="Сохранить"
+                      class="desc-save-btn"
+                      @click="saveDescription"
+                    />
+                    <q-btn
+                      flat
+                      dense
+                      no-caps
+                      label="Отмена"
+                      class="desc-cancel-btn"
+                      @click="cancelDescriptionEdit"
+                    />
+                  </div>
+                </q-card>
+              </q-dialog>
             </div>
 
 
@@ -652,7 +706,6 @@ import { useQuasar } from 'quasar'
 import { CARD_STATUS, CARD_STATUS_OPTIONS, CARD_STATUS_COLORS } from '@/constants/cardStatus'
 import { useUserStore } from 'stores/user.js'
 import { useBoardStore } from 'stores/board.js'
-import HeadingDropdown from 'components/boards/HeadingDropdown.vue'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -771,31 +824,43 @@ const editingCommentId = ref(null)
 const editingCommentText = ref('')
 const isEditingCommentSubmitting = ref(false)
 const deletingCommentId = ref(null)
+const isMobileDescriptionEditor = computed(() => q.screen.width < 768)
+const showInlineDescriptionEditor = computed(
+  () => isEditingDescription.value && !isMobileDescriptionEditor.value
+)
 
 const activeToolbar = computed(() => {
   return q.screen.gt.xs ? [
-    ['bold', 'italic', 'underline', 'strike'],
+    ['bold', 'italic', 'underline'],
+    ['unordered', 'ordered'],
+    ['link'],
     ['left', 'center', 'right', 'justify'],
-    ['unordered', 'ordered', 'outdent', 'indent'],
-    ['link', 'hr', 'removeFormat'],
   ] : [
-    ['bold', 'italic', 'unordered', 'link'],
+    ['bold', 'italic', 'underline', 'unordered', 'ordered', 'link'],
     [{
       label: '',
       icon: 'more_horiz',
       fixedIcon: true,
       list: 'no-icons editor-toolbar-dropdown',
       options: [
-        'underline', 'strike', 'left', 'center', 'right', 'justify',
-        'ordered', 'outdent', 'indent', 'hr', 'removeFormat'
+        'left', 'center', 'right', 'justify',
       ]
     }]
   ]
 })
 
 function startDescriptionEdit() {
+  if (!canManageCardDetails.value) return
   descriptionBackup.value = form.value.description
   isEditingDescription.value = true
+  nextTick(() => {
+    descEditorRef.value?.focus?.()
+  })
+}
+
+function handleDescriptionClick() {
+  if (!canManageCardDetails.value || isEditingDescription.value) return
+  startDescriptionEdit()
 }
 
 function cancelDescriptionEdit() {
@@ -1443,81 +1508,97 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 }
 
 /* Description editor */
+.desc-edit-trigger {
+  color: rgba(255, 255, 255, 0.5);
+
+  &:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
 .description-container {
-  min-height: 220px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  min-height: 140px;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
-  overflow: hidden;
   background: rgba(255, 255, 255, 0.04);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+
+  &.is-editable {
+    cursor: pointer;
+
+    &:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.06);
+    }
+  }
+
+  &.is-inline-editing {
+    padding: 0;
+    cursor: default;
+    border-color: rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.02);
+  }
 
   @media (max-width: 599px) {
-    min-height: 180px;
+    min-height: 120px;
+    padding: 0.625rem;
+  }
+}
+
+.description-editor-panel {
+  width: min(760px, calc(100vw - 2rem));
+  max-height: min(76vh, 640px);
+  margin-top: -24px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  background: rgba(22, 20, 50, 0.97);
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.58);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  @media (max-width: 599px) {
+    width: calc(100vw - 1rem);
+    max-height: calc(100vh - 3rem);
+    margin-top: 0;
+    border-radius: 12px;
+  }
+}
+
+.description-editor-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.875rem 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.description-editor-panel-title {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.desc-panel-close {
+  color: rgba(255, 255, 255, 0.55);
+
+  &:hover {
+    color: #fff;
   }
 }
 
 .description-editor-wrap {
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  overflow: visible;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.description-container .description-editor-wrap {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
+  flex: 1;
+  min-height: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
 }
 
-.description-simple-input {
-  :deep(.q-field__control) {
-    padding: 0.75rem;
-    min-height: 100px;
-  }
-  :deep(.q-field__native) {
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 0.8125rem;
-    line-height: 1.5;
-  }
-}
-
-.desc-editor-toolbar-row {
-  display: flex;
-  align-items: flex-start;
-  flex: 1;
-  min-height: 0;
-
-  .heading-dropdown {
-    padding: 0.25rem 0 0 0.25rem;
-    flex-shrink: 0;
-  }
-
-  .description-editor {
-    flex: 1;
-    min-width: 0;
-  }
-}
-
-.desc-editor-toolbar-row-mobile {
-  display: flex;
-  align-items: flex-start;
-  flex: 1;
-  min-height: 0;
-
-  .description-editor {
-    flex: 1;
-    min-width: 0;
-  }
-}
-
-.desc-toolbar-sep {
-  width: 1px;
-  height: 18px;
-  background: rgba(255, 255, 255, 0.12);
-  margin-top: 0.5rem;
-  flex-shrink: 0;
+.description-editor-inline {
+  min-height: 100%;
 }
 
 .description-editor {
@@ -1530,11 +1611,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     flex-wrap: nowrap;
     overflow-x: auto;
     overflow-y: hidden;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 0.25rem;
-    min-height: auto;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.25rem 0.375rem;
+    min-height: 38px;
     scrollbar-width: none;
-    background: transparent !important;
+    background: rgba(255, 255, 255, 0.02) !important;
   }
 
   :deep(.q-editor__toolbar::-webkit-scrollbar) {
@@ -1558,13 +1639,6 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     }
   }
 
-  .mobile-editor & {
-    :deep(.q-editor__toolbar .q-btn) {
-      min-height: 44px;
-      min-width: 44px;
-    }
-  }
-
   :deep(.q-editor__toolbar-group + .q-editor__toolbar-group::before) {
     background: rgba(255, 255, 255, 0.12);
   }
@@ -1578,7 +1652,8 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     font-size: 0.875rem;
     line-height: 1.6;
     padding: 0.75rem;
-    min-height: 120px;
+    min-height: 220px;
+    max-height: min(44vh, 380px);
 
     h1 { font-size: 1.375rem; font-weight: 700; margin: 0.5rem 0; color: rgba(255, 255, 255, 0.92); }
     h2 { font-size: 1.175rem; font-weight: 700; margin: 0.4rem 0; color: rgba(255, 255, 255, 0.9); }
@@ -1603,9 +1678,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
 .desc-editor-actions {
   display: flex;
+  justify-content: flex-end;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .desc-save-btn {
@@ -1624,25 +1701,6 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 .desc-cancel-btn {
   color: rgba(255, 255, 255, 0.5);
   font-size: 0.8125rem;
-}
-
-/* Description preview (view mode) */
-.description-preview {
-  min-height: 100%;
-  background: transparent;
-  border-radius: 0;
-  padding: 0.75rem;
-  border: 0;
-  cursor: pointer;
-  transition: border-color 0.2s ease;
-
-  &:hover {
-    border-color: rgba(255, 255, 255, 0.15);
-  }
-
-  @media (max-width: 599px) {
-    padding: 0.625rem;
-  }
 }
 
 .description-preview-content {
@@ -1726,25 +1784,39 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   }
 }
 
-.mobile-logs-header {
+:deep(.mobile-logs-header) {
   min-height: 48px;
   padding: 0.5rem 1rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.86);
   font-size: 0.8125rem;
   font-weight: 600;
+  transition: background-color 0.2s ease, color 0.2s ease;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
+  .q-item__label {
+    color: rgba(255, 255, 255, 0.86);
+    font-weight: 600;
   }
 
-  :deep(.q-item__section--avatar) {
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  &:active {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .q-item__section--avatar {
     min-width: 32px;
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.68);
   }
 }
 
-.mobile-logs-expand-icon {
-  color: rgba(255, 255, 255, 0.4);
+:deep(.mobile-logs-expand-icon) {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+:deep(.q-expansion-item--expanded .mobile-logs-header) {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .sidebar-content-wrapper {
