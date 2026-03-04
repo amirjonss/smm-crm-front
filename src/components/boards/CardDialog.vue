@@ -245,35 +245,35 @@
                 <span class="section-title">Описание</span>
               </div>
 
-              <div v-if="isEditingDescription" class="description-editor-wrap">
-                <template v-if="$q.screen.gt.xs">
-                  <div class="desc-editor-toolbar-row">
-                    <heading-dropdown :editor-ref="descEditorRef" />
-                    <div class="desc-toolbar-sep" />
-                    <q-editor
-                      ref="descEditorRef"
-                      v-model="form.description"
-                      :toolbar="descToolbar"
-                      flat
-                      min-height="140px"
-                      content-class="desc-editor-content"
-                      toolbar-bg="transparent"
-                      class="description-editor"
-                      placeholder="Добавьте подробное описание карточки..."
-                      @paste="onEditorPaste"
-                    />
-                  </div>
-                </template>
-                <template v-else>
-                  <q-input
+              <div v-if="isEditingDescription" class="description-editor-wrap" :class="{ 'mobile-editor': $q.screen.lt.sm }">
+                <div v-if="$q.screen.gt.xs" class="desc-editor-toolbar-row">
+                  <heading-dropdown :editor-ref="descEditorRef" />
+                  <div class="desc-toolbar-sep" />
+                  <q-editor
+                    ref="descEditorRef"
                     v-model="form.description"
-                    type="textarea"
-                    autogrow
-                    borderless
-                    class="description-simple-input"
+                    :toolbar="activeToolbar"
+                    flat
+                    min-height="140px"
+                    content-class="desc-editor-content"
+                    class="description-editor"
                     placeholder="Добавьте подробное описание карточки..."
+                    @paste="onEditorPaste"
                   />
-                </template>
+                </div>
+                <div v-else class="desc-editor-toolbar-row-mobile">
+                  <q-editor
+                    ref="descEditorRef"
+                    v-model="form.description"
+                    :toolbar="activeToolbar"
+                    flat
+                    min-height="140px"
+                    content-class="desc-editor-content"
+                    class="description-editor"
+                    placeholder="Добавьте подробное описание карточки..."
+                    @paste="onEditorPaste"
+                  />
+                </div>
 
                 <div class="desc-editor-actions">
                   <q-btn
@@ -689,12 +689,26 @@ const editingCommentText = ref('')
 const isEditingCommentSubmitting = ref(false)
 const deletingCommentId = ref(null)
 
-const descToolbar = [
-  ['bold', 'italic', 'underline', 'strike'],
-  ['left', 'center', 'right', 'justify'],
-  ['unordered', 'ordered', 'outdent', 'indent'],
-  ['link', 'hr', 'removeFormat'],
-]
+const activeToolbar = computed(() => {
+  return q.screen.gt.xs ? [
+    ['bold', 'italic', 'underline', 'strike'],
+    ['left', 'center', 'right', 'justify'],
+    ['unordered', 'ordered', 'outdent', 'indent'],
+    ['link', 'hr', 'removeFormat'],
+  ] : [
+    ['bold', 'italic', 'unordered', 'link'],
+    [{
+      label: '',
+      icon: 'more_horiz',
+      fixedIcon: true,
+      list: 'no-icons editor-toolbar-dropdown',
+      options: [
+        'underline', 'strike', 'left', 'center', 'right', 'justify',
+        'ordered', 'outdent', 'indent', 'hr', 'removeFormat'
+      ]
+    }]
+  ]
+})
 
 function startDescriptionEdit() {
   descriptionBackup.value = form.value.description
@@ -1380,6 +1394,15 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   }
 }
 
+.desc-editor-toolbar-row-mobile {
+  display: flex;
+  align-items: flex-start;
+  .description-editor {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
 .desc-toolbar-sep {
   width: 1px;
   height: 18px;
@@ -1400,6 +1423,12 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     padding: 0.25rem;
     min-height: auto;
+    scrollbar-width: none;
+    background: transparent !important;
+  }
+
+  :deep(.q-editor__toolbar::-webkit-scrollbar) {
+    display: none;
   }
 
   :deep(.q-editor__toolbar .q-btn) {
@@ -1416,6 +1445,13 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     &.q-btn--active {
       color: #fff;
       background: rgba(139, 92, 246, 0.3);
+    }
+  }
+
+  .mobile-editor & {
+    :deep(.q-editor__toolbar .q-btn) {
+      min-height: 44px;
+      min-width: 44px;
     }
   }
 
@@ -1912,11 +1948,41 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 /* Q-editor heading dropdown — scoped to card dialog editor menus only */
 .card-dialog-container .q-menu,
 .q-menu:has(.dl-panel),
-.q-menu:has(.ex-panel) {
+.q-menu:has(.ex-panel),
+.q-menu:has(.editor-toolbar-dropdown) {
   background: #1e1b38 !important;
   border: 1px solid #2d2a4a !important;
   border-radius: 8px !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+  z-index: 10000 !important; /* Ensure dropdowns appear above all dialog layers */
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+}
+
+/* Fallback for browsers that don't support :has() and ensuring opaque list */
+.editor-toolbar-dropdown {
+  background: #1e1b38 !important;
+  border: 1px solid #2d2a4a !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+  padding: 4px 0 !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  z-index: 10000 !important;
+}
+
+/* Hover state for q-editor dropdown options */
+.editor-toolbar-dropdown .q-item {
+  color: rgba(255, 255, 255, 0.85) !important;
+  transition: background 0.2s, color 0.2s;
+  min-height: 36px !important;
+  padding: 0 16px !important;
+  background: transparent !important; /* clear any transparent quasar utility */
+
+  &:hover, &:focus {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #fff !important;
+  }
 }
 
 /* Bottom-sheet dialog style when q-popup-proxy uses dialog mode on mobile */
