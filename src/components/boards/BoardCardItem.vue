@@ -212,6 +212,7 @@ onBeforeUnmount(() => {
   user-select: none;
   -webkit-user-select: none;
   overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Noto Sans", "Ubuntu", "Droid Sans", "Helvetica Neue", sans-serif;
 
   &:hover {
     background: rgba(255, 255, 255, 0.1);
@@ -246,10 +247,10 @@ onBeforeUnmount(() => {
 }
 
 .card-item-title {
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 400;
   color: #fff;
-  line-height: 1.4;
+  line-height: 20px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
