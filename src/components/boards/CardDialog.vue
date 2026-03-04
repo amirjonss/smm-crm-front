@@ -362,7 +362,7 @@
                         no-caps
                         label="Сохранить"
                         class="desc-save-btn"
-                        @click="saveDescription"
+                        @click.stop="saveDescription"
                       />
                       <q-btn
                         flat
@@ -370,7 +370,7 @@
                         no-caps
                         label="Отмена"
                         class="desc-cancel-btn"
-                        @click="cancelDescriptionEdit"
+                        @click.stop="cancelDescriptionEdit"
                       />
                     </div>
                   </div>
@@ -403,7 +403,7 @@
                       dense
                       icon="close"
                       class="desc-panel-close"
-                      @click="cancelDescriptionEdit"
+                      @click.stop="cancelDescriptionEdit"
                     />
                   </div>
 
@@ -428,7 +428,7 @@
                       no-caps
                       label="Сохранить"
                       class="desc-save-btn"
-                      @click="saveDescription"
+                      @click.stop="saveDescription"
                     />
                     <q-btn
                       flat
@@ -436,7 +436,7 @@
                       no-caps
                       label="Отмена"
                       class="desc-cancel-btn"
-                      @click="cancelDescriptionEdit"
+                      @click.stop="cancelDescriptionEdit"
                     />
                   </div>
                 </q-card>
@@ -858,7 +858,9 @@ function startDescriptionEdit() {
   })
 }
 
-function handleDescriptionClick() {
+function handleDescriptionClick(event) {
+  const target = event?.target
+  if (target instanceof HTMLElement && target.closest('a')) return
   if (!canManageCardDetails.value || isEditingDescription.value) return
   startDescriptionEdit()
 }

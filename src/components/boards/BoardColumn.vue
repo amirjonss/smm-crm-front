@@ -248,8 +248,8 @@ function onCreatePattern(name) {
 
 <style scoped lang="scss">
 .board-column {
-  width: 300px;
-  min-width: 300px;
+  width: 272px;
+  min-width: 272px;
   height: 100%;
   max-height: calc(100vh - 180px);
   display: flex;
@@ -260,6 +260,7 @@ function onCreatePattern(name) {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Noto Sans", "Ubuntu", "Droid Sans", "Helvetica Neue", sans-serif;
 
   @media (max-width: 599px) {
     width: 280px;
@@ -308,9 +309,10 @@ function onCreatePattern(name) {
 }
 
 .column-name {
-  font-size: 0.875rem;
+  font-size: 14px;
   font-weight: 600;
   color: #fff;
+  line-height: 20px;
 }
 
 .column-count {
@@ -475,8 +477,31 @@ function onCreatePattern(name) {
 .column-body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 0 0.5rem;
   min-height: 40px;
+  
+  /* Стили для скроллбара внутри колонки (как в Trello) */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    border: 2px solid transparent; /* Оставляем прозрачным, чтобы был отступ от краев, используя padding-box */
+    background-clip: padding-box;
+    
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.3);
+    }
+  }
 }
 
 .cards-list {

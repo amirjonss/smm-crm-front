@@ -634,7 +634,11 @@ onBeforeUnmount(() => {
   overflow: hidden;
   position: relative;
   background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-  height: 100dvh;
+  height: calc(100dvh - 64px);
+
+  @media (max-width: 599px) {
+    height: calc(100dvh - 56px);
+  }
 }
 
 .board-top-bar {
@@ -723,12 +727,36 @@ onBeforeUnmount(() => {
 
 .board-columns-container {
   flex: 1;
-  display: flex;
-  height: 100%;
+  display: block;
+  min-height: 0;
   overflow-x: auto;
   overflow-y: hidden;
   padding: 0;
+  padding-bottom: 12px;
   -webkit-overflow-scrolling: touch;
+
+  /* Стили для скроллбара */
+  scrollbar-width: auto;
+  scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.05);
+
+  &::-webkit-scrollbar {
+    height: 12px;
+    background: transparent;
+  }
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    margin: 0 1.5rem;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.4);
+    }
+  }
 
   @media (max-width: 599px) {
     gap: 0;
@@ -754,6 +782,8 @@ onBeforeUnmount(() => {
   gap: 1rem;
   height: 100%;
   padding: 1rem 1.5rem 1.5rem 1.5rem;
+  width: max-content;
+  min-width: 100%;
 
   @media (max-width: 599px) {
     gap: 0.75rem;
