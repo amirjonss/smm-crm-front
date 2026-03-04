@@ -1,82 +1,76 @@
 <template>
-  <q-card class="patterns-dialog">
-    <div class="patterns-header">
-      <div class="patterns-title">Шаблоны карточек</div>
-      <q-btn flat round dense icon="close" class="header-close" @click="$emit('close')" />
+  <q-card class="patterns-popover-card">
+    <div class="popover-header">
+      <span class="header-title">Шаблоны карточек</span>
+      <q-btn flat round dense icon="close" size="xs" class="close-btn" @click="$emit('close')" />
     </div>
 
-    <div class="patterns-body">
-      <div v-if="loading" class="patterns-loading">
-        <q-spinner-dots size="30px" color="primary" />
+    <div class="popover-body">
+      <!-- Loading state -->
+      <div v-if="loading" class="state-container">
+        <q-spinner-dots size="24px" color="grey-5" />
       </div>
 
-      <template v-else>
-        <div v-if="patterns.length === 0" class="patterns-empty">Нет доступных шаблонов</div>
+      <!-- Empty state -->
+      <div v-else-if="patterns.length === 0 && !isCreating" class="state-container empty">
+        <span class="empty-text">Нет доступных шаблонов</span>
+      </div>
 
-        <div v-else class="patterns-list">
-          <button
-            v-for="pattern in patterns"
-            :key="pattern.id"
-            class="pattern-item"
-            :disabled="submitting"
-            @click="$emit('usePattern', pattern)"
-          >
-            <div class="pattern-name">{{ pattern.name }}</div>
-            <div class="pattern-badge">
-              <q-icon name="content_copy" size="12px" />
-              Шаблон
-            </div>
-          </button>
-        </div>
-
-        <button
-          v-if="!isCreating"
-          class="create-trigger"
-          :disabled="submitting"
-          @click="isCreating = true"
+      <!-- Patterns List -->
+      <div v-if="patterns.length > 0 && !isCreating" class="patterns-list">
+        <div
+          v-for="pattern in patterns"
+          :key="pattern.id"
+          class="pattern-item"
+          @click="$emit('usePattern', pattern)"
         >
-          + Создать новый шаблон
-        </button>
-
-        <div v-else class="create-section">
-          <q-input
-            ref="nameInputRef"
-            v-model="newPatternName"
-            dense
-            outlined
-            dark
-            placeholder="Название шаблона"
-            class="name-input"
-            :disable="submitting"
-            @keydown.enter.prevent="onCreate"
-            @keydown.escape="cancelCreate"
-          />
-          <div class="create-actions">
-            <q-btn
-              unelevated
-              no-caps
-              label="Добавить"
-              class="btn-add"
-              :loading="submitting"
-              :disable="!newPatternName.trim()"
-              @click="onCreate"
-            />
-            <q-btn
-              flat
-              round
-              dense
-              icon="close"
-              class="btn-cancel"
-              :disable="submitting"
-              @click="cancelCreate"
-            />
+          <div class="pattern-name">{{ pattern.name }}</div>
+          <div class="pattern-meta">
+            <div class="pattern-badge">
+              <q-icon name="dashboard" size="12px" class="q-mr-xs" />
+              <span>Шаблон</span>
+            </div>
+            <q-icon name="subject" size="14px" class="q-ml-sm text-grey-6" />
           </div>
         </div>
-      </template>
-    </div>
+      </div>
 
-    <div class="patterns-footer">
-      <q-btn flat no-caps disable label="Изменить шаблоны" class="btn-edit" />
+      <!-- Create Trigger -->
+      <button
+        v-if="!isCreating"
+        class="create-trigger-btn"
+        @click="isCreating = true"
+      >
+        <q-icon name="add" size="16px" class="q-mr-xs" />
+        Создать новый шаблон
+      </button>
+
+      <!-- Create Form -->
+      <div v-else class="create-form">
+        <q-input
+          ref="nameInputRef"
+          v-model="newPatternName"
+          dense
+          outlined
+          dark
+          placeholder="Название шаблона..."
+          class="create-input"
+          :disable="submitting"
+          @keydown.enter.prevent="onCreate"
+          @keydown.escape="cancelCreate"
+        />
+        <div class="create-actions">
+          <q-btn
+            unelevated
+            no-caps
+            label="Добавить"
+            class="btn-add"
+            :loading="submitting"
+            @click="onCreate"
+          />
+          <q-btn flat dense no-caps label="Отмена" class="btn-cancel" @click="cancelCreate" />
+        </div>
+      </div>
     </div>
   </q-card>
 </template>
@@ -126,136 +120,148 @@ function cancelCreate() {
 </script>
 
 <style scoped lang="scss">
-.patterns-dialog {
-  width: 340px;
-  max-width: 94vw;
-  background: rgba(34, 38, 47, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+.patterns-popover-card {
+  width: 260px;
+  background: #2a2a2a;
+  border-radius: 8px;
   overflow: hidden;
-  color: rgba(255, 255, 255, 0.9);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
-.patterns-header {
+.popover-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 0.9rem 0.65rem;
+  padding: 0.75rem 1rem 0.5rem;
+  position: relative;
 }
 
-.patterns-title {
-  font-size: 1rem;
-  font-weight: 600;
+.header-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  width: 100%;
+  text-align: center;
 }
 
-.header-close {
-  color: rgba(255, 255, 255, 0.55);
+.close-btn {
+  position: absolute;
+  right: 0.5rem;
+  top: 0.65rem;
+  color: rgba(255, 255, 255, 0.4);
+  &:hover { color: #fff; }
 }
 
-.patterns-body {
-  padding: 0 0.75rem 0.65rem;
+.popover-body {
+  padding: 0.5rem 0.75rem;
+  max-height: 320px;
+  overflow-y: auto;
+
+  /* Slim scrollbar for better look */
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+  }
 }
 
-.patterns-loading,
-.patterns-empty {
-  min-height: 90px;
+.state-container {
   display: flex;
-  align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 0.85rem;
+  padding: 1.5rem 0;
+}
+
+.empty-text {
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .patterns-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .pattern-item {
-  text-align: left;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 0.65rem 0.7rem;
-  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 0.75rem;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: background 0.2s ease;
 
-  &:hover:not(:disabled) {
-    border-color: rgba(96, 165, 250, 0.5);
-    background: rgba(59, 130, 246, 0.12);
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
   }
 }
 
 .pattern-name {
-  font-size: 0.85rem;
+  font-size: 0.8125rem;
   line-height: 1.4;
+  margin-bottom: 0.5rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.pattern-meta {
+  display: flex;
+  align-items: center;
 }
 
 .pattern-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  margin-top: 0.45rem;
-  font-size: 0.72rem;
-  color: #60a5fa;
   background: rgba(37, 99, 235, 0.2);
-  padding: 0.15rem 0.38rem;
-  border-radius: 999px;
+  color: #60a5fa;
+  font-size: 0.6875rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
 }
 
-.create-trigger {
-  margin-top: 0.6rem;
+.create-trigger-btn {
   width: 100%;
-  text-align: left;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.7);
-  padding: 0.3rem 0.15rem;
-  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8125rem;
+  padding: 0.5rem 0;
   cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
 
-  &:hover:not(:disabled) {
+  &:hover {
     color: #fff;
   }
 }
 
-.create-section {
-  margin-top: 0.6rem;
+.create-form {
+  padding: 0.25rem 0;
 }
 
-.name-input {
+.create-input {
+  margin-bottom: 0.5rem;
   :deep(.q-field__control) {
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
   }
 }
 
 .create-actions {
   display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin-top: 0.5rem;
+  gap: 0.5rem;
 }
 
 .btn-add {
-  background: #60a5fa;
-  color: #0f172a;
-  font-weight: 600;
+  background: #2563eb;
+  color: #fff;
+  font-size: 0.75rem;
 }
 
 .btn-cancel {
-  color: rgba(255, 255, 255, 0.55);
-}
-
-.patterns-footer {
-  padding: 0 0.75rem 0.75rem;
-}
-
-.btn-edit {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
 }
 </style>

@@ -246,22 +246,35 @@
               </div>
 
               <div v-if="isEditingDescription" class="description-editor-wrap">
-                <div class="desc-editor-toolbar-row">
-                  <heading-dropdown :editor-ref="descEditorRef" />
-                  <div class="desc-toolbar-sep" />
-                  <q-editor
-                    ref="descEditorRef"
+                <template v-if="$q.screen.gt.xs">
+                  <div class="desc-editor-toolbar-row">
+                    <heading-dropdown :editor-ref="descEditorRef" />
+                    <div class="desc-toolbar-sep" />
+                    <q-editor
+                      ref="descEditorRef"
+                      v-model="form.description"
+                      :toolbar="descToolbar"
+                      flat
+                      min-height="140px"
+                      content-class="desc-editor-content"
+                      toolbar-bg="transparent"
+                      class="description-editor"
+                      placeholder="Добавьте подробное описание карточки..."
+                      @paste="onEditorPaste"
+                    />
+                  </div>
+                </template>
+                <template v-else>
+                  <q-input
                     v-model="form.description"
-                    :toolbar="descToolbar"
-                    flat
-                    min-height="140px"
-                    content-class="desc-editor-content"
-                    toolbar-bg="transparent"
-                    class="description-editor"
+                    type="textarea"
+                    autogrow
+                    borderless
+                    class="description-simple-input"
                     placeholder="Добавьте подробное описание карточки..."
-                    @paste="onEditorPaste"
                   />
-                </div>
+                </template>
+
                 <div class="desc-editor-actions">
                   <q-btn
                     unelevated
@@ -298,134 +311,251 @@
           </div>
 
           <!-- Right sidebar: logs -->
-          <div class="card-sidebar">
-            <div class="sidebar-header">
-              <q-icon name="history" size="20px" class="sidebar-icon" />
-              <span class="sidebar-title">Комментарии и события</span>
-            </div>
-
-            <div class="comment-compose">
-              <q-input
-                v-model="newCommentText"
-                autogrow
-                dense
-                outlined
-                class="comment-input"
-                maxlength="1000"
-                placeholder="Напишите комментарий..."
-                :disable="isCommentSubmitting || !props.card?.id"
-                @keydown.ctrl.enter.prevent="submitComment"
-                @keydown.meta.enter.prevent="submitComment"
-              />
-              <div class="comment-compose-footer">
-                <span class="comment-compose-hint">Ctrl/⌘ + Enter</span>
-                <q-btn
-                  unelevated
-                  no-caps
-                  class="comment-submit-btn"
-                  label="Отправить"
-                  :loading="isCommentSubmitting"
-                  :disable="!newCommentText.trim() || !props.card?.id"
-                  @click="submitComment"
-                />
+          <div class="card-sidebar" :class="{ 'is-expanded': showLogsMobile }">
+            <template v-if="$q.screen.gt.xs">
+              <div class="sidebar-header">
+                <q-icon name="history" size="20px" class="sidebar-icon" />
+                <span class="sidebar-title">Комментарии и события</span>
               </div>
-            </div>
+              <div class="sidebar-content-wrapper">
+                <div class="comment-compose">
+                  <q-input
+                    v-model="newCommentText"
+                    autogrow
+                    dense
+                    outlined
+                    class="comment-input"
+                    maxlength="1000"
+                    placeholder="Напишите комментарий..."
+                    :disable="isCommentSubmitting || !props.card?.id"
+                    @keydown.ctrl.enter.prevent="submitComment"
+                    @keydown.meta.enter.prevent="submitComment"
+                  />
+                  <div class="comment-compose-footer">
+                    <span class="comment-compose-hint">Ctrl/⌘ + Enter</span>
+                    <q-btn
+                      unelevated
+                      no-caps
+                      class="comment-submit-btn"
+                      label="Отправить"
+                      :loading="isCommentSubmitting"
+                      :disable="!newCommentText.trim() || !props.card?.id"
+                      @click="submitComment"
+                    />
+                  </div>
+                </div>
 
-            <div v-if="cardLogs.length === 0" class="sidebar-empty">
-              <q-icon name="info_outline" size="24px" class="empty-icon" />
-              <span>Нет комментариев и событий</span>
-            </div>
+                <div v-if="cardLogs.length === 0" class="sidebar-empty">
+                  <q-icon name="info_outline" size="24px" class="empty-icon" />
+                  <span>Нет комментариев и событий</span>
+                </div>
 
-            <div v-else class="sidebar-logs">
-              <div
-                v-for="log in visibleLogs"
-                :key="log.id"
-                class="log-entry"
-                :class="{ 'is-comment': isComment(log), 'is-log': !isComment(log) }"
-              >
-                <q-avatar size="28px" color="primary" text-color="white" class="log-avatar">
-                  <img v-if="getUserAvatarUrl(log.createdBy)" :src="getUserAvatarUrl(log.createdBy)" alt="User avatar" />
-                  <span v-else class="avatar-fallback-initial">{{ (log.createdBy?.givenName?.[0] || '?').toUpperCase() }}</span>
-                </q-avatar>
-                <div class="log-content">
-                  <div class="log-head-row">
-                    <div class="log-author-row">
-                      <span class="log-author">{{ log.createdBy?.givenName || 'Пользователь' }}</span>
-                      <span class="log-type-badge" :class="{ comment: isComment(log), event: !isComment(log) }">
-                        {{ isComment(log) ? 'Комментарий' : 'Событие' }}
-                      </span>
-                    </div>
-                    <div v-if="canModifyComment(log)" class="log-actions">
-                      <q-btn
-                        flat
-                        dense
-                        round
-                        size="sm"
-                        icon="edit"
-                        class="log-action-btn"
-                        @click="startEditComment(log)"
-                      />
-                      <q-btn
-                        flat
-                        dense
-                        round
-                        size="sm"
-                        icon="delete"
-                        class="log-action-btn delete"
-                        :loading="deletingCommentId === log.id"
-                        @click="deleteComment(log)"
-                      />
+                <div v-else class="sidebar-logs">
+                  <div
+                    v-for="log in visibleLogs"
+                    :key="log.id"
+                    class="log-entry"
+                    :class="{ 'is-comment': isComment(log), 'is-log': !isComment(log) }"
+                  >
+                    <q-avatar size="28px" color="primary" text-color="white" class="log-avatar">
+                      <img v-if="getUserAvatarUrl(log.createdBy)" :src="getUserAvatarUrl(log.createdBy)" alt="User avatar" />
+                      <span v-else class="avatar-fallback-initial">{{ (log.createdBy?.givenName?.[0] || '?').toUpperCase() }}</span>
+                    </q-avatar>
+                    <div class="log-content">
+                      <div class="log-head-row">
+                        <div class="log-author-row">
+                          <span class="log-author">{{ log.createdBy?.givenName || 'Пользователь' }}</span>
+                          <span class="log-type-badge" :class="{ comment: isComment(log), event: !isComment(log) }">
+                            {{ isComment(log) ? 'Комментарий' : 'Событие' }}
+                          </span>
+                        </div>
+                        <div v-if="canModifyComment(log)" class="log-actions">
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="edit"
+                            class="log-action-btn"
+                            @click="startEditComment(log)"
+                          />
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="delete"
+                            class="log-action-btn delete"
+                            :loading="deletingCommentId === log.id"
+                            @click="deleteComment(log)"
+                          />
+                        </div>
+                      </div>
+                      <template v-if="isEditingComment(log)">
+                        <q-input
+                          v-model="editingCommentText"
+                          autogrow
+                          dense
+                          outlined
+                          class="comment-edit-input"
+                          maxlength="1000"
+                          @keydown.ctrl.enter.prevent="saveEditedComment(log)"
+                          @keydown.meta.enter.prevent="saveEditedComment(log)"
+                        />
+                        <div class="comment-edit-actions">
+                          <q-btn
+                            unelevated
+                            no-caps
+                            dense
+                            label="Сохранить"
+                            class="comment-save-btn"
+                            :loading="isEditingCommentSubmitting"
+                            :disable="!editingCommentText.trim()"
+                            @click="saveEditedComment(log)"
+                          />
+                          <q-btn
+                            flat
+                            no-caps
+                            dense
+                            label="Отмена"
+                            class="comment-cancel-btn"
+                            @click="cancelEditComment"
+                          />
+                        </div>
+                      </template>
+                      <div v-else class="log-description">{{ log.description }}</div>
+                      <div class="log-date">{{ formatLogDate(log.createdAt) }}</div>
                     </div>
                   </div>
-                  <template v-if="isEditingComment(log)">
+
+                  <q-btn
+                    v-if="cardLogs.length > 3 && !showAllLogs"
+                    flat
+                    dense
+                    no-caps
+                    class="show-more-btn"
+                    @click="showAllLogs = true"
+                  >
+                    Показать подробности ({{ cardLogs.length - 3 }})
+                  </q-btn>
+                </div>
+              </div>
+            </template>
+
+            <template v-else>
+              <q-expansion-item
+                v-model="showLogsMobile"
+                icon="history"
+                label="Комментарии и события"
+                header-class="mobile-logs-header"
+                expand-icon-class="mobile-logs-expand-icon"
+              >
+                <div class="sidebar-content-wrapper mobile">
+                  <div class="comment-compose">
                     <q-input
-                      v-model="editingCommentText"
+                      v-model="newCommentText"
                       autogrow
                       dense
                       outlined
-                      class="comment-edit-input"
+                      class="comment-input"
                       maxlength="1000"
-                      @keydown.ctrl.enter.prevent="saveEditedComment(log)"
-                      @keydown.meta.enter.prevent="saveEditedComment(log)"
+                      placeholder="Напишите комментарий..."
+                      :disable="isCommentSubmitting || !props.card?.id"
                     />
-                    <div class="comment-edit-actions">
+                    <div class="comment-compose-footer">
                       <q-btn
                         unelevated
                         no-caps
-                        dense
-                        label="Сохранить"
-                        class="comment-save-btn"
-                        :loading="isEditingCommentSubmitting"
-                        :disable="!editingCommentText.trim()"
-                        @click="saveEditedComment(log)"
-                      />
-                      <q-btn
-                        flat
-                        no-caps
-                        dense
-                        label="Отмена"
-                        class="comment-cancel-btn"
-                        @click="cancelEditComment"
+                        class="comment-submit-btn"
+                        label="Отправить"
+                        :loading="isCommentSubmitting"
+                        :disable="!newCommentText.trim() || !props.card?.id"
+                        @click="submitComment"
                       />
                     </div>
-                  </template>
-                  <div v-else class="log-description">{{ log.description }}</div>
-                  <div class="log-date">{{ formatLogDate(log.createdAt) }}</div>
+                  </div>
+
+                  <div v-if="cardLogs.length === 0" class="sidebar-empty">
+                    <span>Нет комментариев</span>
+                  </div>
+
+                  <div v-else class="sidebar-logs">
+                    <div
+                      v-for="log in visibleLogs"
+                      :key="log.id"
+                      class="log-entry"
+                      :class="{ 'is-comment': isComment(log), 'is-log': !isComment(log) }"
+                    >
+                      <q-avatar size="24px" color="primary" text-color="white" class="log-avatar">
+                        <img v-if="getUserAvatarUrl(log.createdBy)" :src="getUserAvatarUrl(log.createdBy)" alt="User avatar" />
+                        <span v-else class="avatar-fallback-initial">{{ (log.createdBy?.givenName?.[0] || '?').toUpperCase() }}</span>
+                      </q-avatar>
+                      <div class="log-content">
+                        <div class="log-head-row">
+                          <div class="log-author-row">
+                            <span class="log-author">{{ log.createdBy?.givenName || 'Пользователь' }}</span>
+                            <span class="log-type-badge" :class="{ comment: isComment(log), event: !isComment(log) }">
+                              {{ isComment(log) ? 'Комм.' : 'Соб.' }}
+                            </span>
+                          </div>
+                          <div v-if="canModifyComment(log)" class="log-actions">
+                            <q-btn
+                              flat
+                              dense
+                              round
+                              size="xs"
+                              icon="edit"
+                              class="log-action-btn"
+                              @click="startEditComment(log)"
+                            />
+                            <q-btn
+                              flat
+                              dense
+                              round
+                              size="xs"
+                              icon="delete"
+                              class="log-action-btn delete"
+                              :loading="deletingCommentId === log.id"
+                              @click="deleteComment(log)"
+                            />
+                          </div>
+                        </div>
+                        <template v-if="isEditingComment(log)">
+                          <q-input
+                            v-model="editingCommentText"
+                            autogrow
+                            dense
+                            outlined
+                            class="comment-edit-input"
+                            maxlength="1000"
+                          />
+                          <div class="comment-edit-actions">
+                            <q-btn
+                              unelevated
+                              no-caps
+                              dense
+                              label="Ок"
+                              class="comment-save-btn"
+                              @click="saveEditedComment(log)"
+                            />
+                            <q-btn
+                              flat
+                              no-caps
+                              dense
+                              label="Отмена"
+                              class="comment-cancel-btn"
+                              @click="cancelEditComment"
+                            />
+                          </div>
+                        </template>
+                        <div v-else class="log-description">{{ log.description }}</div>
+                        <div class="log-date">{{ formatLogDate(log.createdAt) }}</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-
-              <q-btn
-                v-if="cardLogs.length > 3 && !showAllLogs"
-                flat
-                dense
-                no-caps
-                class="show-more-btn"
-                @click="showAllLogs = true"
-              >
-                Показать подробности ({{ cardLogs.length - 3 }})
-              </q-btn>
-            </div>
-
+              </q-expansion-item>
+            </template>
           </div>
         </div>
       </div>
@@ -454,6 +584,8 @@ const userStore = useUserStore()
 const boardStore = useBoardStore()
 const canManageCardDetails = computed(() => userStore.isAdmin || userStore.isSMM)
 const currentUserId = computed(() => userStore.getUser?.id || null)
+
+const showLogsMobile = ref(false)
 
 const statusOptions = computed(() => {
   if (userStore.isAdmin || userStore.isSMM) return CARD_STATUS_OPTIONS
@@ -1182,6 +1314,10 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 /* Sections */
 .card-section {
   margin-bottom: 1.25rem;
+
+  @media (max-width: 599px) {
+    margin-bottom: 0.85rem;
+  }
 }
 
 .section-header {
@@ -1193,12 +1329,20 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
 .section-icon {
   color: rgba(255, 255, 255, 0.5);
+
+  @media (max-width: 599px) {
+    font-size: 18px !important;
+  }
 }
 
 .section-title {
   font-size: 0.875rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.7);
+
+  @media (max-width: 599px) {
+    font-size: 0.8125rem;
+  }
 }
 
 /* Description editor */
@@ -1207,6 +1351,18 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   border-radius: 8px;
   overflow: visible;
   background: rgba(255, 255, 255, 0.04);
+}
+
+.description-simple-input {
+  :deep(.q-field__control) {
+    padding: 0.75rem;
+    min-height: 100px;
+  }
+  :deep(.q-field__native) {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
 }
 
 .desc-editor-toolbar-row {
@@ -1337,6 +1493,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   &:hover {
     border-color: rgba(255, 255, 255, 0.15);
   }
+
+  @media (max-width: 599px) {
+    padding: 0.625rem;
+    min-height: 40px;
+  }
 }
 
 .description-preview-content {
@@ -1368,11 +1529,19 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   :deep(h4) { font-size: 0.95rem; font-weight: 600; margin: 0.3rem 0; }
   :deep(h5) { font-size: 0.875rem; font-weight: 600; margin: 0.25rem 0; }
   :deep(h6) { font-size: 0.8125rem; font-weight: 600; margin: 0.2rem 0; }
+
+  @media (max-width: 599px) {
+    font-size: 0.8125rem;
+  }
 }
 
 .description-placeholder {
   color: rgba(255, 255, 255, 0.3);
   font-size: 0.875rem;
+
+  @media (max-width: 599px) {
+    font-size: 0.8125rem;
+  }
 }
 
 
@@ -1386,6 +1555,7 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   display: flex;
   flex-direction: column;
   background: rgba(255, 255, 255, 0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   @media (max-width: 1199px), (max-height: 760px) {
     width: 360px;
@@ -1401,7 +1571,46 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     min-height: 0;
     border-left: none;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
-    max-height: 46vh;
+    background: transparent;
+  }
+
+  &.is-expanded {
+    @media (max-width: 767px) {
+      max-height: 60vh;
+    }
+  }
+}
+
+.mobile-logs-header {
+  min-height: 48px;
+  padding: 0.5rem 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8125rem;
+  font-weight: 600;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  :deep(.q-item__section--avatar) {
+    min-width: 32px;
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.mobile-logs-expand-icon {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.sidebar-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+
+  &.mobile {
+    background: rgba(255, 255, 255, 0.02);
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
   }
 }
 
@@ -1426,6 +1635,10 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 .comment-compose {
   padding: 0 1rem 0.85rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+  @media (max-width: 599px) {
+    padding: 0.75rem 0.75rem 0.6rem;
+  }
 }
 
 .comment-input {
@@ -1446,6 +1659,10 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   display: flex;
   align-items: center;
   justify-content: space-between;
+
+  @media (max-width: 599px) {
+    justify-content: flex-end;
+  }
 }
 
 .comment-compose-hint {
@@ -1463,6 +1680,12 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
   &:hover {
     background: rgba(22, 163, 74, 0.92);
+  }
+
+  @media (max-width: 599px) {
+    font-size: 0.7rem;
+    padding: 0 0.8rem;
+    min-height: 26px;
   }
 }
 
@@ -1483,12 +1706,21 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     font-size: 0.8125rem;
     color: rgba(255, 255, 255, 0.3);
   }
+
+  @media (max-width: 599px) {
+    padding: 1rem;
+    span { font-size: 0.75rem; }
+  }
 }
 
 .sidebar-logs {
   flex: 1;
   overflow-y: auto;
   padding: 0.1rem 1rem 0.75rem;
+
+  @media (max-width: 599px) {
+    padding: 0.1rem 0.75rem 0.75rem;
+  }
 }
 
 .log-entry {
@@ -1508,6 +1740,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   &.is-log .log-content {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  @media (max-width: 599px) {
+    gap: 0.5rem;
+    padding: 0.6rem 0;
   }
 }
 
@@ -1548,6 +1785,10 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   font-size: 0.75rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.82);
+
+  @media (max-width: 599px) {
+    font-size: 0.7rem;
+  }
 }
 
 .log-type-badge {
@@ -1567,6 +1808,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   &.event {
     color: rgba(96, 165, 250, 0.95);
     background: rgba(59, 130, 246, 0.16);
+  }
+
+  @media (max-width: 599px) {
+    padding: 0.08rem 0.35rem;
+    font-size: 0.55rem;
   }
 }
 
@@ -1595,12 +1841,22 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   word-break: break-word;
   white-space: pre-wrap;
   margin-top: 0.35rem;
+
+  @media (max-width: 599px) {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+  }
 }
 
 .log-date {
   font-size: 0.6875rem;
   color: rgba(255, 255, 255, 0.45);
   margin-top: 0.35rem;
+
+  @media (max-width: 599px) {
+    font-size: 0.625rem;
+    margin-top: 0.25rem;
+  }
 }
 
 .comment-edit-input {

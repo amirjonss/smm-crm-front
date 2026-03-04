@@ -84,6 +84,7 @@
           <template #item="{ element: list }">
             <board-column
               :list="list"
+              :is-zoomed="isZoomed"
               :patterns="boardStore.getCardPatterns"
               :patterns-loading="isPatternsLoading"
               :pattern-submitting="isPatternSubmitting"
@@ -562,7 +563,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   position: relative;
   background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-  min-height: 100vh;
+  height: 100dvh;
 }
 
 .board-top-bar {
@@ -652,35 +653,40 @@ onBeforeUnmount(() => {
 .board-columns-container {
   flex: 1;
   display: flex;
+  height: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 1rem 1.5rem 1.5rem;
-  gap: 1rem;
+  padding: 0;
   -webkit-overflow-scrolling: touch;
 
   @media (max-width: 599px) {
-    padding: 0.75rem;
-    gap: 0.75rem;
+    gap: 0;
   }
 }
 
 .columns-row {
   display: flex;
   gap: 1rem;
-  align-items: flex-start;
+  align-items: stretch;
+  height: 100%;
+  padding: 1rem 0.75rem 1.5rem 1.5rem;
 
   @media (max-width: 599px) {
     gap: 0.75rem;
+    padding: 0.75rem 0.75rem 8rem 0.75rem;
   }
 }
 
 .board-content-row {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 1rem;
+  height: 100%;
+  padding: 1rem 1.5rem 1.5rem 1.5rem;
 
   @media (max-width: 599px) {
     gap: 0.75rem;
+    padding: 0.75rem 0.75rem 8rem 0.75rem;
   }
 }
 
@@ -770,12 +776,14 @@ body:has(.board-detail-page) {
     .board-column {
       width: calc(100vw - 1.5rem) !important;
       min-width: calc(100vw - 1.5rem) !important;
+      height: 100% !important;
       scroll-snap-align: start;
     }
 
     .add-list-wrapper {
       width: calc(100vw - 1.5rem) !important;
       min-width: calc(100vw - 1.5rem) !important;
+      height: 100% !important;
       scroll-snap-align: start;
     }
   }
@@ -793,6 +801,7 @@ body:has(.board-detail-page) {
       transform: scale(0.78);
       transform-origin: top left;
       width: max-content;
+      height: calc(100% / 0.78) !important;
     }
   }
 
