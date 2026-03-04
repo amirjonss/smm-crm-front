@@ -1,12 +1,5 @@
 <template>
   <q-page class="index-page">
-    <page-loader
-      v-if="isInitialLoading"
-      title="Загружаем проекты"
-      subtitle="Считаем планы на день, неделю и месяц"
-      :fixed="false"
-    />
-
     <div class="page-container">
       <!-- Page Header -->
       <div class="page-header">
@@ -14,6 +7,27 @@
         <p class="page-subtitle">Управление проектами и контент-планами</p>
       </div>
 
+      <div v-if="isInitialLoading" class="index-skeleton-loading">
+        <!-- Stats Skeletons -->
+        <div class="stats-grid q-mb-xl">
+          <div v-for="i in 4" :key="'stat-'+i" class="stat-card">
+            <q-skeleton type="QAvatar" size="48px" class="bg-white-10" dark animation="pulse" />
+            <div class="stat-content q-ml-md" style="flex:1">
+              <q-skeleton type="text" width="40%" class="bg-white-10 q-mb-xs" dark animation="pulse" />
+              <q-skeleton type="text" width="60%" class="bg-white-10" dark animation="pulse" />
+            </div>
+          </div>
+        </div>
+        <!-- Search and List Skeletons -->
+        <div class="controls-row q-mb-md">
+          <q-skeleton type="rect" width="100%" height="40px" class="bg-white-10" style="border-radius:8px" dark animation="pulse" />
+        </div>
+        <div v-for="i in 3" :key="'proj-'+i" class="q-mb-md">
+          <q-skeleton type="rect" width="100%" height="60px" class="bg-white-10" style="border-radius:12px" dark animation="pulse" />
+        </div>
+      </div>
+
+      <template v-else>
       <!-- Stats Cards -->
       <div class="stats-grid q-mb-xl">
         <div class="stat-card">
@@ -836,6 +850,7 @@
           </q-card-section>
         </q-card>
       </q-dialog>
+      </template>
     </div>
   </q-page>
 </template>
@@ -847,7 +862,6 @@ import { useQuasar } from 'quasar'
 import { useContentPlanStore } from 'stores/content-plan.js'
 import { api } from 'boot/axios.js'
 import PdfPrinterComponent from 'components/PdfPrinterComponent.vue'
-import PageLoader from 'components/shared/PageLoader.vue'
 import draggable from 'vuedraggable'
 import { getProjectName } from '@/utils/projectHelpers'
 import { getTodayISO, getWeekRange, getMonthRange } from '@/utils/dateHelpers'

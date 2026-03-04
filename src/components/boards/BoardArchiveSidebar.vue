@@ -25,8 +25,12 @@
         </div>
 
         <div ref="scrollAreaRef" class="sidebar-content" @scroll="onScroll">
-          <div v-if="loading && items.length === 0" class="sidebar-loading">
-            <q-spinner-dots size="32px" color="white" />
+          <div v-if="loading && items.length === 0" class="sidebar-loading-skeletons q-pa-md">
+            <div v-for="i in 5" :key="i" class="q-mb-md">
+              <q-skeleton type="text" width="80%" class="bg-white-10" dark animation="pulse" />
+              <q-skeleton type="text" width="50%" class="bg-white-10 q-mb-sm" dark animation="pulse" />
+              <q-skeleton type="rect" width="100%" height="32px" class="bg-white-10" style="border-radius: 8px" dark animation="pulse" />
+            </div>
           </div>
 
           <div v-else-if="items.length === 0" class="sidebar-empty">

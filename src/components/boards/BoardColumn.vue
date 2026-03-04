@@ -105,9 +105,6 @@
             @pattern="$emit('syncPattern', element)"
           />
         </template>
-        <template #footer>
-          <div class="cards-drop-tail" />
-        </template>
       </draggable>
     </div>
 
@@ -121,9 +118,11 @@
         class="pattern-btn"
       >
         <q-tooltip>Карточки по шаблону</q-tooltip>
+
         <q-menu
           v-model="showPatternsMenu"
           class="patterns-popover-menu"
+          :class="{ 'is-zoomed-out': !isZoomed && $q.screen.lt.sm }"
           anchor="top right"
           self="bottom right"
           :offset="[0, 8]"
@@ -155,6 +154,7 @@ import CardPatternsPopover from './CardPatternsPopover.vue'
 
 const props = defineProps({
   list: { type: Object, required: true },
+  isZoomed: { type: Boolean, default: true },
   patterns: { type: Array, default: () => [] },
   patternsLoading: { type: Boolean, default: false },
   patternSubmitting: { type: Boolean, default: false },
@@ -250,6 +250,7 @@ function onCreatePattern(name) {
 .board-column {
   width: 300px;
   min-width: 300px;
+  height: 100%;
   max-height: calc(100vh - 180px);
   display: flex;
   flex-direction: column;
@@ -263,8 +264,7 @@ function onCreatePattern(name) {
   @media (max-width: 599px) {
     width: 280px;
     min-width: 280px;
-    height: calc(100dvh - 150px);
-    max-height: calc(100dvh - 150px);
+    max-height: none;
   }
 }
 
@@ -485,15 +485,10 @@ function onCreatePattern(name) {
   gap: 0.5rem;
   min-height: 40px;
   min-height: 100%;
-  padding-bottom: 0.25rem;
+  padding-bottom: 0.125rem;
 }
 
 .cards-list > * {
-  flex-shrink: 0;
-}
-
-.cards-drop-tail {
-  min-height: 56px;
   flex-shrink: 0;
 }
 
@@ -574,6 +569,16 @@ function onCreatePattern(name) {
 .patterns-popover-menu {
   background: transparent !important;
   box-shadow: none !important;
+  overflow: visible !important;
+
+  &.is-zoomed-out {
+    transform: scale(0.78) !important;
+    transform-origin: bottom right !important;
+    /* Force layout box to match visual scaled size (260px * 0.78 approx 203px) to prevent overflow/scrollbars */
+    width: 203px !important;
+    min-width: 203px !important;
+    max-height: 312px !important;
+  }
 }
 
 .card-drag-ghost {

@@ -1,12 +1,5 @@
 <template>
   <q-page class="dashboard-page">
-    <page-loader
-      v-if="isLoading && !hasLoadedOnce"
-      title="Загружаем проекты"
-      subtitle="Готовим список, исполнителей и аналитику"
-      :fixed="false"
-    />
-
     <div class="page-container">
       <!-- Header -->
       <div class="page-header">
@@ -23,6 +16,21 @@
         />
       </div>
 
+      <div v-if="isLoading && !hasLoadedOnce" class="skeleton-loading-state">
+        <div class="stats-row q-mb-xl">
+          <div v-for="i in 3" :key="i" class="stat-card">
+             <q-skeleton type="text" width="40%" class="bg-white-10 q-mb-xs" dark animation="pulse" />
+             <q-skeleton type="text" width="60%" class="bg-white-10" dark animation="pulse" />
+          </div>
+        </div>
+        <div class="table-card q-pa-md">
+           <q-skeleton type="rect" width="100%" height="40px" class="bg-white-10 q-mb-md" dark animation="pulse" />
+           <q-skeleton type="rect" width="100%" height="40px" class="bg-white-10 q-mb-md" dark animation="pulse" />
+           <q-skeleton type="rect" width="100%" height="40px" class="bg-white-10" dark animation="pulse" />
+        </div>
+      </div>
+
+      <template v-else>
       <!-- Stats Cards -->
       <div class="stats-row">
         <div class="stat-card">
@@ -51,8 +59,11 @@
 
       <!-- Table Card -->
       <div class="table-card">
-        <div v-if="isLoading" class="loading-state">
-          <q-spinner-dots color="primary" size="32px" />
+        <div v-if="isLoading" class="q-pa-md">
+          <div v-for="i in 5" :key="i" class="q-mb-md">
+            <q-skeleton type="text" width="30%" class="q-mb-sm bg-white-10" dark animation="pulse" />
+            <q-skeleton type="rect" width="100%" height="40px" class="bg-white-10" style="border-radius: 8px" dark animation="pulse" />
+          </div>
         </div>
 
         <div v-else-if="executorsWithProjects.length === 0" class="empty-state">
@@ -618,6 +629,7 @@
           </table>
         </template>
       </div>
+      </template>
     </div>
   </q-page>
 </template>
@@ -626,7 +638,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { api } from 'boot/axios.js'
 import { useQuasar } from 'quasar'
-import PageLoader from 'components/shared/PageLoader.vue'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import bgSvgRaw from 'assets/asset7.svg?raw'

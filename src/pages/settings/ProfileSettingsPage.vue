@@ -1,13 +1,17 @@
 <template>
   <q-page class="profile-page">
-    <page-loader
-      v-if="isInitialLoading"
-      title="Загружаем профиль"
-      subtitle="Подтягиваем данные аккаунта и аватар"
-      :fixed="false"
-    />
-
     <div class="profile-shell">
+      <template v-if="isInitialLoading">
+        <section class="hero q-mb-xl">
+           <q-skeleton type="text" width="60%" class="bg-white-10 text-h4" dark animation="pulse" />
+        </section>
+        <div class="content-grid">
+           <q-skeleton type="rect" width="100%" height="400px" class="bg-white-10" style="border-radius:12px" dark animation="pulse" />
+           <q-skeleton type="rect" width="100%" height="400px" class="bg-white-10" style="border-radius:12px" dark animation="pulse" />
+        </div>
+      </template>
+
+      <template v-else>
       <section class="hero">
         <div>
           <div class="hero-kicker">Account</div>
@@ -162,6 +166,7 @@
           </q-card-section>
         </q-card>
       </div>
+      </template>
     </div>
   </q-page>
 </template>
@@ -170,7 +175,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useUserStore } from 'stores/user.js'
-import PageLoader from 'components/shared/PageLoader.vue'
 
 const q = useQuasar()
 const userStore = useUserStore()
