@@ -58,6 +58,82 @@
 
         <!-- Main content area -->
         <div class="card-dialog-body">
+          <template v-if="initializing">
+            <div class="card-main">
+              <!-- Title skeleton -->
+              <div class="card-title-area">
+                <q-skeleton type="QAvatar" size="28px" class="bg-white-10 title-icon" dark animation="pulse" />
+                <q-skeleton type="text" width="60%" height="44px" class="bg-white-10 title-input" dark animation="pulse" />
+              </div>
+
+              <!-- Actions row skeleton -->
+              <div class="action-chips">
+                <q-skeleton type="QBadge" width="120px" height="32px" class="bg-white-10" style="border-radius: 8px" dark animation="pulse" />
+                <q-skeleton type="QBadge" width="100px" height="32px" class="bg-white-10" style="border-radius: 8px" dark animation="pulse" />
+                <q-skeleton type="QBadge" width="130px" height="32px" class="bg-white-10" style="border-radius: 8px" dark animation="pulse" />
+              </div>
+
+              <!-- Meta info skeleton -->
+              <div class="card-meta-row">
+                <div class="meta-group">
+                  <div class="meta-label"><q-skeleton type="text" width="70px" class="bg-white-10" dark animation="pulse" /></div>
+                  <div class="meta-avatars" style="display:flex">
+                    <q-skeleton type="QAvatar" size="32px" class="bg-white-10 meta-avatar" dark animation="pulse" />
+                    <q-skeleton type="QAvatar" size="32px" class="bg-white-10 meta-avatar" dark animation="pulse" style="margin-left: -8px;" />
+                  </div>
+                </div>
+                <div class="meta-group">
+                  <div class="meta-label"><q-skeleton type="text" width="40px" class="bg-white-10" dark animation="pulse" /></div>
+                  <q-skeleton type="QBadge" width="100px" height="32px" class="bg-white-10" style="border-radius: 8px" dark animation="pulse" />
+                </div>
+              </div>
+
+              <!-- Description section skeleton -->
+              <div class="card-section">
+                <div class="section-header">
+                  <q-skeleton type="QAvatar" size="20px" class="bg-white-10 section-icon" dark animation="pulse" />
+                  <q-skeleton type="text" width="80px" height="24px" class="bg-white-10" dark animation="pulse" />
+                </div>
+                <div class="description-editor-wrap q-pa-md" style="min-height:160px;">
+                  <q-skeleton type="text" width="90%" class="bg-white-10 q-mb-sm" dark animation="pulse" />
+                  <q-skeleton type="text" width="100%" class="bg-white-10 q-mb-sm" dark animation="pulse" />
+                  <q-skeleton type="text" width="75%" class="bg-white-10 q-mb-sm" dark animation="pulse" />
+                  <q-skeleton type="text" width="40%" class="bg-white-10" dark animation="pulse" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Right sidebar: logs skeleton -->
+            <div class="card-sidebar" :class="{ 'is-expanded': showLogsMobile }">
+              <template v-if="$q.screen.gt.xs">
+                <div class="sidebar-header">
+                  <q-skeleton type="QAvatar" size="20px" class="bg-white-10 sidebar-icon" dark animation="pulse" />
+                  <q-skeleton type="text" width="180px" height="24px" class="bg-white-10" dark animation="pulse" />
+                </div>
+                <div class="sidebar-content-wrapper">
+                  <div class="comment-compose">
+                    <q-skeleton type="rect" height="60px" class="bg-white-10" style="border-radius: 10px" dark animation="pulse" />
+                  </div>
+                  <div class="sidebar-logs">
+                    <div v-for="i in 3" :key="i" class="log-entry">
+                      <q-skeleton type="QAvatar" size="28px" class="bg-white-10 log-avatar" dark animation="pulse" />
+                      <div class="log-content">
+                        <div class="log-head-row">
+                          <q-skeleton type="text" width="120px" class="bg-white-10" dark animation="pulse" />
+                          <q-skeleton type="QBadge" width="60px" height="18px" class="bg-white-10" style="border-radius: 9999px" dark animation="pulse" />
+                        </div>
+                        <q-skeleton type="text" width="100%" class="bg-white-10 q-mt-xs" dark animation="pulse" />
+                        <q-skeleton type="text" width="80%" class="bg-white-10 q-mt-xs" dark animation="pulse" />
+                        <q-skeleton type="text" width="60px" class="bg-white-10 q-mt-sm" dark animation="pulse" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+
+          <template v-else>
           <!-- Left side: main content -->
           <div class="card-main">
             <!-- Title area -->
@@ -557,6 +633,7 @@
               </q-expansion-item>
             </template>
           </div>
+          </template>
         </div>
       </div>
     </div>

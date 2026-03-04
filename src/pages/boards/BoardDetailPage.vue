@@ -1,13 +1,5 @@
 <template>
   <q-page class="board-detail-page">
-    <page-loader
-      v-if="isPageLoading || boardStore.loading"
-      title="Загружаем доску"
-      subtitle="Собираем списки, карточки и порядок"
-      :fixed="false"
-      dark
-    />
-
     <div class="board-top-bar">
       <q-btn flat round dense icon="arrow_back" class="back-btn" @click="router.push('/boards')">
         <q-tooltip>Назад к доскам</q-tooltip>
@@ -51,8 +43,28 @@
       </q-btn>
     </div>
 
-    <div v-if="!boardStore.currentBoard" class="loading-state">
-      <q-spinner-dots size="40px" color="white" />
+    <div v-if="isPageLoading || boardStore.loading || !boardStore.currentBoard" class="board-columns-container skeleton-container">
+      <div class="board-content-row">
+        <div v-for="col in 4" :key="'skel-col-' + col" class="skeleton-column">
+          <div class="skeleton-column-header">
+            <q-skeleton type="text" width="50%" class="bg-white-10" dark animation="pulse" />
+            <q-skeleton type="QBadge" width="20px" height="20px" class="bg-white-10" dark animation="pulse" style="border-radius: 9999px" />
+          </div>
+          <div class="skeleton-cards">
+            <div v-for="card in 3" :key="'skel-card-' + card" class="skeleton-card">
+              <q-skeleton type="text" width="85%" class="text-subtitle1 q-mb-sm bg-white-10" dark animation="pulse" />
+              <q-skeleton type="text" width="60%" class="q-mb-md bg-white-10" dark animation="pulse" />
+              <div class="skeleton-card-footer">
+                <q-skeleton type="QBadge" width="50px" height="20px" class="bg-white-10" dark animation="pulse" style="border-radius: 9999px" />
+                <div class="skeleton-avatars">
+                  <q-skeleton type="QAvatar" size="22px" class="bg-white-10 avatar-skel" dark animation="pulse" />
+                  <q-skeleton type="QAvatar" size="22px" class="bg-white-10 avatar-skel" dark animation="pulse" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div
@@ -173,7 +185,6 @@ import CardDialog from 'components/boards/CardDialog.vue'
 import CardPatternDialog from 'components/boards/CardPatternDialog.vue'
 import BoardArchiveSidebar from 'components/boards/BoardArchiveSidebar.vue'
 import BoardPatternsSidebar from 'components/boards/BoardPatternsSidebar.vue'
-import PageLoader from 'components/shared/PageLoader.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -556,6 +567,66 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
+/* Skeleton Board loading states */
+.skeleton-container {
+  display: flex;
+  overflow: hidden;
+  height: 100%;
+}
+.skeleton-column {
+  width: 300px;
+  min-width: 300px;
+  height: 100%;
+  max-height: calc(100vh - 180px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 0.75rem;
+
+  @media (max-width: 599px) {
+    width: 280px;
+    min-width: 280px;
+  }
+}
+.skeleton-column-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.25rem;
+}
+.skeleton-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.skeleton-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+.skeleton-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+}
+.skeleton-avatars {
+  display: flex;
+  align-items: center;
+}
+.avatar-skel {
+  border: 1.5px solid rgba(15, 12, 41, 0.8);
+}
+.bg-white-10 {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
 .board-detail-page {
   padding: 0;
   display: flex;

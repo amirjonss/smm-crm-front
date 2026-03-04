@@ -1,13 +1,15 @@
 <template>
   <q-page class="calendar-page">
-    <page-loader
-      v-if="isPageLoading || isEventsLoading"
-      title="Загружаем календарь"
-      subtitle="Подтягиваем контент-планы и события"
-      :fixed="false"
-    />
-
     <div class="page-container">
+      <div v-if="isPageLoading || isEventsLoading" class="calendar-skeleton">
+        <div class="calendar-header-skeleton q-mb-md flex justify-between items-center">
+           <q-skeleton type="text" width="200px" height="40px" class="bg-white-10" dark animation="pulse" />
+           <q-skeleton type="rect" width="150px" height="40px" class="bg-white-10" style="border-radius: 8px" dark animation="pulse" />
+        </div>
+        <q-skeleton type="rect" width="100%" height="600px" class="bg-white-10" style="border-radius: 16px" dark animation="pulse" />
+      </div>
+
+      <template v-else>
       <!-- Calendar Header -->
       <div class="calendar-header">
         <div class="header-left">
@@ -146,8 +148,6 @@
           </div>
         </transition>
       </div>
-    </div>
-
     <!-- Mobile/Busy Day Events List Dialog (Centered) -->
     <q-dialog v-model="showDayList">
       <q-card class="dialog-card" style="width: 100%; min-width: 320px; max-width: 450px">
@@ -520,6 +520,8 @@
         </div>
       </q-card>
     </q-dialog>
+    </template>
+    </div>
   </q-page>
 </template>
 
@@ -529,7 +531,6 @@ import { date, useQuasar } from 'quasar'
 import { useProjectStore } from 'stores/project.js'
 import { useUserStore } from 'stores/user.js'
 import { useContentPlanStore } from 'stores/content-plan.js'
-import PageLoader from 'components/shared/PageLoader.vue'
 import {
   PLATFORM_OPTIONS,
   PLATFORM,

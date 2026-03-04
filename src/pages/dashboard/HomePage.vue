@@ -1,13 +1,25 @@
 <template>
   <q-page class="dashboard-page">
-    <page-loader
-      v-if="isInitialLoading"
-      title="Загружаем дашборд"
-      subtitle="Собираем статистику и список персонала"
-      :fixed="false"
-    />
-
     <div class="page-container">
+
+      <div v-if="isInitialLoading" class="home-skeleton-loading">
+        <!-- Stats Skeletons -->
+        <div class="stats-grid q-mb-xl">
+          <div v-for="i in 4" :key="'stat-'+i" class="stat-card">
+            <q-skeleton type="QAvatar" size="48px" class="bg-white-10" dark animation="pulse" />
+            <div class="stat-content q-ml-md" style="flex:1">
+              <q-skeleton type="text" width="40%" class="bg-white-10 q-mb-xs" dark animation="pulse" />
+              <q-skeleton type="text" width="60%" class="bg-white-10" dark animation="pulse" />
+            </div>
+          </div>
+        </div>
+        <!-- Table Skeleton -->
+        <div class="q-mb-md">
+          <q-skeleton type="rect" width="100%" height="300px" class="bg-white-10" style="border-radius:12px" dark animation="pulse" />
+        </div>
+      </div>
+
+      <template v-else>
       <!-- Stats Cards -->
       <div class="stats-grid">
         <div class="stat-card">
@@ -321,6 +333,7 @@
           <projects-and-content-list-component :parent-selected-user-id="selectedUserId" />
         </div>
       </div>
+      </template>
 
       <!-- User Form Dialog -->
       <q-dialog v-model="showUserDialog" persistent>
@@ -416,7 +429,6 @@ import { useUserStore } from 'stores/user.js'
 import { useProjectStore } from 'stores/project.js'
 import { useContentPlanStore } from 'stores/content-plan.js'
 import ProjectsAndContentListComponent from 'components/dashboard/ProjectsAndContentListComponent.vue'
-import PageLoader from 'components/shared/PageLoader.vue'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios.js'
 import { getProjectName } from '@/utils/projectHelpers'

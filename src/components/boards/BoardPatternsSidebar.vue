@@ -8,8 +8,11 @@
         </div>
 
         <div class="sidebar-content">
-          <div v-if="loading" class="sidebar-loading">
-            <q-spinner-dots size="32px" color="white" />
+          <div v-if="loading" class="sidebar-loading-skeletons q-pa-md">
+            <div v-for="i in 5" :key="i" class="q-mb-md">
+              <q-skeleton type="text" width="70%" class="bg-white-10 q-mb-xs" dark animation="pulse" />
+              <q-skeleton type="rect" width="100%" height="28px" class="bg-white-10" style="border-radius: 6px" dark animation="pulse" />
+            </div>
           </div>
 
           <div v-else-if="patterns.length === 0" class="sidebar-empty">Шаблоны не найдены</div>

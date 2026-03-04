@@ -7,8 +7,11 @@
 
     <div class="popover-body">
       <!-- Loading state -->
-      <div v-if="loading" class="state-container">
-        <q-spinner-dots size="24px" color="grey-5" />
+      <div v-if="loading" class="state-container-skeletons q-pa-sm">
+        <div v-for="i in 3" :key="i" class="q-mb-md">
+           <q-skeleton type="text" width="80%" class="bg-white-10 q-mb-xs" dark animation="pulse" />
+           <q-skeleton type="rect" width="100%" height="24px" class="bg-white-10" style="border-radius: 4px" dark animation="pulse" />
+        </div>
       </div>
 
       <!-- Empty state -->

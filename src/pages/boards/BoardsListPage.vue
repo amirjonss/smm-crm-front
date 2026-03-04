@@ -1,13 +1,5 @@
 <template>
   <q-page class="boards-list-page">
-    <page-loader
-      v-if="isPageLoading"
-      title="Загружаем доски"
-      subtitle="Собираем ваши Kanban-проекты"
-      :fixed="false"
-      dark
-    />
-
     <div class="page-container">
       <div class="page-header">
         <div>
@@ -24,7 +16,22 @@
         />
       </div>
 
-      <div v-if="boardStore.getBoards.length === 0" class="empty-state">
+      <div v-if="isPageLoading" class="boards-grid">
+        <div v-for="i in 4" :key="'skel-board-' + i" class="skeleton-board-card">
+          <div class="skeleton-board-header">
+            <q-skeleton type="text" width="70%" class="text-h6 bg-white-10" dark animation="pulse" />
+          </div>
+          <div class="skeleton-board-stats">
+            <q-skeleton type="text" width="40%" class="bg-white-10" dark animation="pulse" />
+            <q-skeleton type="text" width="40%" class="bg-white-10" dark animation="pulse" />
+          </div>
+          <div class="skeleton-board-footer">
+            <q-skeleton type="text" width="50%" class="bg-white-10" dark animation="pulse" />
+          </div>
+        </div>
+      </div>
+
+      <div v-else-if="boardStore.getBoards.length === 0" class="empty-state">
         <q-icon name="dashboard" class="empty-state-icon" />
         <p class="empty-state-text">Досок пока нет</p>
         <q-btn
@@ -61,7 +68,6 @@ import { useBoardStore } from 'stores/board.js'
 import { useUserStore } from 'stores/user.js'
 import BoardCard from 'components/boards/BoardCard.vue'
 import BoardDialog from 'components/boards/BoardDialog.vue'
-import PageLoader from 'components/shared/PageLoader.vue'
 
 const router = useRouter()
 const q = useQuasar()
@@ -120,6 +126,33 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
+.skeleton-board-card {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+}
+.skeleton-board-header {
+  margin-bottom: 1rem;
+}
+.skeleton-board-stats {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.skeleton-board-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 0.75rem;
+  margin-top: auto;
+}
+.bg-white-10 {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
 .boards-list-page {
   padding: 0;
   background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
