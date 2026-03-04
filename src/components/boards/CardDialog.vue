@@ -321,65 +321,71 @@
                 <span class="section-title">Описание</span>
               </div>
 
-              <div v-if="isEditingDescription" class="description-editor-wrap" :class="{ 'mobile-editor': $q.screen.lt.sm }">
-                <div v-if="$q.screen.gt.xs" class="desc-editor-toolbar-row">
-                  <heading-dropdown :editor-ref="descEditorRef" />
-                  <div class="desc-toolbar-sep" />
-                  <q-editor
-                    ref="descEditorRef"
-                    v-model="form.description"
-                    :toolbar="activeToolbar"
-                    flat
-                    min-height="140px"
-                    content-class="desc-editor-content"
-                    class="description-editor"
-                    placeholder="Добавьте подробное описание карточки..."
-                    @paste="onEditorPaste"
-                  />
-                </div>
-                <div v-else class="desc-editor-toolbar-row-mobile">
-                  <q-editor
-                    ref="descEditorRef"
-                    v-model="form.description"
-                    :toolbar="activeToolbar"
-                    flat
-                    min-height="140px"
-                    content-class="desc-editor-content"
-                    class="description-editor"
-                    placeholder="Добавьте подробное описание карточки..."
-                    @paste="onEditorPaste"
-                  />
-                </div>
+              <div class="description-container" :class="{ 'mobile-editor': $q.screen.lt.sm }">
+                <template v-if="isEditingDescription">
+                  <div class="description-editor-wrap">
+                    <div v-if="$q.screen.gt.xs" class="desc-editor-toolbar-row">
+                      <heading-dropdown :editor-ref="descEditorRef" />
+                      <div class="desc-toolbar-sep" />
+                      <q-editor
+                        ref="descEditorRef"
+                        v-model="form.description"
+                        :toolbar="activeToolbar"
+                        flat
+                        min-height="140px"
+                        content-class="desc-editor-content"
+                        class="description-editor"
+                        placeholder="Добавьте подробное описание карточки..."
+                        @paste="onEditorPaste"
+                      />
+                    </div>
+                    <div v-else class="desc-editor-toolbar-row-mobile">
+                      <q-editor
+                        ref="descEditorRef"
+                        v-model="form.description"
+                        :toolbar="activeToolbar"
+                        flat
+                        min-height="140px"
+                        content-class="desc-editor-content"
+                        class="description-editor"
+                        placeholder="Добавьте подробное описание карточки..."
+                        @paste="onEditorPaste"
+                      />
+                    </div>
 
-                <div class="desc-editor-actions">
-                  <q-btn
-                    unelevated
-                    dense
-                    no-caps
-                    label="Сохранить"
-                    class="desc-save-btn"
-                    @click="saveDescription"
-                  />
-                  <q-btn
-                    flat
-                    dense
-                    no-caps
-                    label="Отмена"
-                    class="desc-cancel-btn"
-                    @click="cancelDescriptionEdit"
-                  />
-                </div>
-              </div>
+                    <div class="desc-editor-actions">
+                      <q-btn
+                        unelevated
+                        dense
+                        no-caps
+                        label="Сохранить"
+                        class="desc-save-btn"
+                        @click="saveDescription"
+                      />
+                      <q-btn
+                        flat
+                        dense
+                        no-caps
+                        label="Отмена"
+                        class="desc-cancel-btn"
+                        @click="cancelDescriptionEdit"
+                      />
+                    </div>
+                  </div>
+                </template>
 
-              <div v-else class="description-preview" @click="startDescriptionEdit">
-                <div
-                  v-if="form.description"
-                  class="description-preview-content"
-                  v-html="form.description"
-                />
-                <span v-else class="description-placeholder">
-                  Добавить более подробное описание...
-                </span>
+                <template v-else>
+                  <div class="description-preview" @click="startDescriptionEdit">
+                    <div
+                      v-if="form.description"
+                      class="description-preview-content"
+                      v-html="form.description"
+                    />
+                    <span v-else class="description-placeholder">
+                      Добавить более подробное описание...
+                    </span>
+                  </div>
+                </template>
               </div>
             </div>
 
@@ -1437,11 +1443,32 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 }
 
 /* Description editor */
+.description-container {
+  min-height: 220px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+
+  @media (max-width: 599px) {
+    min-height: 180px;
+  }
+}
+
 .description-editor-wrap {
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   overflow: visible;
   background: rgba(255, 255, 255, 0.04);
+}
+
+.description-container .description-editor-wrap {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .description-simple-input {
@@ -1459,6 +1486,8 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 .desc-editor-toolbar-row {
   display: flex;
   align-items: flex-start;
+  flex: 1;
+  min-height: 0;
 
   .heading-dropdown {
     padding: 0.25rem 0 0 0.25rem;
@@ -1474,6 +1503,9 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 .desc-editor-toolbar-row-mobile {
   display: flex;
   align-items: flex-start;
+  flex: 1;
+  min-height: 0;
+
   .description-editor {
     flex: 1;
     min-width: 0;
@@ -1489,6 +1521,7 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 }
 
 .description-editor {
+  height: 100%;
   background: transparent;
   color: rgba(255, 255, 255, 0.85);
 
@@ -1595,11 +1628,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
 /* Description preview (view mode) */
 .description-preview {
-  min-height: 60px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 8px;
+  min-height: 100%;
+  background: transparent;
+  border-radius: 0;
   padding: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 0;
   cursor: pointer;
   transition: border-color 0.2s ease;
 
@@ -1609,7 +1642,6 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
   @media (max-width: 599px) {
     padding: 0.625rem;
-    min-height: 40px;
   }
 }
 
