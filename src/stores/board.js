@@ -172,7 +172,9 @@ export const useBoardStore = defineStore('board', {
       list.cards = []
 
       if (this.currentBoard && this.currentBoard.id === boardId) {
-        this.currentBoard.lists.push(list)
+        if (!this.currentBoard.lists.some((l) => l.id === list.id)) {
+          this.currentBoard.lists.push(list)
+        }
       }
       return list
     },
@@ -201,7 +203,14 @@ export const useBoardStore = defineStore('board', {
             this.archivedListsTotal = Math.max(0, this.archivedListsTotal - 1)
           }
           updated.cards = await fetchListCards(listId, updated.name)
-          this.currentBoard.lists.push(updated)
+          const existingIdx = this.currentBoard.lists.findIndex((l) => l.id === updated.id)
+          if (existingIdx !== -1) {
+            // Mercure event already added it — just update cards
+            this.currentBoard.lists[existingIdx].cards = updated.cards
+            Object.assign(this.currentBoard.lists[existingIdx], updated)
+          } else {
+            this.currentBoard.lists.push(updated)
+          }
           this.currentBoard.lists.sort((a, b) => positionOrMax(a.position) - positionOrMax(b.position))
         } else {
           const list = this.currentBoard.lists.find((l) => l.id === listId)
@@ -243,7 +252,7 @@ export const useBoardStore = defineStore('board', {
 
       if (this.currentBoard) {
         const list = this.currentBoard.lists.find((l) => l.id === listId)
-        if (list) {
+        if (list && !list.cards.some((c) => c.id === card.id)) {
           list.cards.push(card)
         }
       }
@@ -294,7 +303,7 @@ export const useBoardStore = defineStore('board', {
               // Preserve executor from local state if API didn't return full depth
               const executor = card.executor
               Object.assign(card, updated)
-              if (!updated.executor || updated.executor.length === 0) {
+              if (!Array.isArray(updated.executor)) {
                 card.executor = executor
               }
               break
@@ -344,7 +353,9 @@ export const useBoardStore = defineStore('board', {
         description,
       })
       const created = response.data
-      this.cardLogs = [created, ...(this.cardLogs || [])]
+      if (!this.cardLogs.some((l) => l.id === created.id)) {
+        this.cardLogs = [created, ...(this.cardLogs || [])]
+      }
       return created
     },
 
@@ -364,6 +375,12 @@ export const useBoardStore = defineStore('board', {
     async deleteCardLog(cardLogId) {
       await api.delete('/card_logs/' + cardLogId)
       this.cardLogs = this.cardLogs.filter((log) => log.id !== cardLogId)
+    },
+
+    addLogToState(log) {
+      if (!this.cardLogs.some((l) => l.id === log.id)) {
+        this.cardLogs = [log, ...(this.cardLogs || [])]
+      }
     },
 
     // Executor management
@@ -574,6 +591,97 @@ export const useBoardStore = defineStore('board', {
       if (this.currentBoard) {
         const archived = this.currentBoard.lists.filter((list) => list.isArchived)
         this.currentBoard.lists = [...lists, ...archived]
+      }
+    },
+
+    // Real-time patch helpers (used by Mercure event handler)
+    patchCardInState(cardData) {
+      if (!this.currentBoard) return
+      const normalized = normalizeCard(cardData)
+      const targetListId = normalized.list?.id
+
+      for (const list of this.currentBoard.lists) {
+        const idx = list.cards.findIndex((c) => c.id === normalized.id)
+        if (idx !== -1) {
+          if (list.id === targetListId || !targetListId) {
+            const executor = list.cards[idx].executor
+            Object.assign(list.cards[idx], normalized)
+            if (!Array.isArray(normalized.executor)) list.cards[idx].executor = executor
+          } else {
+            const [card] = list.cards.splice(idx, 1)
+            Object.assign(card, normalized)
+            const targetList = this.currentBoard.lists.find((l) => l.id === targetListId)
+            if (targetList) {
+              targetList.cards.push(card)
+              targetList.cards.sort((a, b) => positionOrMax(a.position) - positionOrMax(b.position))
+            }
+          }
+          return
+        }
+      }
+
+      // Card not found in any list — add to target list (card.created event)
+      if (targetListId) {
+        const targetList = this.currentBoard.lists.find((l) => l.id === targetListId)
+        if (targetList) {
+          targetList.cards.push(normalized)
+          targetList.cards.sort((a, b) => positionOrMax(a.position) - positionOrMax(b.position))
+        }
+      }
+    },
+
+    handleCardMoved(data) {
+      if (!this.currentBoard) return
+      const { fromListId, toListId, ...cardData } = data
+      const normalized = normalizeCard(cardData)
+      const resolvedToListId = toListId ?? normalized.list?.id
+
+      if (fromListId) {
+        const fromList = this.currentBoard.lists.find((l) => l.id === fromListId)
+        if (fromList) {
+          const idx = fromList.cards.findIndex((c) => c.id === normalized.id)
+          if (idx !== -1) fromList.cards.splice(idx, 1)
+        }
+      }
+
+      if (resolvedToListId) {
+        const toList = this.currentBoard.lists.find((l) => l.id === resolvedToListId)
+        if (toList) {
+          const existing = toList.cards.find((c) => c.id === normalized.id)
+          if (existing) {
+            Object.assign(existing, normalized)
+          } else {
+            toList.cards.push(normalized)
+          }
+          toList.cards.sort((a, b) => positionOrMax(a.position) - positionOrMax(b.position))
+        }
+      }
+    },
+
+    removeCardFromState(cardId) {
+      if (!this.currentBoard) return
+      for (const list of this.currentBoard.lists) {
+        const idx = list.cards.findIndex((c) => c.id === cardId)
+        if (idx !== -1) {
+          list.cards.splice(idx, 1)
+          return
+        }
+      }
+    },
+
+    patchListInState(listData) {
+      if (!this.currentBoard) return
+      const normalized = normalizeList(listData)
+      const list = this.currentBoard.lists.find((l) => l.id === normalized.id)
+      if (list) {
+        const cards = list.cards
+        Object.assign(list, normalized)
+        list.cards = cards
+      } else {
+        // list.created: add new list
+        normalized.cards = []
+        this.currentBoard.lists.push(normalized)
+        this.currentBoard.lists.sort((a, b) => positionOrMax(a.position) - positionOrMax(b.position))
       }
     },
   },
