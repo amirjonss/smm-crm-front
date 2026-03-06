@@ -1096,6 +1096,41 @@ watch(
   { immediate: true },
 )
 
+// Sync form with real-time Mercure updates while dialog is open
+watch(
+  () =>
+    props.card && {
+      name: props.card.name,
+      status: props.card.status,
+      description: props.card.description,
+      deadline: props.card.deadline,
+      executor: props.card.executor,
+    },
+  (newCard, oldCard) => {
+    if (!props.modelValue || !newCard || initializing.value) return
+    if (!oldCard) return
+    form.value.name = newCard.name || ''
+    form.value.status = newCard.status || 'open'
+    if (!isEditingDescription.value) {
+      form.value.description = newCard.description || ''
+    }
+    if (newCard.deadline !== oldCard.deadline) {
+      form.value.deadline = newCard.deadline ? newCard.deadline.slice(0, 10) : ''
+      if (newCard.deadline) {
+        deadlineDate.value = newCard.deadline.slice(0, 10)
+        deadlineTime.value = newCard.deadline.slice(11, 16) || '12:00'
+        deadlineEnabled.value = true
+      } else {
+        deadlineEnabled.value = false
+      }
+    }
+    if (newCard.executor) {
+      cardExecutors.value = [...newCard.executor]
+    }
+  },
+  { deep: true },
+)
+
 function close() {
   emit('update:modelValue', false)
 }
@@ -1198,12 +1233,40 @@ function autoLinkify(html) {
   return temp.innerHTML;
 }
 
+function stripPasteStyles(html) {
+  const div = document.createElement('div')
+  div.innerHTML = html
+  div.querySelectorAll('*').forEach((el) => {
+    // Remove color, background, font-family, font-size inline styles
+    const style = el.getAttribute('style')
+    if (style) {
+      const cleaned = style
+        .split(';')
+        .filter((s) => !/^\s*(color|background|background-color|font-family|font-size|mso-|line-height)\s*:/i.test(s))
+        .join(';')
+      if (cleaned.trim()) el.setAttribute('style', cleaned)
+      else el.removeAttribute('style')
+    }
+    // Remove color/face attributes on legacy tags
+    el.removeAttribute('color')
+    el.removeAttribute('face')
+  })
+  return div.innerHTML
+}
+
 function onEditorPaste(evt) {
   const text = (evt.clipboardData || window.clipboardData).getData('text');
   if (/^https?:\/\/[^\s]+$/.test(text.trim())) {
     evt.preventDefault();
     const url = text.trim();
     document.execCommand('insertHTML', false, `<a href="${url}" target="_blank">${url}</a>`);
+    return;
+  }
+  // Strip color/font styles from pasted HTML
+  const html = evt.clipboardData?.getData('text/html')
+  if (html) {
+    evt.preventDefault()
+    document.execCommand('insertHTML', false, stripPasteStyles(html))
   }
 }
 
