@@ -495,6 +495,24 @@ export const useBoardStore = defineStore('board', {
       this.reorderCards(toListId, toList.cards)
     },
 
+    async archiveAllCardsInList(listId) {
+      await api.post('/board_lists/' + listId + '/archive-cards')
+      if (this.currentBoard) {
+        const list = this.currentBoard.lists.find((l) => l.id === listId)
+        if (list) {
+          const archived = list.cards.filter((c) => !c.isArchived).map((c) => ({ ...c, isArchived: true }))
+          list.cards = []
+          const alreadyIds = new Set(this.archivedCards.map((c) => c.id))
+          archived.forEach((c) => {
+            if (!alreadyIds.has(c.id)) {
+              this.archivedCards.unshift(c)
+              this.archivedCardsTotal++
+            }
+          })
+        }
+      }
+    },
+
     // Archive fetching
     async fetchArchivedCards(boardId, page = 1, reset = false) {
       if (reset) {
