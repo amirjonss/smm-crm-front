@@ -178,6 +178,7 @@ import { useQuasar } from 'quasar'
 import { useBoardStore } from 'stores/board.js'
 import { useUserStore } from 'stores/user.js'
 import { useBoardDragDrop } from '@/composables/useBoardDragDrop'
+import { useMercureBoard } from '@/composables/useMercureBoard'
 import draggable from 'vuedraggable'
 import BoardColumn from 'components/boards/BoardColumn.vue'
 import AddListButton from 'components/boards/AddListButton.vue'
@@ -192,6 +193,42 @@ const q = useQuasar()
 const boardStore = useBoardStore()
 const userStore = useUserStore()
 const { sortedLists, persistListOrder, handleCardChange } = useBoardDragDrop()
+
+useMercureBoard(route.params.id, (event) => {
+  switch (event.type) {
+    case 'card.created':
+    case 'card.updated':
+      boardStore.patchCardInState(event.data)
+      // If this card is open in the dialog, refresh its logs
+      if (showCardDialog.value && editingCard.value?.id === event.data.id) {
+        boardStore.fetchCardLogs(event.data.id)
+      }
+      break
+    case 'card.moved':
+      boardStore.handleCardMoved(event.data)
+      if (showCardDialog.value && editingCard.value?.id === event.data.id) {
+        boardStore.fetchCardLogs(event.data.id)
+      }
+      break
+    case 'card.archived':
+      if (event.data.isArchived) {
+        boardStore.removeCardFromState(event.data.cardId)
+        if (showCardDialog.value && editingCard.value?.id === event.data.cardId) {
+          showCardDialog.value = false
+        }
+      }
+      break
+    case 'list.updated':
+    case 'list.created':
+      boardStore.patchListInState(event.data)
+      break
+    case 'card.log_added':
+      if (showCardDialog.value && editingCard.value?.id === event.data.cardId) {
+        boardStore.addLogToState(event.data.log)
+      }
+      break
+  }
+})
 
 const showCardDialog = ref(false)
 const editingCard = ref(null)

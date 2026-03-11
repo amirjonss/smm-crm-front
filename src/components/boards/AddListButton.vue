@@ -69,7 +69,8 @@ function submit() {
   flex-shrink: 0;
   width: 280px;
   min-width: 280px;
-  height: 100%;
+  align-self: flex-start;
+  padding-top: 1rem;
 }
 
 .add-list-trigger {

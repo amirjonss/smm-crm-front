@@ -29,29 +29,42 @@ npm run format    # Prettier formatting
 
 ### Routing (`/src/router/routes.js`)
 
-- Route guards: `isAuthorised()` checks auth token, `isAdmin()` verifies admin role
-- Routes: `/` (main), `/calendar`, `/login`, `/dashboard` (admin-only)
+Route guards:
+- `isAuthorised()` — redirects to `/login` if no auth token
+- `isAdmin()` — redirects to `/` if not admin
+- `isNotAdmin()` — admin → `/dashboard`, SMM → `/` (IndexPage), designer/editor/operator → `/boards`
+
+Routes: `/` (SMM home), `/calendar`, `/login`, `/dashboard` (admin), `/boards`, `/boards/:id`, `/profile`
 
 ### State Management (`/src/stores/`)
 
 - `auth.js` - JWT tokens, refresh logic, localStorage persistence
-- `user.js` - Current user & users list CRUD
+- `user.js` - Current user & users list CRUD; role getters: `isAdmin`, `isSMM`, `canCreateBoard`, `canDeleteBoard`, `canManageList`
 - `project.js` - Projects CRUD
 - `content-plan.js` - Content plans with date/status filtering
+- `board.js` - Boards/cards state (TODO: replace mock data with API)
 - `theme.js` - Dark/light theme toggle
 
 ### API Layer (`/src/boot/axios.js`)
 
-- Base URL: `https://api.khsystem.uz/api` (via `.env`)
+- Base URL from `VITE_API_URL` in `.env`
 - Content-Type: `application/ld+json` (default), `application/merge-patch+json` (PATCH)
 - Auto token refresh on 401 responses
 
 ### Component Organization
 
 - `/src/layouts/` - Page wrappers (MainLayout, DashboardLayout)
-- `/src/pages/` - Route-mounted components
-- `/src/components/` - Reusable UI, with `/dashboard/` and `/dashboard/shared/` subdirs
+- `/src/pages/` - Route-mounted components, including `boards/` (BoardsListPage, BoardDetailPage)
+- `/src/components/` - Reusable UI, including `boards/` (BoardColumn, BoardCardItem, CardDialog)
 - `/src/composables/` - Vue 3 composition functions for reusable logic
+- `/src/constants/cardStatus.js` - `CARD_STATUS`, `CARD_STATUS_OPTIONS`, `CARD_STATUS_COLORS`, `LIST_COLORS`, `CARD_COLORS`
+
+### Boards Feature (Trello-style Kanban)
+
+- Dark gradient background (`linear-gradient(135deg, #0f0c29, #302b63, #24243e)`) on all board pages
+- Liquid glass styling for columns/cards/buttons: `rgba(255,255,255,0.06)` + `backdrop-filter: blur(16px)`
+- `CardDialog` — card editor with status badge, rich-text description (q-editor view/edit modes), list selector, read-only CardLog sidebar
+- CRUD permissions: Admin — full CRUD on boards and lists; SMM — full CRUD on lists; others — read-only on lists
 
 ### Styling (`/src/css/`)
 
