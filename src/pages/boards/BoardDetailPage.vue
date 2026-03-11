@@ -109,6 +109,7 @@
               @use-pattern="createCardFromPattern"
               @create-pattern="createPatternAndCard"
               @open-card="openCard($event)"
+              @archive-cards="archiveAllCardsInList(list)"
               @archive="archiveList(list)"
               @rename="renameList(list, $event)"
               @change-color="changeListColor(list, $event)"
@@ -401,6 +402,13 @@ function archiveCard(card) {
   if (!card?.id) return
   boardStore.patchCard(card.id, { isArchived: true }).then(() => {
     q.notify({ message: 'Карточка архивирована', type: 'positive', position: 'top', timeout: 1000 })
+  })
+}
+
+function archiveAllCardsInList(list) {
+  if (!list?.id) return
+  boardStore.archiveAllCardsInList(list.id).then(() => {
+    q.notify({ message: 'Все карточки архивированы', type: 'positive', position: 'top', timeout: 1200 })
   })
 }
 
