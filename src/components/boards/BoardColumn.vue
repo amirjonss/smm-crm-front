@@ -58,6 +58,11 @@
 
             <q-separator class="dropdown-sep" />
 
+            <q-item v-close-popup clickable class="dropdown-item" @click="$emit('archiveCards')">
+              <q-item-section avatar><q-icon name="playlist_remove" size="18px" /></q-item-section>
+              <q-item-section>Архивировать все карточки</q-item-section>
+            </q-item>
+
             <q-item v-close-popup clickable class="dropdown-item" @click="$emit('archive')">
               <q-item-section avatar><q-icon name="archive" size="18px" /></q-item-section>
               <q-item-section>Архивировать список</q-item-section>
@@ -171,6 +176,7 @@ const emit = defineEmits([
   'usePattern',
   'createPattern',
   'archive',
+  'archiveCards',
   'rename',
   'changeColor',
   'cardDragState',
