@@ -1254,19 +1254,49 @@ function stripPasteStyles(html) {
   return div.innerHTML
 }
 
+function insertAtCursor(content) {
+  const sel = window.getSelection()
+  if (!sel || !sel.rangeCount) return
+  sel.deleteFromDocument()
+  const range = sel.getRangeAt(0)
+
+  if (typeof content === 'string') {
+    const temp = document.createElement('div')
+    temp.innerHTML = content
+    const frag = document.createDocumentFragment()
+    let lastNode
+    while (temp.firstChild) {
+      lastNode = frag.appendChild(temp.firstChild)
+    }
+    range.insertNode(frag)
+    if (lastNode) {
+      range.setStartAfter(lastNode)
+      range.collapse(true)
+      sel.removeAllRanges()
+      sel.addRange(range)
+    }
+  }
+
+  // Trigger q-editor's onInput to sync v-model
+  const editor = descEditorRef.value?.$el?.querySelector('.q-editor__content')
+  if (editor) editor.dispatchEvent(new Event('input', { bubbles: true }))
+}
+
 function onEditorPaste(evt) {
-  const text = (evt.clipboardData || window.clipboardData).getData('text');
+  evt.preventDefault()
+  evt.stopImmediatePropagation()
+  const text = (evt.clipboardData || window.clipboardData).getData('text')
   if (/^https?:\/\/[^\s]+$/.test(text.trim())) {
-    evt.preventDefault();
-    const url = text.trim();
-    document.execCommand('insertHTML', false, `<a href="${url}" target="_blank">${url}</a>`);
-    return;
+    const url = text.trim()
+    insertAtCursor(`<a href="${url}" target="_blank">${url}</a>`)
+    return
   }
   // Strip color/font styles from pasted HTML
   const html = evt.clipboardData?.getData('text/html')
   if (html) {
-    evt.preventDefault()
-    document.execCommand('insertHTML', false, stripPasteStyles(html))
+    insertAtCursor(stripPasteStyles(html))
+  } else if (text) {
+    insertAtCursor(text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'))
   }
 }
 
