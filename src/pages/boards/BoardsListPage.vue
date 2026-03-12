@@ -250,3 +250,11 @@ onMounted(async () => {
   margin: 0;
 }
 </style>
+
+<style lang="scss">
+/* Fix Safari bottom bar showing white behind toolbar */
+html:has(.boards-list-page),
+body:has(.boards-list-page) {
+  background: #0f0c29;
+}
+</style>

@@ -817,7 +817,7 @@ onBeforeUnmount(() => {
 
   @media (max-width: 599px) {
     gap: 0.75rem;
-    padding: 0.75rem 0.75rem 8rem 0.75rem;
+    padding: 0.75rem 0.75rem 3.5rem 0.75rem;
   }
 }
 
@@ -832,14 +832,14 @@ onBeforeUnmount(() => {
 
   @media (max-width: 599px) {
     gap: 0.75rem;
-    padding: 0.75rem 0.75rem 8rem 0.75rem;
+    padding: 0.75rem 0.75rem 3.5rem 0.75rem;
   }
 }
 
 /* Slide dot indicators */
 .slide-dots {
   position: fixed;
-  bottom: 5rem;
+  bottom: 1.75rem;
   left: 0;
   right: 0;
   display: flex;
@@ -870,8 +870,8 @@ onBeforeUnmount(() => {
 /* Zoom toggle FAB — liquid glass */
 .zoom-fab {
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
+  bottom: 1.25rem;
+  right: 1.25rem;
   z-index: 100;
   width: 48px;
   height: 48px;
@@ -906,8 +906,10 @@ onBeforeUnmount(() => {
 </style>
 
 <style lang="scss">
-/* Prevent body scroll and black bg when drag clone extends viewport */
+/* Prevent body scroll and fix Safari bottom bar color */
+html:has(.board-detail-page),
 body:has(.board-detail-page) {
+  background: #0f0c29;
   background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
   overflow: hidden;
 }
