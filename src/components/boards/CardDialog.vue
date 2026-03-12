@@ -105,7 +105,7 @@
             </div>
 
             <!-- Right sidebar: logs skeleton -->
-            <div class="card-sidebar" :class="{ 'is-expanded': showLogsMobile }">
+            <div class="card-sidebar">
               <template v-if="$q.screen.gt.xs">
                 <div class="sidebar-header">
                   <q-skeleton type="QAvatar" size="20px" class="bg-white-10 sidebar-icon" dark animation="pulse" />
@@ -449,7 +449,7 @@
           </div>
 
           <!-- Right sidebar: logs -->
-          <div class="card-sidebar" :class="{ 'is-expanded': showLogsMobile }">
+          <div class="card-sidebar">
             <template v-if="$q.screen.gt.xs">
               <div class="sidebar-header">
                 <q-icon name="history" size="20px" class="sidebar-icon" />
@@ -566,16 +566,6 @@
                     </div>
                   </div>
 
-                  <q-btn
-                    v-if="cardLogs.length > 3 && !showAllLogs"
-                    flat
-                    dense
-                    no-caps
-                    class="show-more-btn"
-                    @click="showAllLogs = true"
-                  >
-                    Показать подробности ({{ cardLogs.length - 3 }})
-                  </q-btn>
                 </div>
               </div>
             </template>
@@ -816,7 +806,6 @@ function toggleExecutor(user) {
   }
 }
 
-const showAllLogs = ref(false)
 const isEditingDescription = ref(false)
 const initializing = ref(false)
 const descEditorRef = ref(null)
@@ -885,10 +874,7 @@ const originalForm = ref({})
 
 const cardLogs = computed(() => boardStore.getCardLogs || [])
 
-const visibleLogs = computed(() => {
-  if (showAllLogs.value) return cardLogs.value
-  return cardLogs.value.slice(0, 3)
-})
+const visibleLogs = computed(() => cardLogs.value)
 
 const statusIcon = computed(() => {
   const icons = {
@@ -1041,7 +1027,6 @@ function initForm(card) {
   originalForm.value = { ...data }
   cardExecutors.value = [...(card.executor || [])]
   executorSearch.value = ''
-  showAllLogs.value = false
   isEditingDescription.value = false
   newCommentText.value = ''
   cancelEditComment()
@@ -1458,10 +1443,8 @@ $vh-dynamic: 100dvh;
   display: flex;
   flex: 1;
   height: calc(614px - 57px);
-  overflow-y: auto;
+  overflow: hidden;
   min-height: 0;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
 
   @media (max-width: 1199px), (max-height: 760px) {
     height: auto;
@@ -1469,6 +1452,9 @@ $vh-dynamic: 100dvh;
 
   @media (max-width: 767px) {
     flex-direction: column;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 }
 
@@ -1480,6 +1466,11 @@ $vh-dynamic: 100dvh;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   min-width: 0;
+
+  @media (max-width: 767px) {
+    overflow-y: visible;
+    flex-shrink: 0;
+  }
 
   @media (max-width: 599px) {
     padding: 0.875rem;
@@ -1995,37 +1986,23 @@ $vh-dynamic: 100dvh;
 .card-sidebar {
   width: 459px;
   min-width: 459px;
-  height: 557px;
-  min-height: 557px;
   border-left: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
   background: rgba(255, 255, 255, 0.02);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   @media (max-width: 1199px), (max-height: 760px) {
     width: 360px;
     min-width: 360px;
-    height: auto;
-    min-height: 0;
   }
 
   @media (max-width: 767px) {
     width: 100%;
     min-width: 100%;
-    height: auto;
-    min-height: 0;
     border-left: none;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
     background: transparent;
     flex-shrink: 0;
-  }
-
-  &.is-expanded {
-    @media (max-width: 767px) {
-      max-height: 60vh;
-      max-height: 60dvh;
-    }
   }
 }
 
@@ -2074,6 +2051,8 @@ $vh-dynamic: 100dvh;
   &.mobile {
     background: rgba(255, 255, 255, 0.02);
     border-top: 1px solid rgba(255, 255, 255, 0.04);
+    max-height: 50vh;
+    max-height: 50dvh;
   }
 }
 
@@ -2098,6 +2077,7 @@ $vh-dynamic: 100dvh;
 .comment-compose {
   padding: 0 1rem 0.85rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
 
   @media (max-width: 599px) {
     padding: 0.75rem;
@@ -2114,6 +2094,8 @@ $vh-dynamic: 100dvh;
     color: rgba(255, 255, 255, 0.9);
     font-size: 0.8125rem;
     line-height: 1.4;
+    max-height: 120px;
+    overflow-y: auto !important;
 
     /* Prevent Safari zoom on focus */
     @media (max-width: 599px) {
@@ -2391,22 +2373,6 @@ $vh-dynamic: 100dvh;
   }
 }
 
-.show-more-btn {
-  color: rgba(96, 165, 250, 0.78);
-  font-size: 0.75rem;
-  margin: 0.25rem 0;
-  width: 100%;
-  -webkit-tap-highlight-color: transparent;
-
-  &:hover {
-    color: rgba(147, 197, 253, 1);
-  }
-
-  @media (max-width: 599px) {
-    min-height: 40px;
-    font-size: 0.8125rem;
-  }
-}
 
 </style>
 
