@@ -3,11 +3,11 @@
     :model-value="modelValue"
     persistent
     maximized
-    transition-show="scale"
-    transition-hide="scale"
+    :transition-show="isMobile ? 'slide-up' : 'scale'"
+    :transition-hide="isMobile ? 'slide-down' : 'scale'"
     @update:model-value="$emit('update:modelValue', $event)"
   >
-    <div class="card-dialog-overlay" @click.self="close">
+    <div class="card-dialog-overlay" :class="{ 'is-mobile': isMobile }" @click.self="close">
       <div class="card-dialog-container">
         <!-- Top bar -->
         <div class="card-top-bar">
@@ -19,6 +19,7 @@
             emit-value
             map-options
             class="status-select"
+            :popup-content-class="'card-status-dropdown'"
           >
             <template #selected-item="scope">
               <q-badge
@@ -40,7 +41,7 @@
             class="top-btn"
             @click="syncPattern"
           >
-            <q-tooltip>{{ isTemplateCard ? 'Обновить шаблон' : 'Создать шаблон' }}</q-tooltip>
+            <q-tooltip v-if="!isMobile">{{ isTemplateCard ? 'Обновить шаблон' : 'Создать шаблон' }}</q-tooltip>
           </q-btn>
           <q-btn
             v-if="canManageCardDetails"
@@ -51,7 +52,7 @@
             class="top-btn"
             @click="toggleArchive"
           >
-            <q-tooltip>{{ isCardArchived ? 'Восстановить карточку' : 'Архивировать карточку' }}</q-tooltip>
+            <q-tooltip v-if="!isMobile">{{ isCardArchived ? 'Восстановить карточку' : 'Архивировать карточку' }}</q-tooltip>
           </q-btn>
           <q-btn flat round dense icon="close" class="top-btn" @click="close" />
         </div>
@@ -104,7 +105,7 @@
             </div>
 
             <!-- Right sidebar: logs skeleton -->
-            <div class="card-sidebar" :class="{ 'is-expanded': showLogsMobile }">
+            <div class="card-sidebar">
               <template v-if="$q.screen.gt.xs">
                 <div class="sidebar-header">
                   <q-skeleton type="QAvatar" size="20px" class="bg-white-10 sidebar-icon" dark animation="pulse" />
@@ -391,8 +392,9 @@
                 v-if="isMobileDescriptionEditor"
                 v-model="isEditingDescription"
                 persistent
-                transition-show="fade"
-                transition-hide="fade"
+                :maximized="isMobile"
+                transition-show="slide-up"
+                transition-hide="slide-down"
               >
                 <q-card class="description-editor-panel">
                   <div class="description-editor-panel-header">
@@ -447,7 +449,7 @@
           </div>
 
           <!-- Right sidebar: logs -->
-          <div class="card-sidebar" :class="{ 'is-expanded': showLogsMobile }">
+          <div class="card-sidebar">
             <template v-if="$q.screen.gt.xs">
               <div class="sidebar-header">
                 <q-icon name="history" size="20px" class="sidebar-icon" />
@@ -564,16 +566,6 @@
                     </div>
                   </div>
 
-                  <q-btn
-                    v-if="cardLogs.length > 3 && !showAllLogs"
-                    flat
-                    dense
-                    no-caps
-                    class="show-more-btn"
-                    @click="showAllLogs = true"
-                  >
-                    Показать подробности ({{ cardLogs.length - 3 }})
-                  </q-btn>
                 </div>
               </div>
             </template>
@@ -720,6 +712,7 @@ const userStore = useUserStore()
 const boardStore = useBoardStore()
 const canManageCardDetails = computed(() => userStore.isAdmin || userStore.isSMM)
 const currentUserId = computed(() => userStore.getUser?.id || null)
+const isMobile = computed(() => q.screen.width < 600)
 
 const showLogsMobile = ref(false)
 
@@ -813,7 +806,6 @@ function toggleExecutor(user) {
   }
 }
 
-const showAllLogs = ref(false)
 const isEditingDescription = ref(false)
 const initializing = ref(false)
 const descEditorRef = ref(null)
@@ -882,10 +874,7 @@ const originalForm = ref({})
 
 const cardLogs = computed(() => boardStore.getCardLogs || [])
 
-const visibleLogs = computed(() => {
-  if (showAllLogs.value) return cardLogs.value
-  return cardLogs.value.slice(0, 3)
-})
+const visibleLogs = computed(() => cardLogs.value)
 
 const statusIcon = computed(() => {
   const icons = {
@@ -1038,7 +1027,6 @@ function initForm(card) {
   originalForm.value = { ...data }
   cardExecutors.value = [...(card.executor || [])]
   executorSearch.value = ''
-  showAllLogs.value = false
   isEditingDescription.value = false
   newCommentText.value = ''
   cancelEditComment()
@@ -1254,19 +1242,49 @@ function stripPasteStyles(html) {
   return div.innerHTML
 }
 
+function insertAtCursor(content) {
+  const sel = window.getSelection()
+  if (!sel || !sel.rangeCount) return
+  sel.deleteFromDocument()
+  const range = sel.getRangeAt(0)
+
+  if (typeof content === 'string') {
+    const temp = document.createElement('div')
+    temp.innerHTML = content
+    const frag = document.createDocumentFragment()
+    let lastNode
+    while (temp.firstChild) {
+      lastNode = frag.appendChild(temp.firstChild)
+    }
+    range.insertNode(frag)
+    if (lastNode) {
+      range.setStartAfter(lastNode)
+      range.collapse(true)
+      sel.removeAllRanges()
+      sel.addRange(range)
+    }
+  }
+
+  // Trigger q-editor's onInput to sync v-model
+  const editor = descEditorRef.value?.$el?.querySelector('.q-editor__content')
+  if (editor) editor.dispatchEvent(new Event('input', { bubbles: true }))
+}
+
 function onEditorPaste(evt) {
-  const text = (evt.clipboardData || window.clipboardData).getData('text');
+  evt.preventDefault()
+  evt.stopImmediatePropagation()
+  const text = (evt.clipboardData || window.clipboardData).getData('text')
   if (/^https?:\/\/[^\s]+$/.test(text.trim())) {
-    evt.preventDefault();
-    const url = text.trim();
-    document.execCommand('insertHTML', false, `<a href="${url}" target="_blank">${url}</a>`);
-    return;
+    const url = text.trim()
+    insertAtCursor(`<a href="${url}" target="_blank">${url}</a>`)
+    return
   }
   // Strip color/font styles from pasted HTML
   const html = evt.clipboardData?.getData('text/html')
   if (html) {
-    evt.preventDefault()
-    document.execCommand('insertHTML', false, stripPasteStyles(html))
+    insertAtCursor(stripPasteStyles(html))
+  } else if (text) {
+    insertAtCursor(text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'))
   }
 }
 
@@ -1291,18 +1309,29 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 </script>
 
 <style scoped lang="scss">
+/* ── Safari/mobile viewport fix ── */
+$vh-fallback: 100vh;
+$vh-dynamic: 100dvh;
+
 .card-dialog-overlay {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: $vh-fallback;
+  min-height: $vh-dynamic;
   padding: 2rem;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
+  -webkit-tap-highlight-color: transparent;
 
   @media (max-width: 959px) {
     padding: 1rem;
     align-items: flex-start;
+  }
+
+  &.is-mobile {
+    padding: 0;
+    align-items: stretch;
   }
 }
 
@@ -1312,7 +1341,8 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   height: 614px;
   min-height: 614px;
   max-width: calc(100vw - 4rem);
-  max-height: calc(100vh - 4rem);
+  max-height: calc($vh-fallback - 4rem);
+  max-height: calc($vh-dynamic - 4rem);
   background: rgba(20, 18, 50, 0.92);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
@@ -1331,7 +1361,26 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   }
 
   @media (max-width: 959px) {
-    max-height: calc(100vh - 2rem);
+    max-height: calc($vh-fallback - 2rem);
+    max-height: calc($vh-dynamic - 2rem);
+  }
+
+  /* Full-screen on mobile */
+  @media (max-width: 599px) {
+    width: 100%;
+    min-width: 0;
+    height: $vh-fallback;
+    height: $vh-dynamic;
+    min-height: 0;
+    max-width: 100%;
+    max-height: $vh-fallback;
+    max-height: $vh-dynamic;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    background: rgba(20, 18, 50, 1);
+    /* Safari safe area */
+    padding-bottom: env(safe-area-inset-bottom, 0);
   }
 }
 
@@ -1344,6 +1393,14 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   padding: 0 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
+
+  @media (max-width: 599px) {
+    min-height: 50px;
+    height: 50px;
+    padding: 0 0.5rem 0 0.75rem;
+    /* Safari safe area for top (notch) */
+    padding-top: env(safe-area-inset-top, 0);
+  }
 }
 
 .status-select {
@@ -1367,9 +1424,17 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
 .top-btn {
   color: rgba(255, 255, 255, 0.5);
+  /* Minimum 44px touch target on mobile */
+  min-width: 36px;
+  min-height: 36px;
 
   &:hover {
     color: #fff;
+  }
+
+  @media (max-width: 599px) {
+    min-width: 44px;
+    min-height: 44px;
   }
 }
 
@@ -1378,7 +1443,7 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   display: flex;
   flex: 1;
   height: calc(614px - 57px);
-  overflow-y: auto;
+  overflow: hidden;
   min-height: 0;
 
   @media (max-width: 1199px), (max-height: 760px) {
@@ -1387,6 +1452,9 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
   @media (max-width: 767px) {
     flex-direction: column;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 }
 
@@ -1395,10 +1463,17 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   flex: 1;
   padding: 1.25rem 1.5rem;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   min-width: 0;
 
+  @media (max-width: 767px) {
+    overflow-y: visible;
+    flex-shrink: 0;
+  }
+
   @media (max-width: 599px) {
-    padding: 1rem;
+    padding: 0.875rem;
   }
 }
 
@@ -1408,11 +1483,20 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   align-items: flex-start;
   gap: 0.75rem;
   margin-bottom: 1rem;
+
+  @media (max-width: 599px) {
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
 }
 
 .title-icon {
   margin-top: 6px;
   flex-shrink: 0;
+
+  @media (max-width: 599px) {
+    margin-top: 8px;
+  }
 }
 
 .title-input {
@@ -1429,6 +1513,13 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     line-height: 1.4;
     padding: 0;
   }
+
+  /* Prevent Safari zoom on focus */
+  @media (max-width: 599px) {
+    :deep(.q-field__native) {
+      font-size: 1rem;
+    }
+  }
 }
 
 /* Meta row: executors + deadline inline */
@@ -1437,6 +1528,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   gap: 2rem;
   margin-bottom: 1.25rem;
   flex-wrap: wrap;
+
+  @media (max-width: 599px) {
+    gap: 1.25rem;
+    margin-bottom: 1rem;
+  }
 }
 
 .meta-group {
@@ -1503,6 +1599,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     background: rgba(255, 255, 255, 0.12);
     color: #fff;
   }
+
+  @media (max-width: 599px) {
+    min-height: 36px;
+    height: auto;
+  }
 }
 
 .meta-deadline-text {
@@ -1522,6 +1623,10 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   gap: 0.5rem;
   flex-wrap: wrap;
   margin-bottom: 1.25rem;
+
+  @media (max-width: 599px) {
+    margin-bottom: 1rem;
+  }
 }
 
 .action-chip {
@@ -1531,10 +1636,17 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   border-radius: 8px;
   font-size: 0.8125rem;
   padding: 0.25rem 0.625rem;
+  -webkit-tap-highlight-color: transparent;
 
   &:hover {
     background: rgba(255, 255, 255, 0.12);
     color: #fff;
+  }
+
+  @media (max-width: 599px) {
+    min-height: 38px;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
   }
 }
 
@@ -1580,6 +1692,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     color: #fff;
     background: rgba(255, 255, 255, 0.1);
   }
+
+  @media (max-width: 599px) {
+    min-width: 36px;
+    min-height: 36px;
+  }
 }
 
 .description-container {
@@ -1589,6 +1706,7 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
   transition: border-color 0.2s ease, background-color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 
   &.is-editable {
     cursor: pointer;
@@ -1601,13 +1719,13 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
   &.is-inline-editing {
     padding: 0;
-    cursor: default;
+    cursor: text;
     border-color: rgba(255, 255, 255, 0.16);
     background: rgba(255, 255, 255, 0.02);
   }
 
   @media (max-width: 599px) {
-    min-height: 120px;
+    min-height: 100px;
     padding: 0.625rem;
   }
 }
@@ -1624,11 +1742,20 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   display: flex;
   flex-direction: column;
 
+  /* Fullscreen on mobile */
   @media (max-width: 599px) {
-    width: calc(100vw - 1rem);
-    max-height: calc(100vh - 3rem);
-    margin-top: 0;
-    border-radius: 12px;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: $vh-fallback !important;
+    height: $vh-dynamic !important;
+    max-height: $vh-fallback !important;
+    max-height: $vh-dynamic !important;
+    margin: 0 !important;
+    border: none;
+    border-radius: 0;
+    background: rgba(20, 18, 50, 1);
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
   }
 }
 
@@ -1638,6 +1765,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   justify-content: space-between;
   padding: 0.75rem 0.875rem 0.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+  @media (max-width: 599px) {
+    padding: 0.75rem 0.75rem 0.625rem;
+    min-height: 48px;
+  }
 }
 
 .description-editor-panel-title {
@@ -1648,9 +1780,16 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
 .desc-panel-close {
   color: rgba(255, 255, 255, 0.55);
+  min-width: 36px;
+  min-height: 36px;
 
   &:hover {
     color: #fff;
+  }
+
+  @media (max-width: 599px) {
+    min-width: 44px;
+    min-height: 44px;
   }
 }
 
@@ -1660,6 +1799,8 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   border: 0;
   border-radius: 0;
   background: transparent;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .description-editor-inline {
@@ -1681,6 +1822,7 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     min-height: 38px;
     scrollbar-width: none;
     background: rgba(255, 255, 255, 0.02) !important;
+    -webkit-overflow-scrolling: touch;
   }
 
   :deep(.q-editor__toolbar::-webkit-scrollbar) {
@@ -1702,6 +1844,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
       color: #fff;
       background: rgba(139, 92, 246, 0.3);
     }
+
+    @media (max-width: 599px) {
+      min-height: 36px;
+      min-width: 36px;
+    }
   }
 
   :deep(.q-editor__toolbar-group + .q-editor__toolbar-group::before) {
@@ -1719,6 +1866,8 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     padding: 0.75rem;
     min-height: 220px;
     max-height: min(44vh, 380px);
+    cursor: text;
+    -webkit-overflow-scrolling: touch;
 
     h1 { font-size: 1.375rem; font-weight: 700; margin: 0.5rem 0; color: rgba(255, 255, 255, 0.92); }
     h2 { font-size: 1.175rem; font-weight: 700; margin: 0.4rem 0; color: rgba(255, 255, 255, 0.9); }
@@ -1726,6 +1875,13 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     h4 { font-size: 0.95rem; font-weight: 600; margin: 0.3rem 0; color: rgba(255, 255, 255, 0.88); }
     h5 { font-size: 0.875rem; font-weight: 600; margin: 0.25rem 0; color: rgba(255, 255, 255, 0.86); }
     h6 { font-size: 0.8125rem; font-weight: 600; margin: 0.2rem 0; color: rgba(255, 255, 255, 0.82); }
+
+    /* Prevent Safari zoom — must be 16px+ on iOS */
+    @media (max-width: 599px) {
+      font-size: 1rem;
+      min-height: 180px;
+      max-height: none;
+    }
   }
 
   :deep(.q-editor__content a) {
@@ -1748,6 +1904,12 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   padding: 0.5rem 0.75rem;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.02);
+  flex-shrink: 0;
+
+  @media (max-width: 599px) {
+    padding: 0.625rem 0.75rem;
+    padding-bottom: calc(0.625rem + env(safe-area-inset-bottom, 0));
+  }
 }
 
 .desc-save-btn {
@@ -1761,11 +1923,22 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   &:hover {
     background: rgba(139, 92, 246, 0.5);
   }
+
+  @media (max-width: 599px) {
+    min-height: 40px;
+    padding: 0.375rem 1rem;
+    font-size: 0.875rem;
+  }
 }
 
 .desc-cancel-btn {
   color: rgba(255, 255, 255, 0.5);
   font-size: 0.8125rem;
+
+  @media (max-width: 599px) {
+    min-height: 40px;
+    font-size: 0.875rem;
+  }
 }
 
 .description-preview-content {
@@ -1799,17 +1972,13 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   :deep(h6) { font-size: 0.8125rem; font-weight: 600; margin: 0.2rem 0; }
 
   @media (max-width: 599px) {
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
   }
 }
 
 .description-placeholder {
   color: rgba(255, 255, 255, 0.3);
   font-size: 0.875rem;
-
-  @media (max-width: 599px) {
-    font-size: 0.8125rem;
-  }
 }
 
 
@@ -1817,35 +1986,23 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 .card-sidebar {
   width: 459px;
   min-width: 459px;
-  height: 557px;
-  min-height: 557px;
   border-left: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   flex-direction: column;
   background: rgba(255, 255, 255, 0.02);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   @media (max-width: 1199px), (max-height: 760px) {
     width: 360px;
     min-width: 360px;
-    height: auto;
-    min-height: 0;
   }
 
   @media (max-width: 767px) {
     width: 100%;
     min-width: 100%;
-    height: auto;
-    min-height: 0;
     border-left: none;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
     background: transparent;
-  }
-
-  &.is-expanded {
-    @media (max-width: 767px) {
-      max-height: 60vh;
-    }
+    flex-shrink: 0;
   }
 }
 
@@ -1856,6 +2013,7 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   font-size: 0.8125rem;
   font-weight: 600;
   transition: background-color 0.2s ease, color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 
   .q-item__label {
     color: rgba(255, 255, 255, 0.86);
@@ -1893,6 +2051,8 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   &.mobile {
     background: rgba(255, 255, 255, 0.02);
     border-top: 1px solid rgba(255, 255, 255, 0.04);
+    max-height: 50vh;
+    max-height: 50dvh;
   }
 }
 
@@ -1917,9 +2077,10 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 .comment-compose {
   padding: 0 1rem 0.85rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
 
   @media (max-width: 599px) {
-    padding: 0.75rem 0.75rem 0.6rem;
+    padding: 0.75rem;
   }
 }
 
@@ -1933,6 +2094,13 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     color: rgba(255, 255, 255, 0.9);
     font-size: 0.8125rem;
     line-height: 1.4;
+    max-height: 120px;
+    overflow-y: auto !important;
+
+    /* Prevent Safari zoom on focus */
+    @media (max-width: 599px) {
+      font-size: 1rem;
+    }
   }
 }
 
@@ -1950,6 +2118,10 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 .comment-compose-hint {
   font-size: 0.6875rem;
   color: rgba(255, 255, 255, 0.35);
+
+  @media (max-width: 599px) {
+    display: none;
+  }
 }
 
 .comment-submit-btn {
@@ -1965,9 +2137,9 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   }
 
   @media (max-width: 599px) {
-    font-size: 0.7rem;
-    padding: 0 0.8rem;
-    min-height: 26px;
+    font-size: 0.8125rem;
+    padding: 0 1rem;
+    min-height: 36px;
   }
 }
 
@@ -1990,14 +2162,15 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   }
 
   @media (max-width: 599px) {
-    padding: 1rem;
-    span { font-size: 0.75rem; }
+    padding: 1.5rem 1rem;
   }
 }
 
 .sidebar-logs {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding: 0.1rem 1rem 0.75rem;
 
   @media (max-width: 599px) {
@@ -2061,6 +2234,7 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  flex-wrap: wrap;
 }
 
 .log-author {
@@ -2093,8 +2267,8 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   }
 
   @media (max-width: 599px) {
-    padding: 0.08rem 0.35rem;
-    font-size: 0.55rem;
+    padding: 0.1rem 0.375rem;
+    font-size: 0.5625rem;
   }
 }
 
@@ -2106,6 +2280,7 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
 .log-action-btn {
   color: rgba(255, 255, 255, 0.42);
+  -webkit-tap-highlight-color: transparent;
 
   &:hover {
     color: #fff;
@@ -2113,6 +2288,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
   &.delete:hover {
     color: rgba(248, 113, 113, 1);
+  }
+
+  @media (max-width: 599px) {
+    min-width: 32px;
+    min-height: 32px;
   }
 }
 
@@ -2153,6 +2333,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     color: rgba(255, 255, 255, 0.9);
     font-size: 0.8125rem;
     line-height: 1.4;
+
+    /* Prevent Safari zoom */
+    @media (max-width: 599px) {
+      font-size: 1rem;
+    }
   }
 }
 
@@ -2170,23 +2355,24 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   font-size: 0.75rem;
   padding: 0 0.6rem;
   min-height: 26px;
+
+  @media (max-width: 599px) {
+    min-height: 36px;
+    padding: 0 0.875rem;
+    font-size: 0.8125rem;
+  }
 }
 
 .comment-cancel-btn {
   color: rgba(255, 255, 255, 0.65);
   font-size: 0.75rem;
-}
 
-.show-more-btn {
-  color: rgba(96, 165, 250, 0.78);
-  font-size: 0.75rem;
-  margin: 0.25rem 0;
-  width: 100%;
-
-  &:hover {
-    color: rgba(147, 197, 253, 1);
+  @media (max-width: 599px) {
+    min-height: 36px;
+    font-size: 0.8125rem;
   }
 }
+
 
 </style>
 
@@ -2195,14 +2381,30 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 .card-dialog-container .q-menu,
 .q-menu:has(.dl-panel),
 .q-menu:has(.ex-panel),
-.q-menu:has(.editor-toolbar-dropdown) {
+.q-menu:has(.editor-toolbar-dropdown),
+.card-status-dropdown {
   background: #1e1b38 !important;
   border: 1px solid #2d2a4a !important;
   border-radius: 8px !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
-  z-index: 10000 !important; /* Ensure dropdowns appear above all dialog layers */
+  z-index: 10000 !important;
   opacity: 1 !important;
   backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Status dropdown items */
+.card-status-dropdown .q-item {
+  color: rgba(255, 255, 255, 0.85) !important;
+  min-height: 40px !important;
+
+  &:hover, &:focus {
+    background: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  @media (max-width: 599px) {
+    min-height: 48px !important;
+  }
 }
 
 /* Fallback for browsers that don't support :has() and ensuring opaque list */
@@ -2214,6 +2416,7 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   padding: 4px 0 !important;
   opacity: 1 !important;
   backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   z-index: 10000 !important;
 }
 
@@ -2223,11 +2426,15 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   transition: background 0.2s, color 0.2s;
   min-height: 36px !important;
   padding: 0 16px !important;
-  background: transparent !important; /* clear any transparent quasar utility */
+  background: transparent !important;
 
   &:hover, &:focus {
     background: rgba(255, 255, 255, 0.08) !important;
     color: #fff !important;
+  }
+
+  @media (max-width: 599px) {
+    min-height: 44px !important;
   }
 }
 
@@ -2244,7 +2451,10 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     border-bottom: none !important;
     box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.5) !important;
     max-height: 80vh !important;
+    max-height: 80dvh !important;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: env(safe-area-inset-bottom, 0);
   }
 }
 
@@ -2282,6 +2492,8 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   position: absolute;
   right: 0.5rem;
   color: rgba(255, 255, 255, 0.3) !important;
+  min-width: 36px;
+  min-height: 36px;
   &:hover { color: #fff !important; }
 }
 
@@ -2308,6 +2520,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
       color: rgba(255, 255, 255, 0.5) !important;
       min-height: 32px !important;
       min-width: 32px !important;
+
+      @media (max-width: 599px) {
+        min-height: 40px !important;
+        min-width: 40px !important;
+      }
     }
 
     .q-date__arrow { font-size: 18px; }
@@ -2323,6 +2540,10 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
     .q-date__calendar-item {
       padding: 2px !important;
+
+      @media (max-width: 599px) {
+        padding: 3px !important;
+      }
     }
 
     .q-btn {
@@ -2342,6 +2563,14 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
         background: #3b82f6 !important;
         color: #fff !important;
       }
+
+      @media (max-width: 599px) {
+        width: 36px !important;
+        height: 36px !important;
+        min-height: 36px !important;
+        min-width: 36px !important;
+        font-size: 0.875rem !important;
+      }
     }
   }
 
@@ -2355,6 +2584,10 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 .dl-body {
   padding: 0.75rem 1rem;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+
+  @media (max-width: 599px) {
+    padding: 0.875rem 1rem;
+  }
 }
 
 .dl-label {
@@ -2382,6 +2615,13 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   font-size: 0.8125rem;
   color: #fff;
   &.disabled { opacity: 0.4; }
+
+  @media (max-width: 599px) {
+    padding: 0.5rem 0.625rem;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+  }
 }
 
 .dl-time {
@@ -2400,6 +2640,14 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
   &:disabled { opacity: 0.4; }
   &::-webkit-calendar-picker-indicator { display: none; }
+
+  /* Prevent Safari zoom on focus */
+  @media (max-width: 599px) {
+    font-size: 1rem;
+    width: 80px;
+    padding: 0.5rem;
+    min-height: 38px;
+  }
 }
 
 
@@ -2413,6 +2661,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   border-radius: 8px;
   margin-bottom: 0.375rem;
   &:hover { background: #2563eb !important; }
+
+  @media (max-width: 599px) {
+    min-height: 44px;
+    font-size: 0.875rem;
+  }
 }
 
 .dl-delete {
@@ -2424,6 +2677,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   &:hover {
     color: #fff !important;
     background: rgba(255, 255, 255, 0.06) !important;
+  }
+
+  @media (max-width: 599px) {
+    min-height: 40px;
+    font-size: 0.875rem;
   }
 }
 
@@ -2445,7 +2703,8 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
   @media (max-width: 599px) {
     width: 100%;
-    max-height: 60vh;
+    max-height: 70vh;
+    max-height: 70dvh;
   }
 }
 
@@ -2465,6 +2724,8 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   position: absolute;
   right: 0.625rem;
   color: rgba(255, 255, 255, 0.3) !important;
+  min-width: 36px;
+  min-height: 36px;
   &:hover { color: #fff !important; }
 }
 
@@ -2488,6 +2749,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   .q-field__control {
     min-height: 32px !important;
     height: 32px !important;
+
+    @media (max-width: 599px) {
+      min-height: 40px !important;
+      height: 40px !important;
+    }
   }
 
   .q-field__native {
@@ -2497,6 +2763,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 
     &::placeholder {
       color: rgba(255, 255, 255, 0.3) !important;
+    }
+
+    /* Prevent Safari zoom on focus */
+    @media (max-width: 599px) {
+      font-size: 1rem !important;
     }
   }
 }
@@ -2514,6 +2785,7 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
 .ex-list {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 0 0.375rem 0.375rem;
 
   &::-webkit-scrollbar {
@@ -2535,6 +2807,7 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   cursor: pointer;
   transition: all 0.15s ease;
   position: relative;
+  -webkit-tap-highlight-color: transparent;
 
   &:hover {
     background: rgba(255, 255, 255, 0.06);
@@ -2546,6 +2819,11 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
     &:hover {
       background: rgba(139, 92, 246, 0.15);
     }
+  }
+
+  @media (max-width: 599px) {
+    min-height: 48px;
+    padding: 0.625rem 0.75rem;
   }
 }
 
@@ -2589,6 +2867,10 @@ watch(deadlineDate, () => { deadlineEnabled.value = true })
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
+  @media (max-width: 599px) {
+    font-size: 0.875rem;
+  }
 }
 
 .ex-email {
