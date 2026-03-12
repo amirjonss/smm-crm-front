@@ -61,7 +61,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useBoardStore } from 'stores/board.js'
@@ -115,13 +115,22 @@ function confirmDelete(board) {
   })
 }
 
+// Fix Safari bottom bar color
+const savedBg = ref('')
 onMounted(async () => {
+  savedBg.value = document.documentElement.style.backgroundColor
+  document.documentElement.style.backgroundColor = '#0f0c29'
+
   isPageLoading.value = true
   try {
     await boardStore.fetchBoards()
   } finally {
     isPageLoading.value = false
   }
+})
+
+onBeforeUnmount(() => {
+  document.documentElement.style.backgroundColor = savedBg.value
 })
 </script>
 
@@ -253,7 +262,6 @@ onMounted(async () => {
 
 <style lang="scss">
 /* Fix Safari bottom bar showing white behind toolbar */
-html:has(.boards-list-page),
 body:has(.boards-list-page) {
   background: #0f0c29;
 }

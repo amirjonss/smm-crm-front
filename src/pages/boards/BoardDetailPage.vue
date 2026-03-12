@@ -594,7 +594,12 @@ function archiveList(list) {
   })
 }
 
+// Fix Safari bottom bar color — :has() is unreliable on html in Safari
+const savedBg = ref('')
 onMounted(async () => {
+  savedBg.value = document.documentElement.style.backgroundColor
+  document.documentElement.style.backgroundColor = '#0f0c29'
+
   isPageLoading.value = true
   try {
     await boardStore.fetchBoard(route.params.id)
@@ -608,6 +613,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   unbindDragTouchAutoScroll()
+  document.documentElement.style.backgroundColor = savedBg.value
 })
 </script>
 
@@ -906,11 +912,9 @@ onBeforeUnmount(() => {
 </style>
 
 <style lang="scss">
-/* Prevent body scroll and fix Safari bottom bar color */
-html:has(.board-detail-page),
+/* Prevent body scroll on board page */
 body:has(.board-detail-page) {
   background: #0f0c29;
-  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
   overflow: hidden;
 }
 
