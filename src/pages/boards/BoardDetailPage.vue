@@ -594,7 +594,12 @@ function archiveList(list) {
   })
 }
 
+// Fix Safari bottom bar color — :has() is unreliable on html in Safari
+const savedBg = ref('')
 onMounted(async () => {
+  savedBg.value = document.documentElement.style.backgroundColor
+  document.documentElement.style.backgroundColor = '#0f0c29'
+
   isPageLoading.value = true
   try {
     await boardStore.fetchBoard(route.params.id)
@@ -608,6 +613,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   unbindDragTouchAutoScroll()
+  document.documentElement.style.backgroundColor = savedBg.value
 })
 </script>
 
@@ -817,7 +823,7 @@ onBeforeUnmount(() => {
 
   @media (max-width: 599px) {
     gap: 0.75rem;
-    padding: 0.75rem 0.75rem 8rem 0.75rem;
+    padding: 0.75rem 0.75rem 3.5rem 0.75rem;
   }
 }
 
@@ -832,14 +838,14 @@ onBeforeUnmount(() => {
 
   @media (max-width: 599px) {
     gap: 0.75rem;
-    padding: 0.75rem 0.75rem 8rem 0.75rem;
+    padding: 0.75rem 0.75rem 3.5rem 0.75rem;
   }
 }
 
 /* Slide dot indicators */
 .slide-dots {
   position: fixed;
-  bottom: 5rem;
+  bottom: 1.75rem;
   left: 0;
   right: 0;
   display: flex;
@@ -870,8 +876,8 @@ onBeforeUnmount(() => {
 /* Zoom toggle FAB — liquid glass */
 .zoom-fab {
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
+  bottom: 1.25rem;
+  right: 1.25rem;
   z-index: 100;
   width: 48px;
   height: 48px;
@@ -906,9 +912,9 @@ onBeforeUnmount(() => {
 </style>
 
 <style lang="scss">
-/* Prevent body scroll and black bg when drag clone extends viewport */
+/* Prevent body scroll on board page */
 body:has(.board-detail-page) {
-  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  background: #0f0c29;
   overflow: hidden;
 }
 
