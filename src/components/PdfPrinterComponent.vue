@@ -33,10 +33,10 @@ const props = defineProps({
 })
 
 function getFullName(project) {
-  let givenName = project.createdBy.givenName
+  let givenName = project.executor.givenName
   let familyName = null
-  if (project.createdBy.familyName) {
-    familyName = project.createdBy.familyName
+  if (project.executor.familyName) {
+    familyName = project.executor.familyName
   } else {
     familyName = ''
   }
