@@ -25,10 +25,6 @@
         <q-icon name="view_column" size="14px" />
         <span>{{ listCount }} {{ listWord }}</span>
       </div>
-      <div class="board-stat">
-        <q-icon name="style" size="14px" />
-        <span>{{ cardCount }} {{ cardWord }}</span>
-      </div>
     </div>
 
     <div class="board-card-footer">
@@ -50,23 +46,12 @@ defineEmits(['click', 'edit', 'delete'])
 const userStore = useUserStore()
 
 const listCount = computed(() => props.board.lists?.filter((l) => !l.isArchived).length || 0)
-const cardCount = computed(() => {
-  if (!props.board.lists) return 0
-  return props.board.lists.reduce((sum, l) => sum + (l.cards?.length || 0), 0)
-})
 
 const listWord = computed(() => {
   const n = listCount.value
   if (n === 1) return 'список'
   if (n >= 2 && n <= 4) return 'списка'
   return 'списков'
-})
-
-const cardWord = computed(() => {
-  const n = cardCount.value
-  if (n === 1) return 'карточка'
-  if (n >= 2 && n <= 4) return 'карточки'
-  return 'карточек'
 })
 
 const formattedDate = computed(() => {
