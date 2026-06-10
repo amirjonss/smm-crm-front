@@ -106,6 +106,30 @@ export const useUserStore = defineStore('user', {
           })
       })
     },
+    changeUserRole(id, roles) {
+      return new Promise((resolve, reject) => {
+        api
+          .patch('/users/' + id + '/change-role', { roles })
+          .then((response) => {
+            resolve(response?.data)
+          })
+          .catch((e) => {
+            reject(e)
+          })
+      })
+    },
+    changeUserEmail(id, email) {
+      return new Promise((resolve, reject) => {
+        api
+          .patch('/users/' + id + '/change-email', { email })
+          .then((response) => {
+            resolve(response?.data)
+          })
+          .catch((e) => {
+            reject(e)
+          })
+      })
+    },
     deleteUser(id) {
       return new Promise((resolve, reject) => {
         api

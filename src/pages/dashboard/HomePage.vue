@@ -628,8 +628,15 @@ function selectUser(user) {
 }
 
 function saveEditedUser() {
-  const payload = { ...userForm.value, roles: userForm.value.roles ? [userForm.value.roles] : [] }
-  userStore.patchUser(payload, editingUserId.value).then(() => {
+  const { roles, email, ...userPayload } = userForm.value
+  const rolesList = roles ? [roles] : []
+  const id = editingUserId.value
+
+  Promise.all([
+    userStore.patchUser(userPayload, id),
+    userStore.changeUserRole(id, rolesList),
+    userStore.changeUserEmail(id, email),
+  ]).then(() => {
     fetchFilteredUsers().then(() => {
       isLoading.value = false
       showUserDialog.value = false
