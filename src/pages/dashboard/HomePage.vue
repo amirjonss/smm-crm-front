@@ -81,7 +81,10 @@
                   <div class="mobile-card-body">
                     <div class="mobile-card-row">
                       <span class="mobile-card-label">Проект:</span>
-                      <span class="project-name-table">{{ getProjectName(plan.project) }}</span>
+                      <div class="row items-center no-wrap q-gutter-x-xs">
+                        <span class="project-name-table">{{ getProjectName(plan.project) }}</span>
+                        <span v-if="!getProjectActive(plan.project)" class="inactive-badge">Не активен</span>
+                      </div>
                     </div>
 
                     <div v-if="plan.platforms?.length" class="mobile-card-row">
@@ -159,7 +162,12 @@
                 </thead>
                 <tbody>
                   <tr v-for="plan in todaysContentPlans" :key="plan.id">
-                    <td class="project-name-table">{{ getProjectName(plan.project) }}</td>
+                    <td class="project-name-table">
+                      <div class="project-name-cell">
+                        <span class="project-name-text">{{ getProjectName(plan.project) }}</span>
+                        <span v-if="!getProjectActive(plan.project)" class="inactive-badge">Не активен</span>
+                      </div>
+                    </td>
                     <td class="post-name-table">{{ plan.post }}</td>
                     <td>
                       <span class="format-badge">{{ plan.format }}</span>
@@ -431,7 +439,7 @@ import { useContentPlanStore } from 'stores/content-plan.js'
 import ProjectsAndContentListComponent from 'components/dashboard/ProjectsAndContentListComponent.vue'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios.js'
-import { getProjectName } from '@/utils/projectHelpers'
+import { getProjectName, getProjectActive } from '@/utils/projectHelpers'
 import { getTodayISO } from '@/utils/dateHelpers'
 import {
   PLATFORM_COLORS,
@@ -628,8 +636,15 @@ function selectUser(user) {
 }
 
 function saveEditedUser() {
-  const payload = { ...userForm.value, roles: userForm.value.roles ? [userForm.value.roles] : [] }
-  userStore.patchUser(payload, editingUserId.value).then(() => {
+  const { roles, email, ...userPayload } = userForm.value
+  const rolesList = roles ? [roles] : []
+  const id = editingUserId.value
+
+  Promise.all([
+    userStore.patchUser(userPayload, id),
+    userStore.changeUserRole(id, rolesList),
+    userStore.changeUserEmail(id, email),
+  ]).then(() => {
     fetchFilteredUsers().then(() => {
       isLoading.value = false
       showUserDialog.value = false
@@ -1120,10 +1135,44 @@ onMounted(async () => {
 .project-name-table {
   font-weight: 500;
   color: var(--text-primary);
-  max-width: 180px;
+  max-width: 200px;
+}
+
+.project-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 200px;
+}
+
+.project-name-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.inactive-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.15rem 0.45rem;
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  border-radius: 4px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  .body--dark & {
+    color: #fbbf24;
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.35);
+  }
 }
 
 .post-name-table {

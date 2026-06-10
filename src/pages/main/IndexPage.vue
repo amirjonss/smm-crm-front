@@ -86,7 +86,10 @@
                   <div class="mobile-card-body">
                     <div class="mobile-card-row">
                       <span class="mobile-card-label">Проект:</span>
-                      <span class="project-name">{{ getProjectName(plan.project) }}</span>
+                      <div class="row items-center no-wrap q-gutter-x-xs">
+                        <span class="project-name">{{ getProjectName(plan.project) }}</span>
+                        <span v-if="!getProjectActive(plan.project)" class="inactive-badge">Не активен</span>
+                      </div>
                     </div>
                     <div v-if="plan.platforms?.length" class="mobile-card-row">
                       <span class="mobile-card-label">Платформы:</span>
@@ -157,7 +160,12 @@
                 </thead>
                 <tbody>
                   <tr v-for="plan in todaysContentPlans" :key="plan.id">
-                    <td class="project-name">{{ getProjectName(plan.project) }}</td>
+                    <td class="project-name">
+                      <div class="project-name-cell">
+                        <span class="project-name-text">{{ getProjectName(plan.project) }}</span>
+                        <span v-if="!getProjectActive(plan.project)" class="inactive-badge">Не активен</span>
+                      </div>
+                    </td>
                     <td class="post-name">{{ plan.post }}</td>
                     <td>
                       <span class="format-badge">{{ plan.format }}</span>
@@ -265,7 +273,10 @@
                       <q-icon name="folder" size="20px" />
                     </div>
                     <div class="project-item-info">
-                      <div class="project-item-name">{{ row.name }}</div>
+                      <div class="project-item-name">
+                        <span class="project-name-text">{{ row.name }}</span>
+                        <span v-if="row.isActive === false" class="inactive-badge">Не активен</span>
+                      </div>
                       <div class="project-item-phone">{{ row.phone }}</div>
                     </div>
                     <q-icon
@@ -317,6 +328,7 @@
                 <span class="card-count q-ml-sm">{{
                   contentPlanStore.getContentPlans.length
                 }}</span>
+                <span v-if="selectedProject?.isActive === false" class="inactive-badge">Не активен</span>
               </h2>
               <div class="card-header-actions">
                 <q-btn
@@ -863,7 +875,7 @@ import { useContentPlanStore } from 'stores/content-plan.js'
 import { api } from 'boot/axios.js'
 import PdfPrinterComponent from 'components/PdfPrinterComponent.vue'
 import draggable from 'vuedraggable'
-import { getProjectName } from '@/utils/projectHelpers'
+import { getProjectName, getProjectActive } from '@/utils/projectHelpers'
 import { getTodayISO, getWeekRange, getMonthRange } from '@/utils/dateHelpers'
 import {
   FORMAT_OPTIONS,
@@ -2013,9 +2025,46 @@ onMounted(async () => {
   font-weight: 600;
   font-size: 0.9375rem;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.project-name-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.project-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inactive-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.15rem 0.45rem;
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  border-radius: 4px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  .body--dark & {
+    color: #fbbf24;
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.35);
+  }
 }
 
 .project-item-phone {
@@ -2047,10 +2096,7 @@ onMounted(async () => {
 .project-name {
   font-weight: 500;
   color: var(--text-primary);
-  max-width: 180px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: 200px;
 }
 
 .post-name {

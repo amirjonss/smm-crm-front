@@ -31,6 +31,7 @@
             >
               <div class="mobile-card-header">
                 <span class="mobile-card-title">{{ item.name }}</span>
+                <span v-if="item.isActive === false" class="inactive-badge">Не активен</span>
                 <q-icon
                   :name="item.id === selectedProjectId ? 'check_circle' : 'radio_button_unchecked'"
                   :color="item.id === selectedProjectId ? 'primary' : 'grey-5'"
@@ -78,7 +79,12 @@
                 class="cursor-pointer"
               >
                 <td>{{ index + 1 }}</td>
-                <td class="project-name">{{ item.name }}</td>
+                <td class="project-name">
+                  <div class="project-name-cell">
+                    <span class="project-name-text">{{ item.name }}</span>
+                    <span v-if="item.isActive === false" class="inactive-badge">Не активен</span>
+                  </div>
+                </td>
                 <td>{{ item.executor?.givenName || '-' }}</td>
                 <td>{{ item.phone }}</td>
                 <td>{{ item.createdAt?.slice(0, 10) || '-' }}</td>
@@ -96,6 +102,7 @@
           <h3 class="card-title">
             <q-icon name="list_alt" class="card-icon card-icon-green" />
             Контент-планы
+            <span v-if="selectedProject && selectedProject.isActive === false" class="inactive-badge">Не активен</span>
           </h3>
           <div class="card-header-actions">
             <span class="card-count">{{ contentPlanStore.getContentPlans.length }}</span>
@@ -483,10 +490,44 @@ watch(
 .project-name {
   font-weight: 500;
   color: var(--text-primary);
-  max-width: 180px;
+  max-width: 200px;
+}
+
+.project-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 200px;
+}
+
+.project-name-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.inactive-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.15rem 0.45rem;
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  border-radius: 4px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  .body--dark & {
+    color: #fbbf24;
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.35);
+  }
 }
 
 .post-name {

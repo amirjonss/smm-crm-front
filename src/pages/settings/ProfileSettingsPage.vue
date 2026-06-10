@@ -25,7 +25,6 @@
           </q-avatar>
           <div class="hero-user-meta">
             <strong>{{ displayName }}</strong>
-            <span>{{ userStore.getUser?.email || 'user@example.com' }}</span>
             <span v-if="currentRoleLabel" class="hero-role-chip">{{ currentRoleLabel }}</span>
           </div>
         </div>

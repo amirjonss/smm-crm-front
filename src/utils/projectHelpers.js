@@ -11,3 +11,23 @@ export function getProjectName(project) {
   }
   return '---'
 }
+
+export function getProjectActive(project) {
+  if (!project) return true
+  if (typeof project === 'object') {
+    if ('isActive' in project) return project.isActive
+    const id = project.id
+    if (id) {
+      const projectStore = useProjectStore()
+      const found = projectStore.getProjects.find((p) => String(p.id) === String(id))
+      return found ? found.isActive : true
+    }
+  }
+  if (typeof project === 'string') {
+    const id = project.split('/').pop()
+    const projectStore = useProjectStore()
+    const found = projectStore.getProjects.find((p) => String(p.id) === String(id))
+    return found ? found.isActive : true
+  }
+  return true
+}
