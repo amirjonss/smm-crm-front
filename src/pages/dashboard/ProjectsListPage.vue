@@ -4,16 +4,28 @@
       <!-- Header -->
       <div class="page-header">
         <h1 class="page-title">Список проектов</h1>
-        <q-btn
-          flat
-          dense
-          no-caps
-          icon="picture_as_pdf"
-          label="Экспорт PDF"
-          class="btn-export"
-          @click="exportToPDF"
-          :disable="isLoading"
-        />
+        <div class="header-actions">
+          <q-btn
+            flat
+            dense
+            no-caps
+            :icon="showInactive ? 'visibility' : 'visibility_off'"
+            :label="showInactive ? 'Скрыть неактивные' : 'Показать неактивные'"
+            class="btn-toggle-inactive"
+            :class="{ 'btn-toggle-inactive--active': showInactive }"
+            @click="showInactive = !showInactive"
+          />
+          <q-btn
+            flat
+            dense
+            no-caps
+            icon="picture_as_pdf"
+            label="Экспорт PDF"
+            class="btn-export"
+            @click="exportToPDF"
+            :disable="isLoading"
+          />
+        </div>
       </div>
 
       <div v-if="isLoading && !hasLoadedOnce" class="skeleton-loading-state">
@@ -66,14 +78,14 @@
           </div>
         </div>
 
-        <div v-else-if="executorsWithProjects.length === 0" class="empty-state">
+        <div v-else-if="filteredExecutorsWithProjects.length === 0" class="empty-state">
           <p>Проекты не найдены</p>
         </div>
 
         <template v-else>
           <!-- Mobile View -->
           <div class="mobile-view show-mobile-only">
-            <div v-for="(executor, idx) in executorsWithProjects" :key="idx" class="mobile-group">
+            <div v-for="(executor, idx) in filteredExecutorsWithProjects" :key="idx" class="mobile-group">
               <div class="mobile-executor">
                 {{ executor.givenName }} {{ executor.familyName || '' }}
               </div>
@@ -84,7 +96,10 @@
                 :class="{ 'is-inactive': !project.isActive }"
               >
                 <div class="mobile-row mobile-row--main">
-                  <span class="mobile-label">{{ project.name }}</span>
+                  <div class="mobile-label-group">
+                    <span class="mobile-label">{{ project.name }}</span>
+                    <span v-if="!project.isActive" class="inactive-badge">Не активен</span>
+                  </div>
                   <q-btn
                     flat
                     dense
@@ -357,7 +372,7 @@
               </tr>
             </thead>
             <tbody>
-              <template v-for="(executor, execIdx) in executorsWithProjects" :key="execIdx">
+              <template v-for="(executor, execIdx) in filteredExecutorsWithProjects" :key="execIdx">
                 <tr
                   v-for="(project, projIdx) in executor.projects"
                   :key="project.id"
@@ -371,6 +386,7 @@
                   <td class="td-project">
                     <div class="project-cell">
                       <span class="project-name">{{ project.name }}</span>
+                      <span v-if="!project.isActive" class="inactive-badge">Не активен</span>
                       <q-btn flat dense round size="xs" icon="person" class="reassign-trigger">
                         <q-popup-proxy transition-show="scale" transition-hide="scale">
                           <q-card class="reassign-popup">
@@ -635,7 +651,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { api } from 'boot/axios.js'
 import { useQuasar } from 'quasar'
 import jsPDF from 'jspdf'
@@ -656,6 +672,7 @@ const editingPriceId = ref(null)
 const editPriceValue = ref('')
 const clickTimer = ref(null)
 const isTotalSumVisible = ref(false)
+const showInactive = ref(localStorage.getItem('projectsList_showInactive') === 'true')
 
 // Editing state for graphic and video post counts
 const editingGraphicPostId = ref(null)
@@ -685,6 +702,17 @@ const totalActiveSum = computed(() => {
   return allProjects.value
     .filter((p) => p.isActive && p.price != null)
     .reduce((sum, p) => sum + Number(p.price), 0)
+})
+
+const filteredExecutorsWithProjects = computed(() => {
+  if (showInactive.value) return executorsWithProjects.value
+  return executorsWithProjects.value
+    .map((e) => ({ ...e, projects: e.projects.filter((p) => p.isActive) }))
+    .filter((e) => e.projects.length > 0)
+})
+
+watch(showInactive, (val) => {
+  localStorage.setItem('projectsList_showInactive', String(val))
 })
 
 function toAbsoluteUrl(path) {
@@ -1176,6 +1204,12 @@ onMounted(fetchAllData)
   }
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .btn-export {
   font-size: 0.75rem;
   color: var(--text-secondary);
@@ -1196,6 +1230,42 @@ onMounted(fetchAllData)
 
   &:hover {
     color: var(--text-primary);
+  }
+}
+
+.btn-toggle-inactive {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  padding: 0.25rem 0.625rem;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: #d97706;
+    border-color: rgba(245, 158, 11, 0.4);
+    background: rgba(245, 158, 11, 0.06);
+  }
+
+  &--active {
+    color: #b45309;
+    border-color: rgba(245, 158, 11, 0.4);
+    background: rgba(245, 158, 11, 0.08);
+
+    .body--dark & {
+      color: #fbbf24;
+      background: rgba(245, 158, 11, 0.12);
+    }
+  }
+
+  @media (max-width: 599px) {
+    font-size: 0.6875rem;
+    padding: 0.25rem 0.5rem;
+
+    :deep(.q-icon) {
+      font-size: 1rem;
+    }
   }
 }
 
@@ -1922,6 +1992,38 @@ onMounted(fetchAllData)
 
 .project-name {
   flex: 1;
+}
+
+.inactive-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.15rem 0.45rem;
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+  border-radius: 4px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  .body--dark & {
+    color: #fbbf24;
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.35);
+  }
+}
+
+.mobile-label-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  margin-right: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .reassign-trigger {
