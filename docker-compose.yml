@@ -3,7 +3,7 @@ version: '3'
 services:
   node:
     container_name: ${DOCKER_PROJECT_NAME}_node
-    image: node:20-bullseye
+    image: node:22-bullseye
     working_dir: /var/www/html
     volumes:
       - ./:/var/www/html
