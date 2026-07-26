@@ -29,6 +29,18 @@ export const useProjectStore = defineStore('project', {
           })
       })
     },
+    createProjectForUser(data) {
+      return new Promise((resolve, reject) => {
+        api
+          .post('/projects/for-user/create', data)
+          .then(() => {
+            resolve()
+          })
+          .catch((e) => {
+            reject(e, 'error during the creating project for user')
+          })
+      })
+    },
     fetchProjectsCount() {
       return new Promise((resolve, reject) => {
         api
