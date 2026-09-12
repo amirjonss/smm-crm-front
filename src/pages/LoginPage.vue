@@ -76,6 +76,30 @@
             </template>
           </q-btn>
         </q-form>
+
+        <div class="quick-login">
+          <div class="quick-login-divider">
+            <span>Быстрый вход</span>
+          </div>
+          <div class="quick-login-buttons">
+            <q-btn
+              label="Войти как Админ"
+              class="quick-login-btn quick-login-btn--admin"
+              outline
+              no-caps
+              :loading="isLoading"
+              @click="quickLogin('admin@example.com', 'passwd')"
+            />
+            <q-btn
+              label="Войти как SMM"
+              class="quick-login-btn quick-login-btn--smm"
+              outline
+              no-caps
+              :loading="isLoading"
+              @click="quickLogin('smm@example.com', 'passwd')"
+            />
+          </div>
+        </div>
       </div>
 
       <!-- Footer -->
@@ -127,6 +151,12 @@ function auth() {
         timeout: 3000,
       })
     })
+}
+
+function quickLogin(email, password) {
+  form.email = email
+  form.password = password
+  auth()
 }
 </script>
 
@@ -261,6 +291,53 @@ function auth() {
 .login-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+}
+
+.quick-login {
+  margin-top: 1.5rem;
+}
+
+.quick-login-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin-bottom: 1rem;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  span {
+    padding: 0 0.75rem;
+  }
+}
+
+.quick-login-buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.quick-login-btn {
+  flex: 1;
+  height: 44px;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.quick-login-btn--admin {
+  color: #dc2626;
+  border-color: #dc2626;
+}
+
+.quick-login-btn--smm {
+  color: #3b82f6;
+  border-color: #3b82f6;
 }
 
 .login-footer {
